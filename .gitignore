@@ -1,0 +1,26 @@
+    # Virtual environment
+    venv/
+    .venv/
+    env/
+    .env/
+
+    # Byte-compiled Python files
+    __pycache__/
+    *.pyc
+    *.pyo
+
+    # Editor-specific files
+    .vscode/
+    .idea/
+
+    # Operating system files
+    .DS_Store
+    Thumbs.db
+
+    # Logs and temporary files
+    *.log
+    *.tmp
+    *.swp
+
+    # Sensitive information (e.g., API keys, passwords)
+    .env
