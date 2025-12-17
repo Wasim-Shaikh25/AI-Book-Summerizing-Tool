@@ -37,7 +37,7 @@ class WordExporter:
             f.write(content)
         return filepath
 
-    def structured_text_to_word(self, book_data: dict, output_filename: str) -> str:
+    def structured_text_to_word(self, book_data: dict, output_filename: str, toc_depth: int = 3) -> str:
         """
         Converts structured text data into a Word document using Pandoc
         and a reference DOCX for styling.
@@ -57,7 +57,7 @@ class WordExporter:
                 "-o", output_path,
                 "--reference-doc", REFERENCE_DOCX_PATH,
                 "--toc", # Add table of contents
-                "--toc-depth=3" # Up to heading level 3 in TOC
+                f"--toc-depth={toc_depth}" # Up to specified heading level in TOC
             ]
 
             logger.info(f"Running Pandoc command: {' '.join(pandoc_command)}")

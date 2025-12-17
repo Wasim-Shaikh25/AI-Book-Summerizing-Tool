@@ -1,4 +1,4 @@
-# Common prompt templates for various LLM operations
+# OpenAI specific prompts
 
 PROMPT_CORE_IDEAS = (
     "Extract the most important concepts, definitions, formulas, examples, and key facts "
@@ -22,16 +22,16 @@ PROMPT_MASTER_BRAIN_FINAL = (
 )
 
 PROMPT_REWRITE_CHUNK = (
-    "Based on the MASTER BRAIN knowledge, rewrite the following CHAPTER TEXT into *clear, sufficiently detailed, and exam-focused* notes, using simple English.\n"
+    "Based on the MASTER BRAIN knowledge, rewrite the following CHAPTER TEXT into *highly detailed, comprehensive, and exam-focused* notes, using clear and simple English.\n"
 "Generate a *highly specific, direct, and comprehensive* '# Chapter Title:' and a concise yet informative '**Summary:**' that *precisely reflects the core content of this individual chapter text*. The chapter title should serve as a parent topic or module under which related sub-topics can be grouped.\n"
 "CRITICAL: The '# Chapter Title:' MUST be a precise, overarching topic. ABSOLUTELY DO NOT use generic or thematic phrases like 'Understanding', 'Introduction to', 'Overview of', or the overall theme (e.g., 'Contracts in Different Jurisdictions') in the chapter title or summary. For example, instead of 'Understanding Contracts under Indian Law', use 'Contracts under Indian Law'.\n"
 "STRICTLY ENSURE that the chapter title is a direct, descriptive heading for the broader content that *this chunk contributes to*, and does not contain any introductory words like 'Understanding'.\n"
 "Furthermore, ENSURE THE CHAPTER TITLE IS UNIQUE ACROSS ALL *TOP-LEVEL* CHAPTERS. If the content of this chunk is a sub-topic or a continuation of a previously established broader chapter, then instead of generating a new '# Chapter Title:', you should propose a '## Sub-topic Title:' that fits under the existing chapter. The goal is to group all related information under one main chapter, using sub-headings for distinct aspects.\n"
 "If a suitable existing chapter title is provided in `additional_context` (specifically in `EXISTING_TOP_LEVEL_CHAPTER_TITLES`), and the content of this chunk is a sub-topic or a continuation of that existing chapter, then ABSOLUTELY DO NOT generate a new '# Chapter Title:'. Instead, propose a '## Sub-topic Title:' that fits logically under the existing chapter. The goal is to group all related information under one main chapter, using sub-headings for distinct aspects. If no suitable existing chapter is found in `EXISTING_TOP_LEVEL_CHAPTER_TITLES`, then generate a new unique '# Chapter Title:' that can serve as a parent topic.\n"
     "**ABSOLUTELY AVOID GENERIC INTRODUCTORY SECTIONS:** Do NOT include generic sections like 'Concepts:', 'Definitions:', 'Key Facts:', or 'Tort Law Summary' at the beginning of each chunk's notes. These are repetitive and do not add value to individual chapter notes. Start directly with the specific topics and explanations relevant to *this particular chunk*.\n"
-    "Provide *clear and sufficiently detailed explanations* for all concepts, ensuring they are easy to understand and adequate for exam preparation. Balance conciseness with necessary depth.\n"
-    "Organize notes with clear sub-headings (e.g., '## Topics:', '## [Topic Title]:'). CRITICAL: Ensure that sub-headings are correctly formatted and ABSOLUTELY DO NOT contain extra '##' symbols mistakenly (e.g., '### ## Topic' is incorrect; it should be '### Topic').\n"
-    "Use detailed bullet points ('- '), clear explanations ('*Explanation:*'), and relevant examples ('*Examples:*' followed by bullet points).\n"
+    "Provide *extremely clear, exhaustive, and highly detailed explanations* for all concepts, ensuring they are easy to understand and fully adequate for exam preparation. Prioritize depth and completeness over conciseness.\n"
+    "Organize notes with clear and consistent sub-headings (e.g., '## Topics:', '### [Topic Title]:'). CRITICAL: Ensure that sub-headings are correctly formatted and ABSOLUTELY DO NOT contain extra '##' symbols mistakenly (e.g., '### ## Topic' is incorrect; it should be '### Topic'). Maintain a logical flow and hierarchy.\n"
+    "Use detailed bullet points ('- '), clear explanations ('*Explanation:*'), and relevant examples ('*Examples:*' followed by bullet points). Ensure examples are well-explained and directly illustrate the point.\n"
     "Generate examples *only if they are absolutely essential for clarifying a concept and are not already explicitly provided in the original text*. Ensure generated examples are concise and directly illustrate the point.\n"
     "CRITICAL: DO NOT use '### Examples:' or '## Examples:' as a heading. If examples are provided, integrate them under relevant sub-headings or use a lower-level heading like '### Examples:'.\n"
     "EXCLUDE any programming code snippets unless they are directly part of the legal text (e.g., a specific code of law, not a programming example).\n"

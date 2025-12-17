@@ -18,18 +18,23 @@ CHUNK_OVERLAP_WORDS = 150
 # Active model for summarization (e.g., "gemini", "ollama")
 ACTIVE_MODEL = "GEMINI"
 
-# Embedding model for FAISS (e.g., "sentence-transformers/all-MiniLM-L6-v2")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+# Embedding model for FAISS (using Universal Sentence Encoder)
+# EMBEDDING_MODEL is no longer directly used as we are loading the model via tensorflow_hub
 
 # Gemini configuration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "ADD YOUR API KEY HERE")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
-# Ollama configuration
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "llama3.2:3b")
+# Grok configuration
+GROK_API_KEY = os.getenv("GROK_API_KEY", "") # Replace with actual Grok API key
+GROK_MODEL = os.getenv("GROK_MODEL", "llama-3.1-8b-instant") # Replace with actual Grok model name
+
+# OpenAI configuration
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "") # Replace with actual OpenAI API key
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano") # Replace with actual OpenAI model name
+
 
 # Token limits for summarization
-CORE_IDEAS_MAX_TOKENS = 2000
-MASTER_SUMMARY_MAX_TOKENS = 2000
-REWRITE_MAX_TOKENS = 5000
+CORE_IDEAS_MAX_TOKENS = 4000
+MASTER_SUMMARY_MAX_TOKENS = 4000
+REWRITE_MAX_TOKENS = 10000

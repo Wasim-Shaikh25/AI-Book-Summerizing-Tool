@@ -2,51 +2,57 @@ import logging
 import sys
 from typing import List, Dict, Tuple, Any
 import re
-import ollama # Import the Ollama client
-from src.config import OLLAMA_MODEL_NAME, ACTIVE_MODEL, CORE_IDEAS_MAX_TOKENS, MASTER_SUMMARY_MAX_TOKENS, REWRITE_MAX_TOKENS
-from src.core.common.prompts import PROMPT_CORE_IDEAS, PROMPT_MASTER_BRAIN_COMBINE_BLOCKS, PROMPT_MASTER_BRAIN_FINAL, PROMPT_REWRITE_CHUNK
+from openai import OpenAI
+from langchain_openai import ChatOpenAI
+
+from src.config import OPENAI_API_KEY, OPENAI_MODEL, ACTIVE_MODEL, CORE_IDEAS_MAX_TOKENS, MASTER_SUMMARY_MAX_TOKENS, REWRITE_MAX_TOKENS
+from src.core.openai.prompts.prompts import PROMPT_CORE_IDEAS, PROMPT_MASTER_BRAIN_COMBINE_BLOCKS, PROMPT_MASTER_BRAIN_FINAL, PROMPT_REWRITE_CHUNK
 
 logger = logging.getLogger(__name__)
 
 class Summarizer:
     def __init__(self, active_model: str = ACTIVE_MODEL):
         self.active_model = active_model
-        self.ollama_model = OLLAMA_MODEL_NAME
+        self.openai_model_name = OPENAI_MODEL
 
-        if self.active_model == "OLLAMA":
-            logger.info(f"Initializing Summarizer with Ollama model: {self.ollama_model}...")
+        if self.active_model == "OPENAI":
+            if not OPENAI_API_KEY:
+                raise ValueError("OPENAI_API_KEY not found in environment variables.")
+            self.openai_client = OpenAI(api_key=OPENAI_API_KEY)
+            self.chat_openai_model = ChatOpenAI(model_name=self.openai_model_name, openai_api_key=OPENAI_API_KEY)
+            logger.info(f"Initializing Summarizer with OpenAI model: {self.openai_model_name}...")
         else:
-            raise ValueError(f"Unknown active model: {self.active_model}. Only 'OLLAMA' is supported.")
+            raise ValueError(f"Unknown active model: {self.active_model}. Only 'OPENAI' is supported in this module.")
 
     def _generate_text(self, prompt: str, max_tokens: int, stream: bool = False) -> str:
-        """Helper to generate text using the active LLM (Ollama)."""
+        """Helper to generate text using the active LLM (OpenAI)."""
         full_response = []
         try:
-            if self.active_model == "OLLAMA":
+            if self.active_model == "OPENAI":
+                messages = [{"role": "user", "content": prompt}]
                 if stream:
-                    response_generator = ollama.generate(
-                        model=self.ollama_model,
-                        prompt=prompt,
-                        options={'num_predict': max_tokens},
+                    response_generator = self.openai_client.chat.completions.create(
+                        model=self.openai_model_name,
+                        messages=messages,
+                        max_completion_tokens=max_tokens, # Changed from max_tokens to max_completion_tokens
                         stream=True
                     )
                     for chunk in response_generator:
-                        if 'response' in chunk:
-                            text_part = chunk['response']
+                        if chunk.choices[0].delta.content:
+                            text_part = chunk.choices[0].delta.content
                             full_response.append(text_part)
                             sys.stdout.write(text_part)
                             sys.stdout.flush()
                     sys.stdout.write("\n")
                     sys.stdout.flush()
                 else:
-                    response = ollama.generate(
-                        model=self.ollama_model,
-                        prompt=prompt,
-                        options={'num_predict': max_tokens},
+                    response = self.openai_client.chat.completions.create(
+                        model=self.openai_model_name,
+                        messages=messages,
+                        max_completion_tokens=max_tokens, # Changed from max_tokens to max_completion_tokens
                         stream=False
                     )
-                    if 'response' in response:
-                        full_response.append(response['response'])
+                    full_response.append(response.choices[0].message.content)
             
         except Exception as e:
             logger.error(f"Error generating text with {self.active_model}: {e}")
@@ -149,16 +155,9 @@ class Summarizer:
         """
         Rewrites a text chunk into structured text notes using the active LLM.
         """
-        # If additional_context is provided, format it as a prompt instruction
-        if additional_context:
-            formatted_context = f"Consider the following specific instruction: {additional_context}\n\n"
-        else:
-            formatted_context = ""
-
         raw_notes_prompt = PROMPT_REWRITE_CHUNK.format(
             master_brain=master_brain,
             chunk=chunk,
-            additional_context=formatted_context
+            additional_context=additional_context
         )
-        # Stream the output for the main rewrite process
         return self._generate_text(raw_notes_prompt, REWRITE_MAX_TOKENS, stream=True)

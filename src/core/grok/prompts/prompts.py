@@ -1,4 +1,4 @@
-# Common prompt templates for various LLM operations
+# Grok-specific prompts for summarization and rewriting
 
 PROMPT_CORE_IDEAS = (
     "Extract the most important concepts, definitions, formulas, examples, and key facts "

@@ -11,12 +11,6 @@ os.makedirs(output_folder, exist_ok=True)
 docx_filename = "reference.docx"
 docx_path = os.path.join(output_folder, docx_filename)
 
-# Delete existing .md file if it exists
-md_filename = os.path.splitext(docx_filename)[0] + ".md"
-md_path = os.path.join(output_folder, md_filename)
-if os.path.exists(md_path):
-    os.remove(md_path)
-    print(f"Deleted existing markdown file: {md_path}")
 
 document = Document()
 
