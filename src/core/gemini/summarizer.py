@@ -4,8 +4,8 @@ from typing import List, Dict, Tuple, Any
 import re
 import google.generativeai as genai # Import the Gemini client
 
-from src.config import GEMINI_API_KEY, GEMINI_MODEL, ACTIVE_MODEL, CORE_IDEAS_MAX_TOKENS, MASTER_SUMMARY_MAX_TOKENS, REWRITE_MAX_TOKENS
-from src.core.gemini.prompts.prompts import PROMPT_CORE_IDEAS, PROMPT_MASTER_BRAIN_COMBINE_BLOCKS, PROMPT_MASTER_BRAIN_FINAL, PROMPT_REWRITE_CHUNK
+from src.config import GEMINI_API_KEY, GEMINI_MODEL, ACTIVE_MODEL, CORE_IDEAS_MAX_TOKENS, MASTER_SUMMARY_MAX_TOKENS, REWRITE_MAX_TOKENS, TOPIC_CANONICAL_MAX_TOKENS, FACT_EXTRACTION_MAX_TOKENS, TOPIC_REWRITE_MAX_TOKENS
+from src.core.gemini.prompts.prompts import PROMPT_CORE_IDEAS, PROMPT_MASTER_BRAIN_COMBINE_BLOCKS, PROMPT_MASTER_BRAIN_FINAL, PROMPT_REWRITE_CHUNK, PROMPT_CANONICAL_TOPICS, PROMPT_EXTRACT_NEW_FACTS, PROMPT_REWRITE_TOPIC
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,36 @@ class Summarizer:
         """Extracts core ideas from a text chunk using the active LLM."""
         prompt = PROMPT_CORE_IDEAS.format(text=chunk)
         return self._generate_text(prompt, CORE_IDEAS_MAX_TOKENS)
+
+    def extract_canonical_topics_from_master_brain(self, master_brain: str) -> str:
+        """
+        Extracts a list of canonical topic names from the master brain.
+        """
+        prompt = PROMPT_CANONICAL_TOPICS.format(master_brain=master_brain)
+        return self._generate_text(prompt, TOPIC_CANONICAL_MAX_TOKENS)
+
+    def extract_new_facts_for_topic(self, chunk_content: str, topic_name: str, existing_facts: List[str]) -> str:
+        """
+        Extracts new facts from a chunk relevant to a specific topic, avoiding duplication.
+        """
+        existing_facts_str = "\n- ".join(existing_facts) if existing_facts else "None yet."
+        prompt = PROMPT_EXTRACT_NEW_FACTS.format(
+            chunk=chunk_content,
+            topic_name=topic_name,
+            existing_facts=existing_facts_str
+        )
+        return self._generate_text(prompt, FACT_EXTRACTION_MAX_TOKENS)
+
+    def rewrite_topic_to_structured_notes(self, topic_name: str, collected_points: List[str]) -> str:
+        """
+        Rewrites a single topic into structured notes using all collected points.
+        """
+        all_points_str = "\n- ".join(collected_points)
+        prompt = PROMPT_REWRITE_TOPIC.format(
+            topic_name=topic_name,
+            collected_points=all_points_str
+        )
+        return self._generate_text(prompt, TOPIC_REWRITE_MAX_TOKENS, stream=True)
 
     def create_master_brain(self, core_ideas_list: List[str]) -> str:
         """Combines and compresses core ideas into a master knowledge brain using the active LLM."""

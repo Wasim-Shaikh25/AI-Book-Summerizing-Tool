@@ -35,6 +35,9 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano") # Replace with actual Ope
 
 
 # Token limits for summarization
-CORE_IDEAS_MAX_TOKENS = 4000
-MASTER_SUMMARY_MAX_TOKENS = 4000
-REWRITE_MAX_TOKENS = 10000
+CORE_IDEAS_MAX_TOKENS = 4000 # Increased for better coverage
+MASTER_SUMMARY_MAX_TOKENS = 4000 # Increased for better coverage
+REWRITE_MAX_TOKENS = 10000 # Increased for better coverage
+TOPIC_CANONICAL_MAX_TOKENS = 2000 # Increased for better coverage
+FACT_EXTRACTION_MAX_TOKENS = 2000 # Increased for better coverage
+TOPIC_REWRITE_MAX_TOKENS = 10000 # Increased for better coverage
