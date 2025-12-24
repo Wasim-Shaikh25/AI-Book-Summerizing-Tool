@@ -4,8 +4,8 @@ from typing import List, Dict, Tuple, Any
 import re
 import google.generativeai as genai # Import the Gemini client
 
-from src.config import GEMINI_API_KEY, GEMINI_MODEL, ACTIVE_MODEL, CORE_IDEAS_MAX_TOKENS, MASTER_SUMMARY_MAX_TOKENS, REWRITE_MAX_TOKENS, TOPIC_CANONICAL_MAX_TOKENS, FACT_EXTRACTION_MAX_TOKENS, TOPIC_REWRITE_MAX_TOKENS
-from src.core.gemini.prompts.prompts import PROMPT_CORE_IDEAS, PROMPT_MASTER_BRAIN_COMBINE_BLOCKS, PROMPT_MASTER_BRAIN_FINAL, PROMPT_REWRITE_CHUNK, PROMPT_CANONICAL_TOPICS, PROMPT_EXTRACT_NEW_FACTS, PROMPT_REWRITE_TOPIC
+from src.config import GEMINI_API_KEY, GEMINI_MODEL, ACTIVE_MODEL, REWRITE_MAX_TOKENS
+from src.core.gemini.prompts.prompts import PROMPT_REWRITE_CHUNK_SIMPLIFIED, PROMPT_REWRITE_NODE_CONTROLLED
 
 logger = logging.getLogger(__name__)
 
@@ -53,165 +53,37 @@ class Summarizer:
                         generation_config=generation_config,
                         stream=False
                     )
-                    full_response.append(response.text)
+                    # Check if response has candidates and text before accessing
+                    if response.candidates and response.candidates[0].content.parts:
+                        full_response.append(response.text)
+                    else:
+                        logger.error(f"Gemini response had no valid text parts. Finish reason: {response.candidates[0].finish_reason if response.candidates else 'N/A'}")
+                        return ""
             
         except Exception as e:
             logger.error(f"Error generating text with {self.active_model}: {e}")
             return ""
         return "".join(full_response).strip()
 
-    def extract_core_ideas(self, chunk: str) -> str:
-        """Extracts core ideas from a text chunk using the active LLM."""
-        prompt = PROMPT_CORE_IDEAS.format(text=chunk)
-        return self._generate_text(prompt, CORE_IDEAS_MAX_TOKENS)
+    def rewrite_node_controlled(self, node_title: str, node_content: str, explained_concepts: List[str], heading_level: int) -> str:
+        """
+        Rewrites the consolidated content for a single structure node into structured,
+        exam-oriented notes, adhering to strict rules about concept explanation and repetition.
+        """
+        logger.info(f"Rewriting node: {node_title} (Level {heading_level})")
 
-    def extract_canonical_topics_from_master_brain(self, master_brain: str) -> str:
-        """
-        Extracts a list of canonical topic names from the master brain.
-        """
-        prompt = PROMPT_CANONICAL_TOPICS.format(master_brain=master_brain)
-        return self._generate_text(prompt, TOPIC_CANONICAL_MAX_TOKENS)
-
-    def extract_new_facts_for_topic(self, chunk_content: str, topic_name: str, existing_facts: List[str]) -> str:
-        """
-        Extracts new facts from a chunk relevant to a specific topic, avoiding duplication.
-        """
-        existing_facts_str = "\n- ".join(existing_facts) if existing_facts else "None yet."
-        prompt = PROMPT_EXTRACT_NEW_FACTS.format(
-            chunk=chunk_content,
-            topic_name=topic_name,
-            existing_facts=existing_facts_str
+        # Format explained_concepts for the prompt
+        explained_concepts_context = "- " + "\n- ".join(explained_concepts) if explained_concepts else "None yet."
+        
+        prompt = PROMPT_REWRITE_NODE_CONTROLLED.format(
+            node_title=node_title,
+            node_content=node_content,
+            explained_concepts_context=explained_concepts_context
         )
-        return self._generate_text(prompt, FACT_EXTRACTION_MAX_TOKENS)
-
-    def rewrite_topic_to_structured_notes(self, topic_name: str, collected_points: List[str]) -> str:
-        """
-        Rewrites a single topic into structured notes using all collected points.
-        """
-        all_points_str = "\n- ".join(collected_points)
-        prompt = PROMPT_REWRITE_TOPIC.format(
-            topic_name=topic_name,
-            collected_points=all_points_str
-        )
-        return self._generate_text(prompt, TOPIC_REWRITE_MAX_TOKENS, stream=True)
-
-    def create_master_brain(self, core_ideas_list: List[str]) -> str:
-        """Combines and compresses core ideas into a master knowledge brain using the active LLM."""
-        logger.info("Creating master brain (compressing core ideas)...")
-        if not core_ideas_list:
-            return ""
-
-        combined_blocks: List[str] = []
-        block_size = 30 # Number of core ideas to combine in one go
-        for i in range(0, len(core_ideas_list), block_size):
-            block = "\n\n".join(core_ideas_list[i:i + block_size])
-            prompt = PROMPT_MASTER_BRAIN_COMBINE_BLOCKS.format(text=block)
-            combined = self._generate_text(prompt, MASTER_SUMMARY_MAX_TOKENS)
-            combined_blocks.append(combined)
-
-        # Final combine
-        final_text = "\n\n".join(combined_blocks)
-        prompt_final = PROMPT_MASTER_BRAIN_FINAL.format(text=final_text)
-        master = self._generate_text(prompt_final, MASTER_SUMMARY_MAX_TOKENS)
-        logger.info("Master brain created.")
-        return master
-
-    def _remove_prompt_from_output(self, generated_text: str, prompt_template: str, master_brain: str, chunk: str) -> str:
-        """
-        Removes the formatted prompt and any leading conversational filler from the generated text.
-        """
-        formatted_prompt = prompt_template.format(master_brain=master_brain, chunk=chunk)
         
-        # 1. Attempt to remove the initial instructional part of the prompt
-        first_instruction_line = PROMPT_REWRITE_CHUNK.split('\n')[0].strip()
-        if generated_text.startswith(first_instruction_line):
-            generated_text = generated_text[len(first_instruction_line):].strip()
-        
-        # Remove any "DO NOT include..." instruction if it appears
-        generated_text = re.sub(r"DO NOT include any part of this prompt in your output\. ONLY provide the structured notes\.", "", generated_text, flags=re.IGNORECASE).strip()
+        # Use a higher token limit for rewriting a full node if needed
+        rewritten_text = self._generate_text(prompt, REWRITE_MAX_TOKENS * 2, stream=False) # Stream can be true for debugging
 
-        lines = generated_text.split('\n')
-        cleaned_lines = []
-        content_start_found = False
-
-        # Define patterns that indicate the start of actual content
-        content_start_patterns = [
-            r"^#\s*(?!Chapter Title:)(?!Sub-topic Title:)(.+)", # Matches # Title, but not # Chapter Title:
-            r"^##\s*(?!Sub-topic Title:)(.+)", # Matches ## Sub-topic, but not ## Sub-topic Title:
-            r"^\*\*Summary:\*\*",
-            r"^###\s*Topics:",
-            r"^\*\*.*?\*\*:", # Matches **Topic Title:**
-            r"^- ", # Matches bullet points
-            r"^\d+\.\s", # Matches numbered lists, common for examples
-            r"^```", # Matches start of code blocks or tables
-            r"^\s*\S+" # Any non-empty line (as a last resort)
-        ]
-        
-        # Pattern to identify unwanted "Chapter X ... Page Y" lines generated by the model
-        unwanted_chapter_page_pattern = r"^Chapter\s+\d+\s+\.\.\.\s+Page\s+\d+"
-
-        for line in lines:
-            stripped_line = line.strip()
-            
-            # Explicitly remove "Chapter Title:" and "Sub-topic Title:" prefixes
-            stripped_line = re.sub(r"^#\s*Chapter Title:\s*", "# ", stripped_line, flags=re.IGNORECASE)
-            stripped_line = re.sub(r"^##\s*Sub-topic Title:\s*", "## ", stripped_line, flags=re.IGNORECASE)
-            
-            # Remove "--- CHAPTER BREAK ---" lines
-            if stripped_line == "--- CHAPTER BREAK ---":
-                logger.debug("Skipping '--- CHAPTER BREAK ---' line.")
-                continue
-            
-            # Ensure only one '#' for Heading 1 and two '##' for Heading 2, etc.
-            # This regex handles multiple leading '#' characters and reduces them to the correct count
-            stripped_line = re.sub(r"^(#+)\s*#+\s*(.+)", r"\1 \2", stripped_line)
-            stripped_line = re.sub(r"^(##+)\s*#+\s*(.+)", r"\1 \2", stripped_line)
-            stripped_line = re.sub(r"^(###+)\s*#+\s*(.+)", r"\1 \2", stripped_line)
-            stripped_line = re.sub(r"^(####+)\s*#+\s*(.+)", r"\1 \2", stripped_line)
-            stripped_line = re.sub(r"^(#####+)\s*#+\s*(.+)", r"\1 \2", stripped_line)
-            stripped_line = re.sub(r"^(######+)\s*#+\s*(.+)", r"\1 \2", stripped_line)
-
-            if not content_start_found:
-                is_content_start = False
-                for pattern in content_start_patterns:
-                    if re.match(pattern, stripped_line):
-                        is_content_start = True
-                        break
-                
-                # Also check if it's an unwanted "Chapter X ... Page Y" line
-                if re.match(unwanted_chapter_page_pattern, stripped_line):
-                    logger.debug(f"Skipping unwanted chapter/page line: {stripped_line}")
-                    continue
-
-                if is_content_start:
-                    cleaned_lines.append(stripped_line) # Include this line as it's the start of content
-                    content_start_found = True
-                elif stripped_line: # If it's not empty, but also not a content start pattern, it might be filler
-                    logger.debug(f"Skipping potential prompt/filler line: {stripped_line[:100]}...")
-                    continue
-                else: # It's an empty line before content, skip it
-                    continue
-            else:
-                cleaned_lines.append(stripped_line)
-        
-        cleaned_text = "\n".join(cleaned_lines).strip()
-        
-        if not cleaned_text and generated_text:
-            logger.warning("Aggressive prompt cleaning resulted in empty notes. Returning original raw output.")
-            return generated_text # Fallback to original if cleaning removes everything
-        
-        return cleaned_text
-
-    def rewrite_chunk_to_structured_notes(self, chunk: str, master_brain: str, additional_context: str = "") -> str:
-        """
-        Rewrites a text chunk into structured text notes using the active LLM.
-        """
-        # The additional_context now directly contains instructions and existing titles.
-        # No need to wrap it in "Consider the following specific instruction:"
-        raw_notes_prompt = PROMPT_REWRITE_CHUNK.format(
-            master_brain=master_brain,
-            chunk=chunk,
-            additional_context=additional_context # additional_context is already formatted in main.py
-        )
-        # Stream the output for the main rewrite process
-        return self._generate_text(raw_notes_prompt, REWRITE_MAX_TOKENS, stream=True)
+        # The prompt now instructs the LLM not to include Markdown headings,
+        # so we return the rewritten text directly.
+        return rewritten_text

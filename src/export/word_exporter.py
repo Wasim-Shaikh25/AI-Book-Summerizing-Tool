@@ -44,6 +44,15 @@ class WordExporter:
         """
         output_path = os.path.join(self.output_folder, output_filename)
         
+        # Ensure the output file does not exist to prevent permission errors
+        if os.path.exists(output_path):
+            try:
+                os.remove(output_path)
+                logger.info(f"Removed existing output file: {output_path}")
+            except OSError as e:
+                logger.error(f"Error removing existing output file {output_path}: {e}")
+                raise
+
         # Create a temporary markdown file. The overall book title will not be added.
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md', encoding='utf-8') as temp_md_file:
             temp_md_file.write(book_data.get("content", ""))
@@ -58,6 +67,7 @@ class WordExporter:
                 "--reference-doc", REFERENCE_DOCX_PATH,
                 "--toc", # Add table of contents
                 f"--toc-depth={toc_depth}" # Up to specified heading level in TOC
+                # Removed --wrap=none as it might interfere with paragraph justification
             ]
 
             logger.info(f"Running Pandoc command: {' '.join(pandoc_command)}")

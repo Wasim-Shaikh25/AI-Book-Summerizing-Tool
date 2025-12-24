@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Define paths for PDF and output folders
 PDF_FOLDER = os.path.join(BASE_DIR, "pdfs")
 OUTPUT_FOLDER = os.path.join(BASE_DIR, "output")
-REFERENCE_DOCX_PATH = os.path.join(BASE_DIR, "reference_files", "reference.docx")
+REFERENCE_DOCX_PATH = os.path.join(BASE_DIR, "reference_files", "new_reference.docx")
 
 # Ensure output folder exists
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
@@ -34,10 +34,13 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "") # Replace with actual OpenAI AP
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano") # Replace with actual OpenAI model name
 
 
-# Token limits for summarization
-CORE_IDEAS_MAX_TOKENS = 4000 # Increased for better coverage
-MASTER_SUMMARY_MAX_TOKENS = 4000 # Increased for better coverage
-REWRITE_MAX_TOKENS = 10000 # Increased for better coverage
-TOPIC_CANONICAL_MAX_TOKENS = 2000 # Increased for better coverage
-FACT_EXTRACTION_MAX_TOKENS = 2000 # Increased for better coverage
-TOPIC_REWRITE_MAX_TOKENS = 10000 # Increased for better coverage
+# Token limits for summarization (reverted to chunk-by-chunk focus)
+REWRITE_MAX_TOKENS = 15000 # Increased to allow for more content expansion
+# Deprecated token limits (removed as per new requirements)
+# CORE_IDEAS_MAX_TOKENS = 4000
+# MASTER_SUMMARY_MAX_TOKENS = 4000
+# TOPIC_CANONICAL_MAX_TOKENS = 2000
+# FACT_EXTRACTION_MAX_TOKENS = 2000
+# TOPIC_REWRITE_MAX_TOKENS = 10000
+# OUTLINE_PLANNING_MAX_TOKENS = 4000
+# SINGLE_PASS_WRITING_MAX_TOKENS = 30000
