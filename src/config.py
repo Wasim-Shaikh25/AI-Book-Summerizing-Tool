@@ -35,7 +35,7 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano") # Replace with actual Ope
 
 
 # Toggle for revision notes prompt
-USE_REVISION_PROMPT = False
+USE_REVISION_PROMPT = True
 
 # Token limits for summarization (reverted to chunk-by-chunk focus)
 REWRITE_MAX_TOKENS = 15000 # Increased to allow for more content expansion
