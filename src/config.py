@@ -34,6 +34,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "") # Replace with actual OpenAI AP
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano") # Replace with actual OpenAI model name
 
 
+# Toggle for revision notes prompt
+USE_REVISION_PROMPT = False
+
 # Token limits for summarization (reverted to chunk-by-chunk focus)
 REWRITE_MAX_TOKENS = 15000 # Increased to allow for more content expansion
 # Deprecated token limits (removed as per new requirements)

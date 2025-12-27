@@ -52,16 +52,23 @@ class ConceptConsolidator:
         into one coherent explanation, removing redundancy.
         """
         if not raw_content_list:
+            logger.debug("Raw content list is empty, returning empty string for consolidation.")
             return ""
 
         # Merge all raw content for the node
         merged_content = "\n\n".join(raw_content_list)
         
         logger.info(f"Consolidating content for a node (merged text length: {len(merged_content)})...")
-        
+        logger.debug(f"Merged content for consolidation:\n{merged_content[:500]}...") # Log first 500 chars
+
         prompt = PROMPT_CONSOLIDATE_CONCEPTS.format(raw_node_content=merged_content)
         
         # Use a higher token limit for consolidation as it might be a large amount of text
         consolidated_text = self._generate_text(prompt, REWRITE_MAX_TOKENS * 3) # Adjust token limit
         
+        if not consolidated_text.strip():
+            logger.warning(f"LLM returned empty consolidated text for node. Falling back to merged raw content. (Merged text length: {len(merged_content)})")
+            return merged_content # Fallback to original merged content if LLM returns empty
+        
+        logger.debug(f"Consolidated text from LLM:\n{consolidated_text[:500]}...") # Log first 500 chars
         return consolidated_text

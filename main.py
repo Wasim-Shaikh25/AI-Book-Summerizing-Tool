@@ -5,10 +5,10 @@ import re
 from typing import Dict, List, Any
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s') # Changed to DEBUG
 logger = logging.getLogger(__name__)
 
-from src.config import PDF_FOLDER, OUTPUT_FOLDER, CHUNK_SIZE_WORDS, ACTIVE_MODEL
+from src.config import PDF_FOLDER, OUTPUT_FOLDER, CHUNK_SIZE_WORDS, ACTIVE_MODEL, USE_REVISION_PROMPT
 from src.utils.pdf_reader import PDFReader
 
 # Debugging: Print the active model to verify its value
@@ -53,17 +53,17 @@ class SmartBookRewriterEnhanced:
         
         if ACTIVE_MODEL == "GEMINI":
             self.embedder = GeminiEmbedder(output_folder=self.output_folder) # Still needed for potential future use or if summarizer internally uses it
-            self.summarizer = GeminiSummarizer(active_model=ACTIVE_MODEL)
+            self.summarizer = GeminiSummarizer(active_model=ACTIVE_MODEL, use_revision_prompt=USE_REVISION_PROMPT)
             self.structure_extractor = GeminiStructureExtractor(active_model=ACTIVE_MODEL)
             self.content_mapper = GeminiContentMapper(active_model=ACTIVE_MODEL)
             self.concept_consolidator = GeminiConceptConsolidator(active_model=ACTIVE_MODEL)
         elif ACTIVE_MODEL == "GROK":
             self.embedder = GrokEmbedder(output_folder=self.output_folder)
-            self.summarizer = GrokSummarizer(active_model=ACTIVE_MODEL)
+            self.summarizer = GrokSummarizer(active_model=ACTIVE_MODEL, use_revision_prompt=USE_REVISION_PROMPT)
             # Add Grok specific structure_extractor, content_mapper, concept_consolidator if needed
         elif ACTIVE_MODEL == "OPENAI":
             self.embedder = OpenAIEmbedder(output_folder=self.output_folder)
-            self.summarizer = OpenAISummarizer(active_model=ACTIVE_MODEL)
+            self.summarizer = OpenAISummarizer(active_model=ACTIVE_MODEL, use_revision_prompt=USE_REVISION_PROMPT)
             # Add OpenAI specific structure_extractor, content_mapper, concept_consolidator if needed
         else:
             raise ValueError(f"Unsupported ACTIVE_MODEL for Embedder/Summarizer initialization: {ACTIVE_MODEL}")
@@ -148,17 +148,18 @@ class SmartBookRewriterEnhanced:
                     
                     if cleaned_rewritten_text: # Only add if rewriting produced content
                         # Ensure no leading/trailing newlines in the content itself
-                        content_to_add = cleaned_rewritten_text.strip('\n')
-                        final_notes_markdown_parts.append(f"{markdown_heading_prefix} {node_title}\n\n{content_to_add}\n\n")
+                        # Remove any potential leading markdown heading from the LLM's output
+                        # This is a safeguard in case the LLM ignores the prompt instruction not to include headings.
+                        content_without_llm_heading = re.sub(r'^(#+\s*.*?\n\n|\s*#+\s*.*?\n)', '', cleaned_rewritten_text, count=1, flags=re.MULTILINE).strip('\n')
+                        
+                        final_notes_markdown_parts.append(f"{markdown_heading_prefix} {node_title}\n\n{content_without_llm_heading}\n\n")
                         explained_concepts.append(node_title)
                     else:
-                        logger.warning(f"Skipping empty rewritten content for node: {node_title}. Adding heading only.")
-                        final_notes_markdown_parts.append(f"{markdown_heading_prefix} {node_title}\n\n")
-                        explained_concepts.append(node_title)
+                        logger.info(f"Completely skipping node '{node_title}' due to empty rewritten content.")
+                        # Do not add anything to final_notes_markdown_parts, effectively skipping the node
                 else:
-                    logger.info(f"Skipping rewriting for node '{node_title}' due to empty consolidated content. Adding heading only.")
-                    final_notes_markdown_parts.append(f"{markdown_heading_prefix} {node_title}\n\n")
-                    explained_concepts.append(node_title)
+                    logger.info(f"Completely skipping node '{node_title}' due to empty consolidated content.")
+                    # Do not add anything to final_notes_markdown_parts, effectively skipping the node
 
                 if 'children' in node and node['children']:
                     _recursively_rewrite(node['children'], level + 1)

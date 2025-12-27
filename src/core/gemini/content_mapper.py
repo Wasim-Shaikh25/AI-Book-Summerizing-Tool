@@ -1,5 +1,6 @@
 import logging
 import json
+import re # Added for regex parsing
 from typing import List, Dict, Any, Tuple
 import google.generativeai as genai
 
@@ -38,18 +39,60 @@ class ContentMapper:
                     stream=False
                 )
                 if response.candidates and response.candidates[0].content.parts:
-                    # Remove markdown fences if present
-                    cleaned_text = response.text.strip()
-                    if cleaned_text.startswith("```json") and cleaned_text.endswith("```"):
-                        cleaned_text = cleaned_text[len("```json"): -len("```")].strip()
+                    raw_response_text = response.text.strip()
+                    raw_response_text = response.text.strip()
+                    if not raw_response_text:
+                        logger.warning("Gemini response.text was empty after stripping. Finish reason: {response.candidates[0].finish_reason if response.candidates else 'N/A'}. Full response object: {response}")
+                        return ""
+
+                    # Aggressively clean non-printable ASCII characters before JSON parsing
+                    # This helps with potential hidden characters that break json.loads
+                    cleaned_raw_response = ''.join(char for char in raw_response_text if char.isprintable() or char in ['\n', '\t'])
+                    
+                    cleaned_text = ""
+                    # Attempt to extract JSON content within markdown fences first
+                    json_match = re.search(r"```json\s*(.*?)\s*```", cleaned_raw_response, re.DOTALL)
+                    if json_match:
+                        cleaned_text = json_match.group(1).strip()
+                    else:
+                        # If no markdown fences, try to find the outermost JSON array or object
+                        # This is a more robust attempt to find valid JSON even if not perfectly formatted
+                        json_start_index = -1
+                        json_end_index = -1
+                        
+                        # Try to find an array first
+                        array_start = cleaned_raw_response.find('[')
+                        array_end = cleaned_raw_response.rfind(']')
+                        
+                        # Try to find an object second
+                        object_start = cleaned_raw_response.find('{')
+                        object_end = cleaned_raw_response.rfind('}')
+
+                        if array_start != -1 and array_end != -1 and array_start < array_end:
+                            json_start_index = array_start
+                            json_end_index = array_end
+                        elif object_start != -1 and object_end != -1 and object_start < object_end:
+                            json_start_index = object_start
+                            json_end_index = object_end
+
+                        if json_start_index != -1 and json_end_index != -1:
+                            cleaned_text = cleaned_raw_response[json_start_index : json_end_index + 1].strip()
+                        else:
+                            # Fallback: if no clear delimiters, assume the whole response is JSON or try stripping "json" prefix
+                            cleaned_text = cleaned_raw_response.strip()
+                            if cleaned_text.startswith("json"):
+                                cleaned_text = cleaned_text[4:].strip()
+                    
+                    if not cleaned_text:
+                        logger.warning(f"LLM response was empty or contained no extractable JSON after cleaning. Raw response: {cleaned_raw_response[:500]}...")
+                        return ""
                     return cleaned_text
                 else:
-                    logger.error(f"Gemini response had no valid text parts. Finish reason: {response.candidates[0].finish_reason if response.candidates else 'N/A'}")
+                    logger.error(f"Gemini response had no valid text parts. Finish reason: {response.candidates[0].finish_reason if response.candidates else 'N/A'}. Full response object: {response}")
                     return ""
         except Exception as e:
-            logger.error(f"Error generating text with {self.active_model}: {e}")
+            logger.error(f"Error generating text with {self.active_model}: {e}. Raw response: {response.text if response else 'N/A'}")
             return ""
-        return ""
 
     def _flatten_structure(self, structure: List[Dict[str, Any]], parent_title: str = "", level: int = 0) -> List[Dict[str, Any]]:
         """Flattens the hierarchical structure into a list of nodes with full paths."""
@@ -73,14 +116,26 @@ class ContentMapper:
 
         # Flatten the structure for easier LLM prompting and lookup
         flat_structure = self._flatten_structure(structured_book_with_content)
+        logger.debug(f"Flat structure titles for mapping: {[node['title'] for node in flat_structure]}")
         
         # Create a mapping from flat title to the actual node object in the hierarchical structure
         # This is a bit tricky with deep copies, so we'll use a recursive helper to find the node
         def find_node_by_path(structure_nodes, path_parts):
             if not path_parts:
                 return None
+            
+            target_title_part = path_parts[0].strip()
+            # Remove leading numbering (e.g., "1.", "1.1", "A.", "I.") from the target title part
+            target_title_part = re.sub(r"^((\d+\.)+|\w+\.)\s*", "", target_title_part).lower()
+
             for node in structure_nodes:
-                if node['title'] == path_parts[0]:
+                node_title_normalized = node['title'].strip()
+                # Remove leading numbering from the node title for comparison
+                node_title_normalized = re.sub(r"^((\d+\.)+|\w+\.)\s*", "", node_title_normalized).lower()
+                
+                # logger.debug(f"Comparing target '{target_title_part}' with node '{node_title_normalized}'") # Debugging line
+
+                if node_title_normalized == target_title_part:
                     if len(path_parts) == 1:
                         return node
                     elif 'children' in node and node['children']:
@@ -99,16 +154,40 @@ class ContentMapper:
             )
             
             # The LLM should return a JSON list of titles this chunk maps to
-            raw_mapping_json = self._generate_text(prompt, REWRITE_MAX_TOKENS // 2) # Adjust token limit
+            # Increased token limit to allow for larger JSON responses
+            raw_mapping_json = self._generate_text(prompt, REWRITE_MAX_TOKENS * 2) 
 
+            if not raw_mapping_json.strip():
+                logger.warning(f"LLM returned empty response for chunk {i+1} mapping. Skipping JSON decoding.")
+                continue # Skip to the next chunk if no JSON was returned
+
+            # Attempt to fix common JSON issues before parsing
+            # Remove trailing commas in objects/arrays that might cause errors
+            cleaned_json_string = re.sub(r',\s*([\]}])', r'\1', raw_mapping_json)
+            
             try:
-                mapped_data = json.loads(raw_mapping_json)
+                mapped_data = json.loads(cleaned_json_string)
                 if not isinstance(mapped_data, list):
-                    raise ValueError("LLM did not return a JSON list for chunk mapping.")
+                    logger.warning(f"LLM did not return a JSON list for chunk {i+1} mapping. Raw response: {cleaned_json_string}")
+                    # Fallback: If not a list, try to map the entire chunk to the first top-level node
+                    if structured_book_with_content and len(structured_book_with_content) > 0:
+                        first_top_node = structured_book_with_content[0]
+                        if 'raw_content' not in first_top_node:
+                            first_top_node['raw_content'] = []
+                        first_top_node['raw_content'].append(chunk_content)
+                        logger.warning(f"Fallback: Mapped chunk {i+1} to top-level node '{first_top_node['title']}' due to malformed LLM response.")
+                    continue # Skip to the next chunk
                 
                 for item in mapped_data:
                     if not isinstance(item, dict) or 'title' not in item or 'source_text' not in item:
-                        logger.warning(f"Invalid item in LLM mapping response for chunk {i+1}: {item}")
+                        logger.warning(f"Invalid item in LLM mapping response for chunk {i+1}: {item}. Raw response: {cleaned_json_string}")
+                        # Fallback for invalid item: map to the first top-level node
+                        if structured_book_with_content and len(structured_book_with_content) > 0:
+                            first_top_node = structured_book_with_content[0]
+                            if 'raw_content' not in first_top_node:
+                                first_top_node['raw_content'] = []
+                            first_top_node['raw_content'].append(chunk_content)
+                            logger.warning(f"Fallback: Mapped chunk {i+1} to top-level node '{first_top_node['title']}' due to invalid item in LLM response.")
                         continue
 
                     mapped_title = item['title']
@@ -121,17 +200,40 @@ class ContentMapper:
                     if target_node:
                         if 'raw_content' not in target_node:
                             target_node['raw_content'] = []
-                        # Append the extracted source_text, not the whole chunk_content
-                        if source_text: # Only add if source_text is not empty
+                        # Append the extracted source_text, or the whole chunk_content if source_text is empty
+                        if source_text:
                             target_node['raw_content'].append(source_text)
+                        else:
+                            logger.warning(f"LLM returned empty source_text for mapped title '{mapped_title}'. Using entire chunk_content as fallback.")
+                            target_node['raw_content'].append(chunk_content)
                     else:
-                        logger.warning(f"Chunk {i+1} mapped to non-existent title: {mapped_title}")
+                        logger.warning(f"Chunk {i+1} mapped to non-existent title: {mapped_title}. Using entire chunk_content as fallback to first top-level node.")
+                        # Fallback for non-existent title: map to the first top-level node
+                        if structured_book_with_content and len(structured_book_with_content) > 0:
+                            first_top_node = structured_book_with_content[0]
+                            if 'raw_content' not in first_top_node:
+                                first_top_node['raw_content'] = []
+                            first_top_node['raw_content'].append(chunk_content)
 
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to decode JSON mapping from LLM response for chunk {i+1}: {e}")
                 logger.error(f"Raw LLM response: {raw_mapping_json}")
+                # Fallback for JSONDecodeError: map entire chunk to the first top-level node
+                if structured_book_with_content and len(structured_book_with_content) > 0:
+                    first_top_node = structured_book_with_content[0]
+                    if 'raw_content' not in first_top_node:
+                        first_top_node['raw_content'] = []
+                    first_top_node['raw_content'].append(chunk_content)
+                    logger.warning(f"Fallback: Mapped chunk {i+1} to top-level node '{first_top_node['title']}' due to JSONDecodeError.")
             except Exception as e:
                 logger.error(f"An unexpected error occurred during chunk mapping for chunk {i+1}: {e}")
+                # Fallback for any other unexpected error: map entire chunk to the first top-level node
+                if structured_book_with_content and len(structured_book_with_content) > 0:
+                    first_top_node = structured_book_with_content[0]
+                    if 'raw_content' not in first_top_node:
+                        first_top_node['raw_content'] = []
+                    first_top_node['raw_content'].append(chunk_content)
+                    logger.warning(f"Fallback: Mapped chunk {i+1} to top-level node '{first_top_node['title']}' due to unexpected error.")
         
         logger.info("Finished mapping chunks to structure nodes.")
         return structured_book_with_content

@@ -51,9 +51,7 @@ PROMPT_MAP_CHUNK_TO_STRUCTURE = (
     "    *   `title`: The exact title of the structure node (string). "
     "    *   `source_text`: A string containing *only* the relevant sentences/paragraphs from the 'CHUNK TEXT' "
     "        that directly pertain to this `title`. If multiple parts of the chunk are relevant, merge them. "
-    "        If no specific text is found for a title, `source_text` should be an empty string. "
-    "2.  **DO NOT include any conversational text, markdown code block fences (```json), or any other characters "
-    "    before or after the JSON. Output ONLY the JSON array.** "
+    "2.  **Output ONLY the JSON array.** DO NOT include any conversational text, markdown code block fences (```json), or any other characters before or after the JSON. "
     "3.  **Match the `title` exactly as provided in 'BOOK STRUCTURE TITLES'.** "
     "4.  **Consider the full hierarchical path** (e.g., 'Chapter 1 > Section A > Subheading 1') when mapping. "
     "5.  **DO NOT rewrite, summarize, or generate explanations.** ONLY extract and attach raw PDF text. "
@@ -106,7 +104,7 @@ PROMPT_REWRITE_NODE_CONTROLLED = (
     "5.  **DEDUPLICATION:** DO NOT repeat explanations. If a concept is listed in 'Concepts Already Explained', assume it has been covered and DO NOT explain it again. Only reference it if necessary.\n"
     "6.  **EXPLANATION STYLE (VERY IMPORTANT):** Rewrite content so a first-time reader can understand. Each concept should implicitly answer: What it is, Why it exists, How it applies, and What happens if violated. Use short paragraphs, clear bullet points (`- `), numbered lists (`1. `), simple English, and a logical flow. Ensure consistent indentation for lists.\n"
     "7.  **EXAMPLES & CASE LAWS (DO NOT SHORTEN):** If examples or case laws exist in the 'NODE CONTENT', keep ALL of them. Explain facts, issue, and outcome in simple words. DO NOT compress them to one line or remove reasoning. Case laws are learning tools, not just references.\n"
-    "8.  **LENGTH CONTROL (IMPORTANT):** You MUST expand content by rewriting sentences in simpler English, breaking long sentences into clearer shorter sentences, or explaining existing ideas using different words already implied in the text. You MUST NOT add new concepts, examples, reasoning, or interpretations. Target output: 115-125% of original informational content, focusing on clarity for a first-time learner. Ensure this expansion is always applied.\n"
+    "8.  **LENGTH CONTROL (IMPORTANT):** You MUST condense content by rewriting sentences in simpler English, breaking long sentences into clearer shorter sentences, or explaining existing ideas using different words already implied in the text. You MUST NOT add new concepts, examples, reasoning, or interpretations. Target output: 50-60% of original informational content, focusing on conciseness for a first-time learner. Ensure this reduction is always applied.\n"
     "9.  **ABSOLUTE PROHIBITIONS:**\n"
     "    *   ❌ No over-summarization.\n"
     "    *   ❌ No 'In short', 'Briefly', 'Simply put' replacements.\n"
@@ -120,7 +118,7 @@ PROMPT_REWRITE_NODE_CONTROLLED = (
 
 PROMPT_REWRITE_CHUNK_SIMPLIFIED = (
     "You are an expert in simplifying complex legal texts for exam preparation. "
-    "Your task is to rewrite the provided 'CHUNK TEXT' in *simpler, direct English*, making it *slightly shorter*, "
+    "Your task is to rewrite the provided 'CHUNK TEXT' in *simpler, direct English*, making it *significantly shorter* (aim for 50% reduction), "
     "while strictly preserving the original meaning, structure, and order. "
     "**CRITICAL RULES (NON-NEGOTIABLE):**\n"
     "1.  **DO NOT introduce any information that is not explicitly present in the CHUNK TEXT.** This includes explanations, background knowledge, interpretations, or legal reasoning not directly stated. "

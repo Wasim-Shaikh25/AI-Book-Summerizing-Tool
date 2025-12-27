@@ -41,3 +41,20 @@ PROMPT_REWRITE_CHUNK = (
     "{additional_context}" # Placeholder for additional context
     "MASTER BRAIN:\n{master_brain}\n\nCHAPTER TEXT:\n{chunk}\n"
 )
+
+PROMPT_REVISION_NOTES = (
+    "Rewrite the following content for the node '{node_title}' into *very short, concise, and revision-focused* notes, using simple English.\n"
+    "Focus on extracting only the main points, key facts, and essential case details. Explanations should be extremely brief, just enough to convey the core concept for quick revision.\n"
+    "**CRITICAL INSTRUCTIONS:**\n"
+    "1.  **Conciseness:** Prioritize brevity. Every sentence should be packed with information, eliminating any verbose language.\n"
+    "2.  **Main Points Only:** Extract only the most critical information. Do not elaborate unless absolutely necessary for clarity.\n"
+    "3.  **Case Details Intact (Shortened):** If case details are present, keep them but summarize them to their absolute core, highlighting the key ruling or principle.\n"
+    "4.  **No Repetition:** Do not repeat information already covered. Assume the user has a basic understanding and needs quick refreshers.\n"
+    "5.  **Structure:** Use concise bullet points. Avoid lengthy paragraphs.\n"
+    "6.  **Avoid Generic Headings:** Do not use generic introductory headings like 'Introduction', 'Overview', 'Concepts', 'Definitions'. Start directly with the content.\n"
+    "7.  **Context of Explained Concepts:** Avoid re-explaining concepts listed in `explained_concepts_context`. Focus on new or deeper aspects.\n\n"
+    "**Node Title:** {node_title}\n"
+    "**Node Content:**\n{node_content}\n\n"
+    "**Concepts Already Explained:**\n{explained_concepts_context}\n\n"
+    "**Rewritten Revision Notes:**\n"
+)
