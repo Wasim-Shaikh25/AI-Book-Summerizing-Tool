@@ -40,53 +40,53 @@ class ContentMapper:
                 )
                 if response.candidates and response.candidates[0].content.parts:
                     raw_response_text = response.text.strip()
-                    raw_response_text = response.text.strip()
                     if not raw_response_text:
-                        logger.warning("Gemini response.text was empty after stripping. Finish reason: {response.candidates[0].finish_reason if response.candidates else 'N/A'}. Full response object: {response}")
+                        logger.warning(f"Gemini response.text was empty after stripping. Finish reason: {response.candidates[0].finish_reason if response.candidates else 'N/A'}. Full response object: {response}")
                         return ""
 
                     # Aggressively clean non-printable ASCII characters before JSON parsing
-                    # This helps with potential hidden characters that break json.loads
                     cleaned_raw_response = ''.join(char for char in raw_response_text if char.isprintable() or char in ['\n', '\t'])
                     
-                    cleaned_text = ""
-                    # Attempt to extract JSON content within markdown fences first
+                    extracted_json_text = ""
+                    
+                    extracted_json_text = ""
+                    
+                    # Strategy 1: Extract JSON content within markdown fences
                     json_match = re.search(r"```json\s*(.*?)\s*```", cleaned_raw_response, re.DOTALL)
                     if json_match:
-                        cleaned_text = json_match.group(1).strip()
-                    else:
-                        # If no markdown fences, try to find the outermost JSON array or object
-                        # This is a more robust attempt to find valid JSON even if not perfectly formatted
-                        json_start_index = -1
-                        json_end_index = -1
-                        
-                        # Try to find an array first
-                        array_start = cleaned_raw_response.find('[')
-                        array_end = cleaned_raw_response.rfind(']')
-                        
-                        # Try to find an object second
-                        object_start = cleaned_raw_response.find('{')
-                        object_end = cleaned_raw_response.rfind('}')
-
-                        if array_start != -1 and array_end != -1 and array_start < array_end:
-                            json_start_index = array_start
-                            json_end_index = array_end
-                        elif object_start != -1 and object_end != -1 and object_start < object_end:
-                            json_start_index = object_start
-                            json_end_index = object_end
-
-                        if json_start_index != -1 and json_end_index != -1:
-                            cleaned_text = cleaned_raw_response[json_start_index : json_end_index + 1].strip()
-                        else:
-                            # Fallback: if no clear delimiters, assume the whole response is JSON or try stripping "json" prefix
-                            cleaned_text = cleaned_raw_response.strip()
-                            if cleaned_text.startswith("json"):
-                                cleaned_text = cleaned_text[4:].strip()
+                        extracted_json_text = json_match.group(1).strip()
                     
-                    if not cleaned_text:
-                        logger.warning(f"LLM response was empty or contained no extractable JSON after cleaning. Raw response: {cleaned_raw_response[:500]}...")
-                        return ""
-                    return cleaned_text
+                    # Strategy 2: If markdown fences fail, try to find the first complete and valid JSON object or array
+                    if not extracted_json_text:
+                        # Iterate through the response to find potential JSON start points
+                        for i in range(len(cleaned_raw_response)):
+                            if cleaned_raw_response[i] == '{' or cleaned_raw_response[i] == '[':
+                                # Attempt to find the matching end brace/bracket
+                                balance = 0
+                                for j in range(i, len(cleaned_raw_response)):
+                                    char = cleaned_raw_response[j]
+                                    if char == '{' or char == '[':
+                                        balance += 1
+                                    elif char == '}' or char == ']':
+                                        balance -= 1
+                                    
+                                    if balance == 0:
+                                        candidate = cleaned_raw_response[i : j + 1].strip()
+                                        try:
+                                            json.loads(candidate) # Validate if it's actual JSON
+                                            extracted_json_text = candidate
+                                            break # Found a valid JSON, stop searching
+                                        except json.JSONDecodeError:
+                                            # This balanced block was not valid JSON, continue searching
+                                            pass
+                                if extracted_json_text: # If a valid JSON was found in this outer loop, break
+                                    break
+                    
+                    if not extracted_json_text:
+                        logger.warning(f"LLM response did not contain any parsable JSON. Raw response: {cleaned_raw_response[:500]}...")
+                        return "" # Return empty if no valid JSON block is found
+
+                    return extracted_json_text
                 else:
                     logger.error(f"Gemini response had no valid text parts. Finish reason: {response.candidates[0].finish_reason if response.candidates else 'N/A'}. Full response object: {response}")
                     return ""

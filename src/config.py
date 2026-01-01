@@ -33,7 +33,6 @@ GROK_MODEL = os.getenv("GROK_MODEL", "llama-3.1-8b-instant") # Replace with actu
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "") # Replace with actual OpenAI API key
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano") # Replace with actual OpenAI model name
 
-
 # Toggle for revision notes prompt
 USE_REVISION_PROMPT = True
 
