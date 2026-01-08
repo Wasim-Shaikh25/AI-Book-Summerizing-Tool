@@ -1,0 +1,183 @@
+import logging
+import os
+from typing import Optional, Any
+from src.interaction.command_parser import CommandParser, IntentResult
+from src.core.retrieval_engine import RetrievalEngine
+from src.core.content_generation_engine import ContentGenerationEngine
+from src.export.word_exporter import WordExporter
+from src.storage.topic_repository import TopicRepository
+from src.storage.knowledge_store import KnowledgeStore
+from src.config import OUTPUT_FOLDER
+
+logger = logging.getLogger(__name__)
+
+class CommandLoop:
+    """
+    The main terminal-based command loop for the Knowledge Engine.
+    Implements the Intent Processing Pipeline.
+    """
+    def __init__(self):
+        self.parser = CommandParser()
+        self.store = KnowledgeStore()
+        self.topic_repo = TopicRepository(self.store)
+        self.retrieval_engine = RetrievalEngine(self.topic_repo)
+        self.gen_engine = ContentGenerationEngine(self.parser.client)
+        self.word_exporter = WordExporter(output_folder=OUTPUT_FOLDER)
+        self.rewriter: Optional[Any] = None
+        self.current_file_path: Optional[str] = None
+        
+        self.last_generated_response: Optional[str] = None
+        self.running = True
+
+    def start(self):
+        print("\n" + "="*50)
+        print("AI KNOWLEDGE ENGINE - INTERACTIVE CHAT")
+        print("Please provide a full PDF file path to begin, or type 'exit' to quit.")
+        print("="*50 + "\n")
+
+        while self.running:
+            try:
+                user_input = input("You> ").strip()
+                if not user_input:
+                    continue
+                
+                # Clean input (strip quotes and newlines which often come from terminal wrapping)
+                clean_input = user_input.strip().strip('"').strip("'").replace('\n', '').replace('\r', '')
+                
+                # Check if input is a file path
+                if clean_input.lower().endswith(".pdf") and (os.path.exists(clean_input) or (":" in clean_input and "\\" in clean_input)):
+                    if os.path.exists(clean_input):
+                        self._handle_ingestion(clean_input)
+                    else:
+                        print(f"[!] File not found: {clean_input}")
+                    continue
+
+                # STEP 1: Intent Understanding (Fixed commands or Gemini analysis)
+                result = self.parser.parse_intent(user_input)
+                
+                if result == "exit":
+                    self.running = False
+                    print("Goodbye!")
+                    continue
+                elif result == "help":
+                    self._show_help()
+                    continue
+                elif result == "export":
+                    self._handle_export()
+                    continue
+                
+                if isinstance(result, IntentResult):
+                    self._process_intent_pipeline(result)
+                else:
+                    print("I didn't understand that. Type 'help' for usage.")
+            
+            except KeyboardInterrupt:
+                print("\nUse 'exit' to quit.")
+            except Exception as e:
+                logger.error(f"Error in command loop: {e}")
+                print(f"An error occurred: {e}")
+
+    def _process_intent_pipeline(self, intent: IntentResult):
+        """
+        Executes the 4-step Intent Processing Pipeline.
+        """
+        if not self.rewriter and intent.scope == "full_book":
+            print("[!] Please ingest a book first by providing its file path.")
+            return
+
+        print(f"[*] Processing {intent.task_type}...")
+
+        if intent.scope == "full_book" and self.rewriter:
+            # Use the specialized pipeline for full book operations
+            results = self.rewriter.run(intent=intent, export_to_word=True, specific_file=self.current_file_path)
+            if "error" in results:
+                print(f"[!] Error: {results['error']}")
+                return
+            response = results['markdown']
+        else:
+            # STEP 2: Knowledge Retrieval
+            # STEP 3: Coverage Check
+            chunks, knowledge_gap = self.retrieval_engine.retrieve(intent)
+            
+            # STEP 4: Content Writing
+            response = self.gen_engine.generate(intent, chunks, knowledge_gap)
+        
+        if response:
+            print("\n" + "-"*30)
+            print(response)
+            print("-"*30 + "\n")
+            self.last_generated_response = response
+        else:
+            print("[!] Failed to generate content.")
+
+    def _handle_export(self):
+        if not self.last_generated_response:
+            print("[!] Warning: No answer exists yet to export. Please ask a question or request notes first.")
+            return
+        
+        print("[*] Exporting last generated answer to Word...")
+        try:
+            # Using existing document formatting rules via WordExporter
+            # We'll use a generic title for individual exports
+            book_data = self.word_exporter.assemble_full_book_structured_text(
+                [self.last_generated_response], 
+                "Exported_Notes"
+            )
+            # Disable TOC for single answer exports to keep it direct
+            file_path = self.word_exporter.structured_text_to_word(
+                book_data, 
+                "Exported_Notes.docx",
+                include_toc=False
+            )
+            print(f"[+] Successfully exported to: {file_path}")
+        except Exception as e:
+            logger.error(f"Export failed: {e}")
+            print(f"[!] Export failed: {e}")
+
+    def _handle_ingestion(self, file_path: str):
+        """
+        Handles the ingestion of a new PDF file.
+        """
+        from src.core.pipeline import SmartBookRewriterEnhanced
+        import os
+        
+        print(f"[*] Ingesting file: {file_path}")
+        
+        # Determine directory and filename
+        pdf_dir = os.path.dirname(file_path)
+        
+        # Initialize rewriter with the specific directory
+        # We'll use a subfolder 'output' in the same directory as the PDF for results
+        output_dir = os.path.join(pdf_dir, "output")
+        
+        try:
+            self.rewriter = SmartBookRewriterEnhanced(
+                pdf_folder=pdf_dir,
+                output_folder=output_dir
+            )
+            # We need to make sure the rewriter only processes THIS specific file
+            self.rewriter.ingest(specific_file=file_path)
+            self.current_file_path = file_path
+            
+            # Update repositories in the loop to use the new data
+            self.topic_repo = self.rewriter.topic_repo
+            self.retrieval_engine = RetrievalEngine(self.topic_repo)
+            
+            print(f"[+] Ingestion complete. You can now ask questions about '{self.rewriter.book_title}'.")
+        except Exception as e:
+            logger.error(f"Ingestion failed: {e}")
+            print(f"[!] Ingestion failed: {e}")
+
+    def _show_help(self):
+        print("\nAVAILABLE COMMANDS:")
+        print("  exit                       - Immediately stops the system safely.")
+        print("  help                       - Displays this usage instructions.")
+        print("  export                     - Exports the LAST GENERATED ANSWER into a Word (.docx) file.")
+        print("  [File Path]                - Provide a full .pdf path to ingest a new book.")
+        print("\nDYNAMIC USER INTENT EXAMPLES:")
+        print("  - 'rewrite the book in simple English'")
+        print("  - 'give me full book summary'")
+        print("  - 'create short study notes'")
+        print("  - 'create revision notes'")
+        print("  - 'answer this question: what is photosynthesis?'")
+        print("\nNote: Formatting is system-controlled to ensure academic quality.\n")
