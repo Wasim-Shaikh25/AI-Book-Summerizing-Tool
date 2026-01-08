@@ -24,3 +24,6 @@ Thumbs.db
 
 # Sensitive information (e.g., API keys, passwords)
 .env
+
+# Project specific
+output/
