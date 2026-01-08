@@ -37,7 +37,7 @@ class WordExporter:
             f.write(content)
         return filepath
 
-    def structured_text_to_word(self, book_data: dict, output_filename: str, toc_depth: int = 3) -> str:
+    def structured_text_to_word(self, book_data: dict, output_filename: str, toc_depth: int = 3, include_toc: bool = True) -> str:
         """
         Converts structured text data into a Word document using Pandoc
         and a reference DOCX for styling.
@@ -64,11 +64,14 @@ class WordExporter:
                 "pandoc",
                 temp_md_path,
                 "-o", output_path,
-                "--reference-doc", REFERENCE_DOCX_PATH,
-                "--toc", # Add table of contents
-                f"--toc-depth={toc_depth}" # Up to specified heading level in TOC
-                # Removed --wrap=none as it might interfere with paragraph justification
+                "--reference-doc", REFERENCE_DOCX_PATH
             ]
+            
+            if include_toc:
+                pandoc_command.extend([
+                    "--toc",
+                    f"--toc-depth={toc_depth}"
+                ])
 
             logger.info(f"Running Pandoc command: {' '.join(pandoc_command)}")
             
@@ -114,7 +117,7 @@ if __name__ == "__main__":
         "## Chapter 2: Advanced Topics",
         "Another paragraph here, also justified."
     ]
-    sample_title = "Sample Contract Law Notes"
+    sample_title = "Sample Book Notes"
 
     book_data_example = exporter.assemble_full_book_structured_text(sample_notes, sample_title)
     
