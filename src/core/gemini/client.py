@@ -28,7 +28,7 @@ class GeminiClient:
         response_schema: Optional[Type[BaseModel]] = None
     ) -> Union[str, Dict[str, Any]]:
         """
-        Generates content from Gemini. If response_schema is provided, 
+        Generates content from Gemini (Synchronous). If response_schema is provided, 
         it enforces JSON output and validates it against the schema.
         """
         config = generation_config or {
@@ -39,8 +39,6 @@ class GeminiClient:
 
         if response_schema:
             config["response_mime_type"] = "application/json"
-            # Note: In newer Gemini SDKs, you can pass response_schema directly.
-            # For compatibility, we'll ensure the prompt asks for JSON and we validate it.
 
         try:
             response = self.model.generate_content(prompt, generation_config=config)
@@ -58,6 +56,45 @@ class GeminiClient:
 
         except Exception as e:
             logger.error(f"Error during Gemini generation: {str(e)}")
+            if response_schema:
+                return {}
+            return ""
+
+    async def generate_content_async(
+        self, 
+        prompt: str, 
+        generation_config: Optional[Dict[str, Any]] = None,
+        response_schema: Optional[Type[BaseModel]] = None
+    ) -> Union[str, Dict[str, Any]]:
+        """
+        Generates content from Gemini (Asynchronous). If response_schema is provided, 
+        it enforces JSON output and validates it against the schema.
+        """
+        config = generation_config or {
+            "temperature": 0.1,
+            "top_p": 1,
+            "top_k": 1,
+        }
+
+        if response_schema:
+            config["response_mime_type"] = "application/json"
+
+        try:
+            response = await self.model.generate_content_async(prompt, generation_config=config)
+            
+            if not response or not response.text:
+                logger.error("Gemini returned an empty response.")
+                return "" if not response_schema else {}
+
+            raw_text = response.text.strip()
+            
+            if response_schema:
+                return self._parse_and_validate(raw_text, response_schema)
+            
+            return raw_text
+
+        except Exception as e:
+            logger.error(f"Error during Gemini async generation: {str(e)}")
             if response_schema:
                 return {}
             return ""

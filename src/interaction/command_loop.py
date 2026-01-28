@@ -4,6 +4,7 @@ from typing import Optional, Any
 from src.interaction.command_parser import CommandParser, IntentResult
 from src.core.retrieval_engine import RetrievalEngine
 from src.core.content_generation_engine import ContentGenerationEngine
+from src.core.gemini.renderer_profiles import PROFILES
 from src.export.word_exporter import WordExporter
 from src.storage.topic_repository import TopicRepository
 from src.storage.knowledge_store import KnowledgeStore
@@ -71,8 +72,9 @@ class CommandLoop:
                 else:
                     print("I didn't understand that. Type 'help' for usage.")
             
-            except KeyboardInterrupt:
-                print("\nUse 'exit' to quit.")
+            except (KeyboardInterrupt, EOFError):
+                print("\nExiting...")
+                self.running = False
             except Exception as e:
                 logger.error(f"Error in command loop: {e}")
                 print(f"An error occurred: {e}")
@@ -95,12 +97,21 @@ class CommandLoop:
                 return
             response = results['markdown']
         else:
-            # STEP 2: Knowledge Retrieval
+            # STEP 2: Knowledge Retrieval (Blueprint-Aware)
             # STEP 3: Coverage Check
             chunks, knowledge_gap = self.retrieval_engine.retrieve(intent)
             
-            # STEP 4: Content Writing
-            response = self.gen_engine.generate(intent, chunks, knowledge_gap)
+            if knowledge_gap and not intent.allow_external_knowledge:
+                print("[!] The provided material does not contain sufficient information to answer this question.")
+                return
+
+            # Select Renderer Profile
+            profile = PROFILES["NOTES_MODE"]
+            if intent.task_type == "question_answer":
+                profile = PROFILES["EXAM_NOTES_MODE"] # Default Q&A to strict exam mode
+
+            # STEP 4: Content Writing (Profile-Aware)
+            response = self.gen_engine.generate(intent, chunks, knowledge_gap, profile=profile)
         
         if response:
             print("\n" + "-"*30)
@@ -123,11 +134,11 @@ class CommandLoop:
                 [self.last_generated_response], 
                 "Exported_Notes"
             )
-            # Disable TOC for single answer exports to keep it direct
+            # Enable TOC for exports as requested by user
             file_path = self.word_exporter.structured_text_to_word(
                 book_data, 
                 "Exported_Notes.docx",
-                include_toc=False
+                include_toc=True
             )
             print(f"[+] Successfully exported to: {file_path}")
         except Exception as e:

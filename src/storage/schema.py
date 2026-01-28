@@ -12,6 +12,7 @@ class BookMetadata(BaseModel):
     subject: str = "unknown"
     source_file_name: str
     total_pages: int
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 class TopicKnowledge(BaseModel):
     """
@@ -19,6 +20,7 @@ class TopicKnowledge(BaseModel):
     Designed for Question-Answering and semantic retrieval.
     """
     topic_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    concept_id: Optional[str] = None # Stable ID across sessions
     book_id: str
     topic: str
     subtopic: Optional[str] = None

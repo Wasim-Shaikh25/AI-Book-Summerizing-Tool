@@ -26,9 +26,10 @@ class StructureExtractor:
 
     def extract_structure(self, full_text: str) -> List[Dict[str, Any]]:
         """
-        Extracts the hierarchical structure from the full PDF text.
+        Extracts the hierarchical Table of Contents (TOC) from the full PDF text.
+        This structure serves as a CLOSED SET of fixed structural slots.
         """
-        logger.info("Extracting book structure using Gemini...")
+        logger.info("Extracting CLOSED SET book structure using Gemini...")
         prompt = PROMPT_EXTRACT_BOOK_STRUCTURE.format(full_text=full_text)
         
         # Use schema-driven generation
@@ -42,4 +43,5 @@ class StructureExtractor:
             logger.error("Failed to extract book structure or received invalid format.")
             return []
 
+        # The extracted structure is now the authoritative CLOSED SET of slots.
         return result["structure"]

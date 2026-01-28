@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 from src.core.gemini.client import GeminiClient
 from src.core.gemini.prompts.prompts import PROMPT_NORMALIZE_TOPIC
+from src.utils.cpu_manager import CPUExecutionManager
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,22 @@ class TopicNormalizer:
     """
     def __init__(self):
         self.client = GeminiClient()
+        self.cpu_manager = CPUExecutionManager()
+
+    def normalize_text_cpu(self, text: str) -> str:
+        """
+        CPU-bound text normalization (lowercase, strip, remove special chars).
+        """
+        import re
+        text = text.lower().strip()
+        text = re.sub(r'[^\w\s]', '', text)
+        return text
+
+    def batch_normalize_text_cpu(self, texts: List[str]) -> List[str]:
+        """
+        Runs basic text normalization in parallel using the CPU pool.
+        """
+        return self.cpu_manager.run_parallel(self.normalize_text_cpu, texts)
 
     def normalize(self, raw_topic_name: str, consolidated_text: str) -> Dict[str, Any]:
         """
