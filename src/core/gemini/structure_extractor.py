@@ -24,6 +24,37 @@ class StructureExtractor:
     def __init__(self, active_model: str = "GEMINI"):
         self.client = GeminiClient()
 
+    def _deduplicate_structure(self, nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Recursively deduplicates nodes with the same title, merging their children.
+        """
+        seen_titles = {}
+        deduplicated = []
+        
+        for node in nodes:
+            title = node['title'].strip()
+            # Normalize title for comparison (case-insensitive, strip whitespace)
+            norm_title = title.lower()
+            
+            if norm_title in seen_titles:
+                # Merge children if they exist
+                existing_node = seen_titles[norm_title]
+                if 'children' in node and node['children']:
+                    if 'children' not in existing_node or not existing_node['children']:
+                        existing_node['children'] = []
+                    existing_node['children'].extend(node['children'])
+                    # Recursively deduplicate the newly extended children
+                    existing_node['children'] = self._deduplicate_structure(existing_node['children'])
+            else:
+                # New title, add to deduplicated list
+                new_node = node.copy()
+                if 'children' in new_node and new_node['children']:
+                    new_node['children'] = self._deduplicate_structure(new_node['children'])
+                seen_titles[norm_title] = new_node
+                deduplicated.append(new_node)
+                
+        return deduplicated
+
     def extract_structure(self, full_text: str) -> List[Dict[str, Any]]:
         """
         Extracts the hierarchical structure from the full PDF text.
@@ -42,4 +73,5 @@ class StructureExtractor:
             logger.error("Failed to extract book structure or received invalid format.")
             return []
 
-        return result["structure"]
+        # Apply programmatic deduplication as a safety layer
+        return self._deduplicate_structure(result["structure"])

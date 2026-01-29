@@ -67,9 +67,7 @@ class PDFReader:
                     if not text:
                         # Image-only page detected
                         logger.info(f"Image-only page detected: Page {page_num + 1}. Routing to OCR...")
-                        ocr_results = self.ocr_reader.extract_text_from_images(pdf_path)
-                        # Filter results for this specific page
-                        page_ocr_text = "\n".join([res["text"] for res in ocr_results if res["page_number"] == page_num + 1])
+                        page_ocr_text = self.ocr_reader.extract_text_from_page(doc, page_num)
                         if page_ocr_text:
                             pages_data.append({"text": f"[SOURCE: IMAGE] {page_ocr_text}", "page_number": total_page_counter})
                     else:
