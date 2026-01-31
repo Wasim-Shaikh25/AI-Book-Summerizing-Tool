@@ -13,7 +13,7 @@ from src.core.gemini.prompts.prompts import (
     PROMPT_ANALYZE_CONTENT_DEPTH,
     PROMPT_MAP_CONCEPTS_TO_STRUCTURE
 )
-from src.core.semantic.models import SourceBlueprint, DerivedBlueprint, BlueprintNode, ExplanationDepth
+from src.core.semantic.models import SourceBlueprint, DerivedBlueprint, BlueprintNode, ExplanationDepth, ExplanationVariant
 
 logger = logging.getLogger(__name__)
 
@@ -256,6 +256,7 @@ class BlueprintBuilder:
         )
 
         if response:
+            logger.debug(f"Raw LLM response for content depth analysis: {response}") # Added debug log
             try:
                 # Clean response if it contains markdown fences
                 clean_response = re.sub(r'```json\s*|\s*```', '', response).strip()
@@ -268,20 +269,26 @@ class BlueprintBuilder:
                 
                 result = json.loads(clean_response)
                 
-                depth_data = result.get("explanation_depth", {})
+                # Parse new explanation_depth_type and explanation_components
+                usage_type = result.get("usage_type", "explained")
+                explanation_depth_type = result.get("explanation_depth_type", "intermediate")
+                explanation_components = result.get("explanation_components", {})
+
                 depth = ExplanationDepth(
-                    definition=depth_data.get("definition", False),
-                    intuition=depth_data.get("intuition", False),
-                    derivation=depth_data.get("derivation", False),
-                    examples=depth_data.get("examples", "none"),
-                    proof=depth_data.get("proof", False)
+                    definition=explanation_components.get("definition", False),
+                    intuition=explanation_components.get("intuition", False),
+                    derivation=explanation_components.get("derivation", False),
+                    examples=explanation_components.get("examples", "brief"), # Changed default from "none" to "brief"
+                    proof=explanation_components.get("proof", False),
+                    # Set allowed_expansion based on inferred depth type
+                    allowed_expansion="enhance" if explanation_depth_type == "detailed" else "rephrase_only"
                 )
-                return result.get("usage_type", "explained"), depth, result.get("max_source_extent")
+                return usage_type, depth, None # max_source_extent is no longer used for importance
             except Exception as e:
                 logger.error(f"Failed to parse content depth analysis: {e}")
 
         # Fallback to basic heuristic if LLM fails
-        return "explained", ExplanationDepth(definition=True), "1 paragraph"
+        return "explained", ExplanationDepth(definition=True, examples="brief", intuition=False, derivation=False, proof=False), None
 
     def build_derived_blueprint(self, source_blueprint: SourceBlueprint, authorial_intent: Optional[str] = None) -> DerivedBlueprint:
         """
@@ -297,7 +304,8 @@ class BlueprintBuilder:
             data = {
                 "title": node.title,
                 "usage_type": node.usage_type,
-                "concept_ids": node.concept_ids
+                "concept_ids": node.concept_ids,
+                "explanation_depth": node.explanation_depth.dict() # Include depth for LLM context
             }
             if node.children:
                 data["children"] = [serialize_node(c) for c in node.children]
@@ -332,6 +340,9 @@ class BlueprintBuilder:
             source_nodes_by_id = {}
             source_topic_ids = {c["concept_id"] for c in source_blueprint.concepts}
             
+            # Also map concepts by ID to get their explanation variants
+            source_concepts_by_id = {c["concept_id"]: c for c in source_blueprint.concepts}
+
             def count_slots(nodes):
                 count = 0
                 for n in nodes:
@@ -355,36 +366,57 @@ class BlueprintBuilder:
                 # ENFORCE MAPPING INTEGRITY: Every node MUST map to ≥1 SourceBlueprint topic_id
                 valid_cids = [cid for cid in cids if cid in source_topic_ids]
                 if not valid_cids and level > 1: # Chapters (level 1) might be containers
-                    logger.warning(f"REJECTING DerivedBlueprint node with no valid SourceBlueprint mapping: '{title}'")
+                    logger.warning(f"REJECTING DerivedBlueprint node with no valid SourceBlueprint mapping: '{title}' (Level: {level})")
                     return None
 
                 # ENFORCE DEPTH: Cannot increase hierarchy depth
                 if level > 3:
                     logger.warning(f"REJECTING DerivedBlueprint node exceeding depth limit: '{title}'")
                     return None
-                usage_type = "referenced_only"
-                depth = ExplanationDepth()
-                extents = []
                 
-                for cid in cids:
+                # Aggregate explanation depth and variants from source concepts
+                aggregated_depth = ExplanationDepth()
+                aggregated_variants = []
+                aggregated_examples = []
+                
+                for cid in valid_cids:
+                    src_concept = source_concepts_by_id.get(cid)
+                    src_node = source_nodes_by_id.get(cid) # Define src_node here
+                    if src_concept and src_node: # Ensure src_node is available
+                        # Aggregate explanation depth components
+                        src_depth = src_node.explanation_depth
+                        if src_depth:
+                            aggregated_depth.definition = aggregated_depth.definition or src_depth.definition
+                            aggregated_depth.intuition = aggregated_depth.intuition or src_depth.intuition
+                            aggregated_depth.derivation = aggregated_depth.derivation or src_depth.derivation
+                            aggregated_depth.proof = aggregated_depth.proof or src_depth.proof
+                            
+                            levels = {"brief": 1, "full": 2} # Removed "none"
+                            if levels.get(src_depth.examples, 0) > levels.get(aggregated_depth.examples, 0):
+                                aggregated_depth.examples = src_depth.examples
+                        
+                        # Aggregate explanation variants
+                        if "explanation_variants" in src_concept and src_concept["explanation_variants"]:
+                            for variant in src_concept["explanation_variants"]:
+                                aggregated_variants.append(ExplanationVariant(**variant).dict())
+                        
+                        # Aggregate examples
+                        if "examples" in src_concept and src_concept["examples"]:
+                            aggregated_examples.extend(src_concept["examples"])
+                
+                # Deduplicate aggregated examples
+                aggregated_examples = list(set(aggregated_examples))
+
+                # Determine usage_type for the derived node
+                # If any mapped source concept was 'explained', then this derived node is 'explained'
+                derived_usage_type = "referenced_only"
+                for cid in valid_cids:
                     src_node = source_nodes_by_id.get(cid)
-                    if src_node:
-                        if src_node.usage_type == "explained":
-                            usage_type = "explained"
-                        elif src_node.usage_type == "contextual" and usage_type == "referenced_only":
-                            usage_type = "contextual"
-                        
-                        depth.definition = depth.definition or src_node.explanation_depth.definition
-                        depth.intuition = depth.intuition or src_node.explanation_depth.intuition
-                        depth.derivation = depth.derivation or src_node.explanation_depth.derivation
-                        depth.proof = depth.proof or src_node.explanation_depth.proof
-                        
-                        levels = {"none": 0, "brief": 1, "full": 2}
-                        if levels.get(src_node.explanation_depth.examples, 0) > levels.get(depth.examples, 0):
-                            depth.examples = src_node.explanation_depth.examples
-                        
-                        if src_node.max_source_extent:
-                            extents.append(src_node.max_source_extent)
+                    if src_node and src_node.usage_type == "explained":
+                        derived_usage_type = "explained"
+                        break
+                    elif src_node and src_node.usage_type == "contextual":
+                        derived_usage_type = "contextual" # If no explained, but some contextual
 
                 derived_id = hashlib.sha256(f"{title}_{level}_{'_'.join(cids)}".encode()).hexdigest()[:12]
 
@@ -393,11 +425,20 @@ class BlueprintBuilder:
                     level=level,
                     derived_topic_id=derived_id,
                     concept_ids=cids,
-                    usage_type=usage_type,
-                    explanation_depth=depth,
+                    usage_type=derived_usage_type,
+                    explanation_depth=aggregated_depth,
                     allowed_expansion=raw.get("allowed_expansion", "rephrase_only"),
-                    max_source_extent="; ".join(extents) if extents else None
+                    # max_source_extent is no longer directly used for importance, can be omitted or derived differently
+                    # For now, we'll keep it None as it's not directly passed from _analyze_content_depth anymore
+                    max_source_extent=None 
                 )
+                
+                # Log merges/renames
+                if raw.get("original_title") and raw["original_title"] != title:
+                    logger.info(f"DerivedBlueprint: Renamed '{raw['original_title']}' to '{title}'.")
+                if len(cids) > 1:
+                    logger.info(f"DerivedBlueprint: Merged concepts {cids} into node '{title}'.")
+
                 if "children" in raw:
                     children = []
                     for c in raw["children"]:
@@ -444,7 +485,7 @@ class BlueprintBuilder:
                 source_blueprint_id=source_blueprint.book_id,
                 book_id=source_blueprint.book_id,
                 hierarchy=derived_hierarchy,
-                concepts=source_blueprint.concepts,
+                concepts=source_blueprint.concepts, # Keep original concepts for now, will refine
                 authorial_intent=authorial_intent
             )
             
@@ -625,30 +666,55 @@ class BlueprintBuilder:
         if len(concepts) < 2:
             return concepts
 
-        logger.info("Starting contradiction detection phase...")
+        logger.info("Starting contradiction detection and explanation aggregation phase...")
         
-        groups: Dict[str, List[Dict[str, Any]]] = {}
+        # Group concepts by normalized term for initial comparison
+        concept_groups: Dict[str, List[Dict[str, Any]]] = {}
         for c in concepts:
             name = c.get("concept_name", "unknown").lower().strip()
-            if name not in groups:
-                groups[name] = []
-            groups[name].append(c)
+            if name not in concept_groups:
+                concept_groups[name] = []
+            concept_groups[name].append(c)
 
-        resolved_list = []
-        for name, group in groups.items():
-            if len(group) < 2:
-                resolved_list.extend(group)
+        final_concepts_with_variants = []
+        for name, group in concept_groups.items():
+            if not group:
                 continue
 
-            logger.info(f"Checking contradictions for concept group: {name}")
-            primary = group[0]
+            # The first concept in the group (sorted by confidence) becomes the canonical concept
+            # All its explanations will be stored as variants.
+            canonical_concept = group[0]
             
+            # Initialize explanation variants list for the canonical concept
+            if "explanation_variants" not in canonical_concept:
+                canonical_concept["explanation_variants"] = []
+
+            # Add the primary explanation as a variant
+            if canonical_concept.get("verbatim_evidence"):
+                canonical_concept["explanation_variants"].append(ExplanationVariant(
+                    text=canonical_concept["verbatim_evidence"],
+                    depth_type="detailed", # Heuristic for now, will be refined by _analyze_content_depth
+                    usage_type="core",
+                    source_chapter_or_chunk_range=f"Chunk {canonical_concept.get('source_chunk_index')}",
+                    original_concept_id=canonical_concept.get("concept_id"),
+                    confidence=canonical_concept.get("confidence", 0.0)
+                ).dict())
+            
+            # Aggregate examples from all concepts in the group into the canonical concept
+            all_examples = list(set(ex for c in group for ex in c.get("examples", [])))
+            if "examples" not in canonical_concept:
+                canonical_concept["examples"] = []
+            canonical_concept["examples"].extend(all_examples)
+            canonical_concept["examples"] = list(set(canonical_concept["examples"])) # Deduplicate examples
+
+            # Process remaining concepts in the group for contradictions or aggregation
             for i in range(1, len(group)):
-                secondary = group[i]
+                secondary_concept = group[i]
                 
+                # Perform TRUE CONTRADICTION DETECTION
                 prompt = PROMPT_DETECT_CONTRADICTION.format(
-                    text1=primary.get("description", ""),
-                    text2=secondary.get("description", "")
+                    text1=canonical_concept.get("verbatim_evidence", ""),
+                    text2=secondary_concept.get("verbatim_evidence", "")
                 )
                 
                 response = self.client.generate_content(prompt, generation_config={"temperature": 0.1})
@@ -658,29 +724,48 @@ class BlueprintBuilder:
                         result = json.loads(clean_response)
                         
                         if result.get("conflict"):
-                            logger.warning(f"CONTRADICTION DETECTED for '{name}': {result.get('reason')}")
-                            
-                            pref_idx = result.get("preferred_index", 1)
-                            if pref_idx == 2:
-                                rejected = primary
-                                primary = secondary
-                            else:
-                                rejected = secondary
-                                
-                            if "metadata" not in primary: primary["metadata"] = {}
-                            primary["metadata"]["conflict"] = True
-                            primary["metadata"]["rejected_reference"] = {
-                                "description": rejected.get("description"),
-                                "source_chunk": rejected.get("source_chunk_index"),
-                                "reason": result.get("reason")
+                            logger.warning(f"TRUE CONTRADICTION DETECTED for '{name}': {result.get('reason')}")
+                            # Mark the canonical concept with conflict metadata
+                            if "metadata" not in canonical_concept: canonical_concept["metadata"] = {}
+                            canonical_concept["metadata"]["conflict"] = True
+                            canonical_concept["metadata"]["contradiction_report"] = {
+                                "conflicting_concept_name": secondary_concept.get("concept_name"),
+                                "reason": result.get("reason"),
+                                "conflicting_evidence_preview": secondary_concept.get("verbatim_evidence", "")[:100] + "...",
+                                "resolution_strategy": "flagged_for_manual_review" # No automatic resolution for true conflicts
                             }
-                            primary["metadata"]["resolution_status"] = "resolved_to_primary"
-                    except Exception as e:
-                        logger.error(f"Contradiction check failed: {e}")
-            
-            resolved_list.append(primary)
+                            # Do NOT add conflicting explanation as a variant
+                            logger.info(f"Logged true contradiction for '{name}'. Conflicting explanation from chunk {secondary_concept.get('source_chunk_index')} was NOT aggregated.")
+                        else:
+                            # If no true conflict, aggregate the explanation as a variant
+                            logger.info(f"No true semantic contradiction for '{name}'. Aggregating explanation from chunk {secondary_concept.get('source_chunk_index')} as a variant.")
+                            if secondary_concept.get("verbatim_evidence"):
+                                canonical_concept["explanation_variants"].append(ExplanationVariant(
+                                    text=secondary_concept["verbatim_evidence"],
+                                    depth_type="intermediate", # Heuristic for now
+                                    usage_type="contextual", # Heuristic for now
+                                    source_chapter_or_chunk_range=f"Chunk {secondary_concept.get('source_chunk_index')}",
+                                    original_concept_id=secondary_concept.get("concept_id"),
+                                    confidence=secondary_concept.get("confidence", 0.0)
+                                ).dict())
+                                logger.info(f"Explanation from chunk {secondary_concept.get('source_chunk_index')} aggregated as variant for '{name}'.")
+                            
+                            if "metadata" not in canonical_concept: canonical_concept["metadata"] = {}
+                            canonical_concept["metadata"]["aggregated_from"] = canonical_concept["metadata"].get("aggregated_from", []) + [{
+                                "concept_name": secondary_concept.get("concept_name"),
+                                "source_chunk": secondary_concept.get("source_chunk_index"),
+                                "explanation_aggregated": True,
+                                "examples_merged": True
+                            }]
+                            logger.info(f"Examples from chunk {secondary_concept.get('source_chunk_index')} merged for '{name}'.")
 
-        return resolved_list
+                    except Exception as e:
+                        logger.error(f"Contradiction detection or aggregation failed for '{name}': {e}")
+                        logger.debug(f"Raw LLM response: {response}")
+            
+            final_concepts_with_variants.append(canonical_concept)
+
+        return final_concepts_with_variants
 
     def _detect_concept_drift(self, resolved_concepts: List[Dict[str, Any]], all_raw_concepts: List[Dict[str, Any]]):
         """

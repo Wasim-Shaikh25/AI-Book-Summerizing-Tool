@@ -6,7 +6,7 @@ class ExplanationDepth(BaseModel):
     definition: bool = False
     intuition: bool = False
     derivation: bool = False
-    examples: str = "none"  # none | brief | full
+    examples: str = "brief"  # brief | full
     proof: bool = False
     allowed_expansion: str = "rephrase_only" # rephrase_only | enhance | compress
 
@@ -59,7 +59,19 @@ class ConceptTermRecord(BaseModel):
     term: str
     classification: str  # EXPLAINED_CONCEPT | REFERENCED_ONLY | DEPENDENCY_ONLY
     verbatim_evidence: Optional[str] = None
+    examples: Optional[List[str]] = Field(default_factory=list) # New field for examples
     source_location: Optional[str] = None
+    confidence: float = 0.0
+
+class ExplanationVariant(BaseModel):
+    """
+    Represents a single explanation for a concept, with metadata about its depth and origin.
+    """
+    text: str
+    depth_type: str = "intermediate" # introductory | intermediate | detailed
+    usage_type: str = "core" # core | contextual
+    source_chapter_or_chunk_range: Optional[str] = None
+    original_concept_id: Optional[str] = None # The ID of the raw concept this variant came from
     confidence: float = 0.0
 
 # Handle recursive model definition

@@ -111,7 +111,15 @@ class AcademicNoteWriter:
         rel_context = ", ".join([f"{r['topic']} ({r['relation']})" for r in relationships]) if relationships else "None identified."
         explained_context = ", ".join(already_explained) if already_explained else "None yet."
         reference_only_context = ", ".join(reference_only_terms) if reference_only_terms else "None identified."
-        examples_context = json.dumps(processed_examples, indent=2) if processed_examples else "None provided."
+        
+        # Improved formatting for examples_context
+        if processed_examples:
+            examples_formatted = []
+            for i, ex in enumerate(processed_examples):
+                examples_formatted.append(f"Example {i+1}: {ex.get('text', '')}")
+            examples_context = "\n".join(examples_formatted)
+        else:
+            examples_context = "None provided."
 
         effective_freedom = profile.content_freedom.value
         if render_confidence < 0.5 and effective_freedom == "allow_enhancement":
@@ -218,7 +226,7 @@ class AcademicNoteWriter:
                 "definition": "definition" in raw_response.lower(),
                 "intuition": any(w in raw_response.lower() for w in ["imagine", "analogy", "intuition"]),
                 "derivation": any(w in raw_response.lower() for w in ["derived", "formula", "equation"]),
-                "examples": "brief" if "example" in raw_response.lower() else "none",
+                "examples": "full" if processed_examples and any(ex.get('text', '').lower() in raw_response.lower() for ex in processed_examples) else "none",
                 "proof": "proof" in raw_response.lower()
             }
             

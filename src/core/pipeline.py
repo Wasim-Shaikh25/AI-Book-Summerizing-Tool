@@ -205,24 +205,37 @@ class SmartBookRewriterEnhanced:
         logger.info("Phase 4: Storing finalized Knowledge Blueprints...")
         # Store concepts from derived blueprint (which came from source)
         for concept in derived_blueprint.concepts:
-            # Ensure raw_content is a string to satisfy Pydantic validation
-            description = concept.get("description")
-            if description is None:
-                description = ""
-                
+            # Determine importance based on TOC position and explicit explanation
+            # For now, a simple heuristic: concepts mapped to higher-level TOC nodes are more important
+            # This will be refined further in BlueprintBuilder._analyze_content_depth
+            importance_score = 0.5 # Default
+            if concept.get("classification") == "EXPLAINED_CONCEPT" and concept.get("verbatim_evidence"):
+                importance_score = 0.8 # Explicitly explained concepts are more important
+
+            # Aggregate all explanation variants into a single raw_content string for TopicKnowledge
+            # This is a temporary measure until TopicKnowledge can store ExplanationVariant objects directly
+            all_explanations_text = ""
+            if "explanation_variants" in concept and concept["explanation_variants"]:
+                for variant in concept["explanation_variants"]:
+                    all_explanations_text += f"--- Explanation ({variant.get('depth_type', 'unknown')}, {variant.get('usage_type', 'unknown')}) from {variant.get('source_chapter_or_chunk_range', 'unknown')} ---\n"
+                    all_explanations_text += variant.get("text", "") + "\n\n"
+            else:
+                all_explanations_text = concept.get("verbatim_evidence", "") # Fallback to original if no variants
+
             topic_knowledge = TopicKnowledge(
                 concept_id=concept.get("concept_id"),
                 book_id=book_meta.book_id,
                 topic=concept.get("concept_name", "Unknown Concept"),
-                importance_score=concept.get("importance_score", 0.5),
-                raw_content=str(description),
+                importance_score=importance_score, # Updated importance logic
+                raw_content=all_explanations_text.strip(), # Store aggregated explanations
                 topic_type="canonical_concept",
                 metadata={
                     "aliases": concept.get("aliases", []),
                     "examples": concept.get("examples", []),
                     "dependencies": concept.get("dependencies", []),
                     "confidence": concept.get("confidence", 0.0),
-                    "explanation_evidence": concept.get("explanation_evidence")
+                    "explanation_evidence": concept.get("verbatim_evidence"), # Keep original evidence for reference
+                    "explanation_variants": concept.get("explanation_variants", []) # Store variants in metadata
                 }
             )
             self.topic_repo.save_topic(topic_knowledge)
@@ -411,7 +424,7 @@ class SmartBookRewriterEnhanced:
                     "source_topic_ids": cids,
                     "relationships": [{"topic": d, "relation": "depends_on"} for d in list(set(slot_dependencies))],
                     "already_explained": [], 
-                    "tagged_examples": slot_examples,
+                    "tagged_examples": slot_examples, # Pass collected examples
                     "reference_only_terms": reference_only_terms,
                     "profile": profile,
                     "render_confidence": render_confidence,
@@ -570,11 +583,24 @@ class SmartBookRewriterEnhanced:
         if not has_drift: conf_reasons.append("low drift")
         else: conf_reasons.append("detected drift")
 
+        # Collect detailed contradiction reports
+        contradiction_reports = []
+        for c in canonical_concepts:
+            if isinstance(c.metadata, dict) and c.metadata.get("conflict"):
+                report = {
+                    "concept_name": c.topic,
+                    "reason": c.metadata.get("rejected_reference", {}).get("reason", "Unknown reason"),
+                    "rejected_content_preview": c.metadata.get("rejected_reference", {}).get("description", "")[:100] + "...",
+                    "resolution_status": c.metadata.get("resolution_status", "resolved_to_primary")
+                }
+                contradiction_reports.append(report)
+
         result = {
             "markdown": final_content,
             "metadata": {
                 "render_confidence": render_confidence,
-                "confidence_reason": ", ".join(conf_reasons)
+                "confidence_reason": ", ".join(conf_reasons),
+                "contradiction_reports": contradiction_reports if contradiction_reports else "No contradictions detected."
             }
         }
         

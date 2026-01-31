@@ -79,6 +79,7 @@ class ConceptDiscoveryAgent:
                     term=term_data.get("term", "Unknown"),
                     classification=classification,
                     verbatim_evidence=term_data.get("verbatim_evidence"),
+                    examples=term_data.get("examples", []), # New: parse examples
                     source_location=term_data.get("source_location"),
                     confidence=float(term_data.get("confidence", 0.0))
                 )

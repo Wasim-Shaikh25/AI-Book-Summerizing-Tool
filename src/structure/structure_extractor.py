@@ -19,10 +19,34 @@ StructureNode.model_rebuild()
 
 class StructureExtractor:
     """
-    Extracts the hierarchical structure of a book using Gemini.
+    Extracts the hierarchical structure of a book using Gemini and deduplicates it.
     """
     def __init__(self, active_model: str = "GEMINI"):
         self.client = GeminiClient()
+
+    def _merge_duplicate_nodes(self, nodes: List[StructureNode]) -> List[StructureNode]:
+        """
+        Recursively merges duplicate nodes in a hierarchical structure.
+        Assumes that a "brief" TOC will appear before a "detailed" one.
+        """
+        if not nodes:
+            return []
+
+        seen_titles = {}  # type: Dict[str, StructureNode]
+        deduplicated_nodes = []
+
+        for node in nodes:
+            normalized_title = node.title.lower().strip()
+            if normalized_title in seen_titles:
+                # If title seen, append children to the existing node
+                existing_node = seen_titles[normalized_title]
+                existing_node.children.extend(self._merge_duplicate_nodes(node.children))
+            else:
+                # If new title, add to seen and process its children
+                node.children = self._merge_duplicate_nodes(node.children)
+                seen_titles[normalized_title] = node
+                deduplicated_nodes.append(node)
+        return deduplicated_nodes
 
     def extract_structure(self, full_text: str) -> List[Dict[str, Any]]:
         """
@@ -43,5 +67,9 @@ class StructureExtractor:
             logger.error("Failed to extract book structure or received invalid format.")
             return []
 
-        # The extracted structure is now the authoritative CLOSED SET of slots.
-        return result["structure"]
+        # Deduplicate the extracted structure
+        structure_nodes = [StructureNode.model_validate(item) for item in result["structure"]]
+        deduplicated_structure = self._merge_duplicate_nodes(structure_nodes)
+
+        # Convert back to list of dicts for consistency if needed, or adjust downstream
+        return [node.model_dump() for node in deduplicated_structure]
