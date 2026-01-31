@@ -278,7 +278,6 @@ class BlueprintBuilder:
                     definition=explanation_components.get("definition", False),
                     intuition=explanation_components.get("intuition", False),
                     derivation=explanation_components.get("derivation", False),
-                    examples=explanation_components.get("examples", "brief"), # Changed default from "none" to "brief"
                     proof=explanation_components.get("proof", False),
                     # Set allowed_expansion based on inferred depth type
                     allowed_expansion="enhance" if explanation_depth_type == "detailed" else "rephrase_only"
@@ -288,7 +287,7 @@ class BlueprintBuilder:
                 logger.error(f"Failed to parse content depth analysis: {e}")
 
         # Fallback to basic heuristic if LLM fails
-        return "explained", ExplanationDepth(definition=True, examples="brief", intuition=False, derivation=False, proof=False), None
+        return "explained", ExplanationDepth(definition=True, intuition=False, derivation=False, proof=False), None
 
     def build_derived_blueprint(self, source_blueprint: SourceBlueprint, authorial_intent: Optional[str] = None) -> DerivedBlueprint:
         """
@@ -377,7 +376,6 @@ class BlueprintBuilder:
                 # Aggregate explanation depth and variants from source concepts
                 aggregated_depth = ExplanationDepth()
                 aggregated_variants = []
-                aggregated_examples = []
                 
                 for cid in valid_cids:
                     src_concept = source_concepts_by_id.get(cid)
@@ -391,22 +389,11 @@ class BlueprintBuilder:
                             aggregated_depth.derivation = aggregated_depth.derivation or src_depth.derivation
                             aggregated_depth.proof = aggregated_depth.proof or src_depth.proof
                             
-                            levels = {"brief": 1, "full": 2} # Removed "none"
-                            if levels.get(src_depth.examples, 0) > levels.get(aggregated_depth.examples, 0):
-                                aggregated_depth.examples = src_depth.examples
-                        
                         # Aggregate explanation variants
                         if "explanation_variants" in src_concept and src_concept["explanation_variants"]:
                             for variant in src_concept["explanation_variants"]:
                                 aggregated_variants.append(ExplanationVariant(**variant).dict())
-                        
-                        # Aggregate examples
-                        if "examples" in src_concept and src_concept["examples"]:
-                            aggregated_examples.extend(src_concept["examples"])
                 
-                # Deduplicate aggregated examples
-                aggregated_examples = list(set(aggregated_examples))
-
                 # Determine usage_type for the derived node
                 # If any mapped source concept was 'explained', then this derived node is 'explained'
                 derived_usage_type = "referenced_only"
@@ -700,13 +687,6 @@ class BlueprintBuilder:
                     confidence=canonical_concept.get("confidence", 0.0)
                 ).dict())
             
-            # Aggregate examples from all concepts in the group into the canonical concept
-            all_examples = list(set(ex for c in group for ex in c.get("examples", [])))
-            if "examples" not in canonical_concept:
-                canonical_concept["examples"] = []
-            canonical_concept["examples"].extend(all_examples)
-            canonical_concept["examples"] = list(set(canonical_concept["examples"])) # Deduplicate examples
-
             # Process remaining concepts in the group for contradictions or aggregation
             for i in range(1, len(group)):
                 secondary_concept = group[i]
@@ -755,9 +735,9 @@ class BlueprintBuilder:
                                 "concept_name": secondary_concept.get("concept_name"),
                                 "source_chunk": secondary_concept.get("source_chunk_index"),
                                 "explanation_aggregated": True,
-                                "examples_merged": True
+                                "examples_merged": False # Examples are no longer merged
                             }]
-                            logger.info(f"Examples from chunk {secondary_concept.get('source_chunk_index')} merged for '{name}'.")
+                            logger.info(f"Examples from chunk {secondary_concept.get('source_chunk_index')} were NOT merged for '{name}'.")
 
                     except Exception as e:
                         logger.error(f"Contradiction detection or aggregation failed for '{name}': {e}")
@@ -808,8 +788,8 @@ class BlueprintBuilder:
                         result = json.loads(clean_response)
                         
                         if result.get("drift_warning"):
-                            logger.warning(f"CONCEPT DRIFT DETECTED for '{name}': {result.get('drift_reason')}")
+                            logger.warning(f"CONCEPT DRIFT DETECTED for '{name}': {result.get('reason')}")
                             concept["drift_warning"] = True
-                            concept["drift_reason"] = result.get("drift_reason")
+                            concept["drift_reason"] = result.get("reason")
                     except Exception as e:
                         logger.error(f"Drift detection parsing failed: {e}")

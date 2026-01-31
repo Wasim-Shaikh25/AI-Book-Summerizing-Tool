@@ -200,7 +200,7 @@ PROMPT_CLASSIFY_INTENT = (
 
 PROMPT_REWRITE_CHUNK_SIMPLIFIED = (
     "You are an expert in simplifying complex academic texts for exam preparation. "
-    "Your task is to rewrite the provided 'CHUNK TEXT' in *simpler, direct English*, making it *significantly shorter* (aim for 50% reduction), "
+    "Your task is to rewrite the provided 'CHUNK TEXT' in *simpler, direct English*, making it *similarly concise*, "
     "while strictly preserving the original meaning, structure, and order. "
     "**CRITICAL RULES (NON-NEGOTIABLE):**\n"
     "1.  **DO NOT introduce any information that is not explicitly present in the CHUNK TEXT.** This includes explanations, background knowledge, interpretations, or reasoning not directly stated. "
@@ -265,7 +265,7 @@ PROMPT_CLASSIFY_TOPIC = (
     "2. **NO REWRITING:** Do not rewrite the content.\n"
     "3. **EXAM LOGIC:** Prioritize core concepts, theories, and processes that are essential for exams.\n"
     "4. **STRICT JSON:** Output ONLY a JSON object with the following keys:\n"
-    "   - 'topic_type': One of 'core_concept', 'sub_concept', 'definition_only', 'example', 'application', 'reference_only'.\n"
+    "   - 'topic_type': One of 'core_concept', 'sub_concept', 'definition_only', 'application', 'reference_only'.\n"
     "   - 'explanation_depth': One of 'detailed', 'brief', 'none'.\n"
     "   - 'definition_status': One of 'needs_explanation', 'already_explained', 'reference_only'.\n\n"
     "TOPIC NAME: {topic_name}\n"
@@ -296,7 +296,6 @@ PROMPT_ACADEMIC_NOTE_WRITER = (
     "- **Profile Name:** {profile_name}\n"
     "- **Bullet Ratio:** {bullet_ratio}\n"
     "- **Prose Ratio:** {prose_ratio}\n"
-    "- **Example Handling:** {example_handling}\n"
     "- **Content Freedom:** {content_freedom}\n\n"
     "**INPUT CONTEXT:**\n"
     "- **Explanation Depth:** {explanation_depth}\n"
@@ -319,7 +318,6 @@ PROMPT_ACADEMIC_NOTE_WRITER = (
     "    - **DEPTH LIMITS**: You must NOT exceed the recorded explanation depth provided in 'Explanation Depth'. If a field is 'Forbidden', do not include it.\n"
     "4. **STRICT REFERENCE HANDLING (MANDATORY):** If a term is listed in 'Reference-Only Terms':\n"
     "    - It must NOT be explained or defined.\n"
-    "    - It must NOT receive examples.\n"
     "    - It must NOT be expanded into subtopics.\n"
     "    - You may ONLY mention it once as context if it appears in the 'NODE CONTENT'.\n"
     "    - DO NOT use external knowledge to expand on these terms.\n"
@@ -331,11 +329,7 @@ PROMPT_ACADEMIC_NOTE_WRITER = (
     "   - If 'allow_enhancement': You are encouraged to improve explanations, add missing clarity, and replace weak text with stronger academic prose. You MUST stay concept-aligned with the 'NODE CONTENT' but can use external pedagogical techniques to enhance understanding.\n"
     "   - If 'restricted': Stick closely to the source. Allow minor rephrasing for clarity and flow, but do not add new concepts or analogies.\n"
     "   - If 'forbidden': You MUST use ONLY the information present in the 'NODE CONTENT'. DO NOT introduce new ideas, DO NOT add external knowledge, and DO NOT make inferences beyond what is explicitly stated. Any violation of this rule will result in the output being rejected.\n"
-    "5. **EXAMPLE HANDLING (TAG-AWARE):**\n"
-    "   - If 'keep_all', include all provided 'TAGGED EXAMPLES'.\n"
-    "   - If 'compress_or_drop_low_relevance', drop 'low' relevance examples and shorten 'compressible' ones.\n"
-    "   - ALWAYS preserve core facts and outcomes, bolding key identifiers.\n"
-    "6. **OUTPUT FORMAT (STRICT):**\n"
+    "5. **OUTPUT FORMAT (STRICT):**\n"
     "   Your output MUST start with a JSON block containing any FLEX actions taken, followed by the Markdown content.\n"
     "   Example:\n"
     "   ```json\n"
@@ -351,8 +345,7 @@ PROMPT_ACADEMIC_NOTE_WRITER = (
     "   Follow the JSON block with the Markdown content.\n\n"
     "**STRICT GUARD CLAUSE:**\n"
     "{guard_clause}\n\n"
-    "NODE CONTENT:\n{node_content}\n\n"
-    "TAGGED EXAMPLES:\n{tagged_examples}\n"
+    "NODE CONTENT:\n{node_content}\n"
 )
 
 PROMPT_VERIFY_OUTPUT = (
@@ -424,19 +417,6 @@ PROMPT_DETECT_CONCEPT_DRIFT = (
     "LATE EXPLANATION:\n{late_text}\n"
 )
 
-PROMPT_COMPRESS_EXAMPLE = (
-    "You are a Precise Compression Agent. Your task is to shorten the provided 'ACADEMIC EXAMPLE' while preserving its core logic.\n\n"
-    "**COMPRESSION RULES:**\n"
-    "1. **PRESERVE PREMISE:** Keep the initial problem, scenario, or setup.\n"
-    "2. **PRESERVE OUTCOME:** Keep the final conclusion, result, or takeaway.\n"
-    "3. **REMOVE NARRATIVE:** Strip away story-like wording, character names (unless essential), and descriptive filler.\n"
-    "4. **REMOVE REDUNDANCY:** Delete any repeated explanations or meta-commentary.\n"
-    "5. **NO NEW CONTENT:** Do not add any information not present in the original. You may only rephrase for conciseness.\n\n"
-    "**OUTPUT FORMAT:**\n"
-    "Return ONLY the compressed text. No intros or outros.\n\n"
-    "ACADEMIC EXAMPLE:\n{example_text}\n"
-)
-
 PROMPT_ANALYZE_CONTENT_DEPTH = (
     "You are an expert Academic Content Analyst. Your task is to analyze the provided 'CONTENT' "
     "in the context of the structural node '{node_path}' and determine its usage type, explanation depth, and source extent.\n\n"
@@ -453,7 +433,6 @@ PROMPT_ANALYZE_CONTENT_DEPTH = (
     "   - definition: Does it provide a formal definition? (true/false)\n"
     "   - intuition: Does it provide conceptual intuition or analogies? (true/false)\n"
     "   - derivation: Does it show how a formula or principle is derived? (true/false)\n"
-    "   - examples: What is the level of examples provided? (brief | full) - MUST be 'brief' or 'full'. If no examples are found, default to 'brief'.\n"
     "   - proof: Does it include a formal proof or theorem verification? (true/false)\n\n"
     "**CRITICAL RULES:**\n"
     "- If the content is empty or irrelevant, set usage_type to 'referenced_only' and explanation_depth_type to 'none'.\n"
@@ -468,7 +447,6 @@ PROMPT_ANALYZE_CONTENT_DEPTH = (
     "    \"definition\": true/false,\n"
     "    \"intuition\": true/false,\n"
     "    \"derivation\": true/false,\n"
-    "    \"examples\": \"none/brief/full\",\n"
     "    \"proof\": true/false\n"
     "  }}\n"
     "}}\n"
