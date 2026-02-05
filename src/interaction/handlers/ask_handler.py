@@ -4,6 +4,7 @@ from src.core.gemini.client import GeminiClient
 from src.interaction.command_parser import IntentResult
 from src.core.retrieval_engine import RetrievalEngine
 from src.core.content_generation_engine import ContentGenerationEngine
+from src.core.gemini.renderer_profiles import PROFILES
 from src.export.output_manager import OutputManager
 from src.config import OUTPUT_FOLDER
 
@@ -22,11 +23,18 @@ class AskHandler:
         """
         Processes a question-answering intent.
         """
-        # 1. Retrieve relevant chunks and detect gaps
+        # 1. Retrieve relevant chunks and detect gaps (Blueprint-Aware)
         chunks, knowledge_gap = self.retrieval_engine.retrieve(intent)
         
-        # 2. Generate structured response
-        answer = self.generation_engine.generate(intent, chunks, knowledge_gap)
+        if knowledge_gap and not intent.allow_external_knowledge:
+            print("[!] The provided material does not contain sufficient information to answer this question.")
+            return
+
+        # Select Renderer Profile
+        profile = PROFILES["EXAM_NOTES_MODE"] # Default Q&A to strict exam mode
+
+        # 2. Generate structured response (Profile-Aware)
+        answer = self.generation_engine.generate(intent, chunks, knowledge_gap, profile=profile)
         
         # 3. Handle output
         self.output_manager.handle_output(answer, intent, title=f"Answer for {intent.normalized_query[:30]}")

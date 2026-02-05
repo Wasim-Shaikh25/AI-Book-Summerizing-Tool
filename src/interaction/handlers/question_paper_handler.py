@@ -7,6 +7,7 @@ from src.core.gemini.client import GeminiClient
 from src.interaction.command_parser import IntentResult
 from src.core.retrieval_engine import RetrievalEngine
 from src.core.content_generation_engine import ContentGenerationEngine
+from src.core.gemini.renderer_profiles import PROFILES
 from src.export.output_manager import OutputManager
 from src.config import OUTPUT_FOLDER
 from src.utils.pdf_reader import PDFReader
@@ -63,12 +64,18 @@ class QuestionPaperHandler:
         combined_query = "\n".join(questions)
         temp_intent = intent.model_copy(update={"normalized_query": combined_query, "scope": "multiple_questions"})
         
-        # 2. Retrieve relevant chunks for all questions
+        # 2. Retrieve relevant chunks for all questions (Blueprint-Aware)
         chunks, knowledge_gap = self.retrieval_engine.retrieve(temp_intent)
         
-        # 3. Generate all answers in one call
-        # We update the intent to explicitly ask for all questions to be answered
-        final_content = self.generation_engine.generate(temp_intent, chunks, knowledge_gap)
+        if knowledge_gap and not intent.allow_external_knowledge:
+            print("[!] The provided material does not contain sufficient information to answer these questions.")
+            return
+
+        # Select Renderer Profile
+        profile = PROFILES["EXAM_NOTES_MODE"] # Default for question papers
+
+        # 3. Generate all answers in one call (Profile-Aware)
+        final_content = self.generation_engine.generate(temp_intent, chunks, knowledge_gap, profile=profile)
         
         # 4. Handle output
         self.output_manager.handle_output(

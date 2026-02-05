@@ -14,6 +14,7 @@ class IntentResult(BaseModel):
     language_level: str = Field(..., description="simple, standard, advanced")
     format_type: str = Field(..., description="paragraph, bullet, exam_oriented")
     allow_external_knowledge: bool = Field(True)
+    refers_to_original_structure: bool = Field(False, description="True if user refers to original book structure (e.g., 'Chapter 4', 'Topic 3.2')")
     normalized_query: str = Field(..., description="A concise, search-optimized version of the user's request.")
 
 class CommandParser:
