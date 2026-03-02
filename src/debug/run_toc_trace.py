@@ -90,7 +90,7 @@ def run(pdf_path: str) -> Path:
     hierarchy = assign_hierarchy(final_heads)
     _write_json(out_dir / "04_hierarchy.preview.json", _preview_lines(hierarchy, 40))
 
-    toc = clean_toc(hierarchy)
+    toc = clean_toc(hierarchy, fragments=frag_result.fragments)
     _write_json(out_dir / "05_toc_cleaned.json", toc)
 
     return out_dir
