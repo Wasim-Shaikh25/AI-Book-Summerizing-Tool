@@ -1,0 +1,452 @@
+[
+  {
+    "id": "L5:MODULE 1:",
+    "text": "MODULE 1:",
+    "start_line": 5,
+    "end_line": 5,
+    "before_context": [
+      " ",
+      " ",
+      "LAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION "
+    ],
+    "after_context": [
+      "General Principles of Tort ",
+      "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. ",
+      "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. "
+    ],
+    "full_context_preview": " \n \nLAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION \n\nDETECTED_HEADING: MODULE 1:\n\nGeneral Principles of Tort \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. ",
+    "is_valid": true
+  },
+  {
+    "id": "L6:General Principles of Tort",
+    "text": "General Principles of Tort",
+    "start_line": 6,
+    "end_line": 6,
+    "before_context": [
+      " ",
+      "LAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION ",
+      "MODULE 1: "
+    ],
+    "after_context": [
+      "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. ",
+      "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. ",
+      "1.3 Damnum Sine Injuria, Injuria Sine Damnum "
+    ],
+    "full_context_preview": " \nLAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION \nMODULE 1: \n\nDETECTED_HEADING: General Principles of Tort\n\n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n1.3 Damnum Sine Injuria, Injuria Sine Damnum ",
+    "is_valid": true
+  },
+  {
+    "id": "L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+    "text": "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.",
+    "start_line": 7,
+    "end_line": 7,
+    "before_context": [
+      "LAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION ",
+      "MODULE 1: ",
+      "General Principles of Tort "
+    ],
+    "after_context": [
+      "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. ",
+      "1.3 Damnum Sine Injuria, Injuria Sine Damnum ",
+      "1.4 Volenti non-fit Injuria, Ubi jus ibi remedium "
+    ],
+    "full_context_preview": "LAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION \nMODULE 1: \nGeneral Principles of Tort \n\nDETECTED_HEADING: 1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.\n\n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n1.3 Damnum Sine Injuria, Injuria Sine Damnum \n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium ",
+    "is_valid": true
+  },
+  {
+    "id": "L8:1.2 Distinction from Crime, Breach of Contract etc., who may",
+    "text": "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.",
+    "start_line": 8,
+    "end_line": 8,
+    "before_context": [
+      "MODULE 1: ",
+      "General Principles of Tort ",
+      "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. "
+    ],
+    "after_context": [
+      "1.3 Damnum Sine Injuria, Injuria Sine Damnum ",
+      "1.4 Volenti non-fit Injuria, Ubi jus ibi remedium ",
+      "1.5 Extinguishment of Liability in Tort "
+    ],
+    "full_context_preview": "MODULE 1: \nGeneral Principles of Tort \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n\nDETECTED_HEADING: 1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.\n\n1.3 Damnum Sine Injuria, Injuria Sine Damnum \n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium \n1.5 Extinguishment of Liability in Tort ",
+    "is_valid": true
+  },
+  {
+    "id": "L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum",
+    "text": "1.3 Damnum Sine Injuria, Injuria Sine Damnum",
+    "start_line": 9,
+    "end_line": 9,
+    "before_context": [
+      "General Principles of Tort ",
+      "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. ",
+      "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. "
+    ],
+    "after_context": [
+      "1.4 Volenti non-fit Injuria, Ubi jus ibi remedium ",
+      "1.5 Extinguishment of Liability in Tort ",
+      "1.6 General Defenses and Discharge of Torts "
+    ],
+    "full_context_preview": "General Principles of Tort \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n\nDETECTED_HEADING: 1.3 Damnum Sine Injuria, Injuria Sine Damnum\n\n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium \n1.5 Extinguishment of Liability in Tort \n1.6 General Defenses and Discharge of Torts ",
+    "is_valid": true
+  },
+  {
+    "id": "L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium",
+    "text": "1.4 Volenti non-fit Injuria, Ubi jus ibi remedium",
+    "start_line": 10,
+    "end_line": 10,
+    "before_context": [
+      "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. ",
+      "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. ",
+      "1.3 Damnum Sine Injuria, Injuria Sine Damnum "
+    ],
+    "after_context": [
+      "1.5 Extinguishment of Liability in Tort ",
+      "1.6 General Defenses and Discharge of Torts ",
+      " "
+    ],
+    "full_context_preview": "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n1.3 Damnum Sine Injuria, Injuria Sine Damnum \n\nDETECTED_HEADING: 1.4 Volenti non-fit Injuria, Ubi jus ibi remedium\n\n1.5 Extinguishment of Liability in Tort \n1.6 General Defenses and Discharge of Torts \n ",
+    "is_valid": true
+  },
+  {
+    "id": "L11:1.5 Extinguishment of Liability in Tort",
+    "text": "1.5 Extinguishment of Liability in Tort",
+    "start_line": 11,
+    "end_line": 11,
+    "before_context": [
+      "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. ",
+      "1.3 Damnum Sine Injuria, Injuria Sine Damnum ",
+      "1.4 Volenti non-fit Injuria, Ubi jus ibi remedium "
+    ],
+    "after_context": [
+      "1.6 General Defenses and Discharge of Torts ",
+      " ",
+      "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. "
+    ],
+    "full_context_preview": "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n1.3 Damnum Sine Injuria, Injuria Sine Damnum \n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium \n\nDETECTED_HEADING: 1.5 Extinguishment of Liability in Tort\n\n1.6 General Defenses and Discharge of Torts \n \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. ",
+    "is_valid": true
+  },
+  {
+    "id": "L12:1.6 General Defenses and Discharge of Torts",
+    "text": "1.6 General Defenses and Discharge of Torts",
+    "start_line": 12,
+    "end_line": 12,
+    "before_context": [
+      "1.3 Damnum Sine Injuria, Injuria Sine Damnum ",
+      "1.4 Volenti non-fit Injuria, Ubi jus ibi remedium ",
+      "1.5 Extinguishment of Liability in Tort "
+    ],
+    "after_context": [
+      " ",
+      "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. ",
+      " "
+    ],
+    "full_context_preview": "1.3 Damnum Sine Injuria, Injuria Sine Damnum \n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium \n1.5 Extinguishment of Liability in Tort \n\nDETECTED_HEADING: 1.6 General Defenses and Discharge of Torts\n\n \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n ",
+    "is_valid": true
+  },
+  {
+    "id": "L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+    "text": "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.",
+    "start_line": 14,
+    "end_line": 14,
+    "before_context": [
+      "1.5 Extinguishment of Liability in Tort ",
+      "1.6 General Defenses and Discharge of Torts ",
+      " "
+    ],
+    "after_context": [
+      " ",
+      "A. INTRODUCTION: ",
+      " 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct "
+    ],
+    "full_context_preview": "1.5 Extinguishment of Liability in Tort \n1.6 General Defenses and Discharge of Torts \n \n\nDETECTED_HEADING: 1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.\n\n \nA. INTRODUCTION: \n 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct ",
+    "is_valid": true
+  },
+  {
+    "id": "L16:A. INTRODUCTION:",
+    "text": "A. INTRODUCTION:",
+    "start_line": 16,
+    "end_line": 16,
+    "before_context": [
+      " ",
+      "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. ",
+      " "
+    ],
+    "after_context": [
+      " 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct ",
+      "which is ‘tortious’ ,  or, twisted.. The equivalent word in English is “Wrong”. In Roman it is “delict” and in ",
+      "Sanskrit it is “Jimha” which means ‘crooked’. "
+    ],
+    "full_context_preview": " \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n \n\nDETECTED_HEADING: A. INTRODUCTION:\n\n 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct \nwhich is ‘tortious’ ,  or, twisted.. The equivalent word in English is “Wrong”. In Roman it is “delict” and in \nSanskrit it is “Jimha” which means ‘crooked’. ",
+    "is_valid": true
+  },
+  {
+    "id": "L20:Definition of Tort",
+    "text": "Definition of Tort",
+    "start_line": 20,
+    "end_line": 20,
+    "before_context": [
+      " 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct ",
+      "which is ‘tortious’ ,  or, twisted.. The equivalent word in English is “Wrong”. In Roman it is “delict” and in ",
+      "Sanskrit it is “Jimha” which means ‘crooked’. "
+    ],
+    "after_context": [
+      "The term tort is the French equivalent of the English word ‘wrong’ and of the Roman law term ‘delict’. The ",
+      "word tort is derived from the Latin word tortum which means twisted or crooked or wrong and is in ",
+      "contrast to the word rectum which means straight. Everyone is expected to behave in a straightforward "
+    ],
+    "full_context_preview": " 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct \nwhich is ‘tortious’ ,  or, twisted.. The equivalent word in English is “Wrong”. In Roman it is “delict” and in \nSanskrit it is “Jimha” which means ‘crooked’. \n\nDETECTED_HEADING: Definition of Tort\n\nThe term tort is the French equivalent of the English word ‘wrong’ and of the Roman law term ‘delict’. The \nword tort is derived from the Latin word tortum which means twisted or crooked or wrong and is in \ncontrast to the word rectum which means straight. Everyone is expected to behave in a straightforward ",
+    "is_valid": true
+  },
+  {
+    "id": "L60:Nature of Torts",
+    "text": "Nature of Torts",
+    "start_line": 60,
+    "end_line": 60,
+    "before_context": [
+      "e) It may, in special cases, consist merely in not avoiding or preventing harm which the party was bound ",
+      "absolutely or within limits, to avoid or prevent. ",
+      " "
+    ],
+    "after_context": [
+      "A. Tort and crime ",
+      "Historically tort had its roots in criminal procedure. Even today there is a punitive element in some ",
+      "aspects of the rules on damages. However tort is a species if civil injury or wrong. The distinction between "
+    ],
+    "full_context_preview": "e) It may, in special cases, consist merely in not avoiding or preventing harm which the party was bound \nabsolutely or within limits, to avoid or prevent. \n \n\nDETECTED_HEADING: Nature of Torts\n\nA. Tort and crime \nHistorically tort had its roots in criminal procedure. Even today there is a punitive element in some \naspects of the rules on damages. However tort is a species if civil injury or wrong. The distinction between ",
+    "is_valid": true
+  },
+  {
+    "id": "L61:A. Tort and crime",
+    "text": "A. Tort and crime",
+    "start_line": 61,
+    "end_line": 61,
+    "before_context": [
+      "absolutely or within limits, to avoid or prevent. ",
+      " ",
+      "Nature of Torts "
+    ],
+    "after_context": [
+      "Historically tort had its roots in criminal procedure. Even today there is a punitive element in some ",
+      "aspects of the rules on damages. However tort is a species if civil injury or wrong. The distinction between ",
+      "civil and criminal wrongs depends on the nature of the remedy provided by law. A civil wrong is one which "
+    ],
+    "full_context_preview": "absolutely or within limits, to avoid or prevent. \n \nNature of Torts \n\nDETECTED_HEADING: A. Tort and crime\n\nHistorically tort had its roots in criminal procedure. Even today there is a punitive element in some \naspects of the rules on damages. However tort is a species if civil injury or wrong. The distinction between \ncivil and criminal wrongs depends on the nature of the remedy provided by law. A civil wrong is one which ",
+    "is_valid": true
+  },
+  {
+    "id": "L80:Scope of Tort Law",
+    "text": "Scope of Tort Law",
+    "start_line": 80,
+    "end_line": 80,
+    "before_context": [
+      "commits the tort. Although an action fro damages is an essential mark of tort and its characteristic remedy, ",
+      "there may be and often other remedies also. ",
+      " "
+    ],
+    "after_context": [
+      "The main aim of implementing tort law was to use it as a tool to make people to follow the behavior of a ",
+      "reasonable prudent man and to make them respectful towards each other’s rights and duties. In order to ",
+      "achieve its aim law of torts allows the victim to claim compensation for the infringement of his right. "
+    ],
+    "full_context_preview": "commits the tort. Although an action fro damages is an essential mark of tort and its characteristic remedy, \nthere may be and often other remedies also. \n \n\nDETECTED_HEADING: Scope of Tort Law\n\nThe main aim of implementing tort law was to use it as a tool to make people to follow the behavior of a \nreasonable prudent man and to make them respectful towards each other’s rights and duties. In order to \nachieve its aim law of torts allows the victim to claim compensation for the infringement of his right. ",
+    "is_valid": true
+  },
+  {
+    "id": "L94:I. Wrongful Act",
+    "text": "I. Wrongful Act",
+    "start_line": 94,
+    "end_line": 94,
+    "before_context": [
+      "b) The nature of the wrongful act should be such to have a resort to legal remedy and ",
+      "c) Unliquidated damages should be the legal remedy for the wrongful act. ",
+      " "
+    ],
+    "after_context": [
+      "An act becomes a wrongful act if only it violates a legal right of another individual. ",
+      "In Rogers v. Ranjendro Dutt, the Judges opined that the act for which the plaintiff is complaining should be ",
+      "a legal wrongful act. Thus, mere harm in to another person’s interest is not sufficient but the act should be "
+    ],
+    "full_context_preview": "b) The nature of the wrongful act should be such to have a resort to legal remedy and \nc) Unliquidated damages should be the legal remedy for the wrongful act. \n \n\nDETECTED_HEADING: I. Wrongful Act\n\nAn act becomes a wrongful act if only it violates a legal right of another individual. \nIn Rogers v. Ranjendro Dutt, the Judges opined that the act for which the plaintiff is complaining should be \na legal wrongful act. Thus, mere harm in to another person’s interest is not sufficient but the act should be ",
+    "is_valid": true
+  },
+  {
+    "id": "L110:II. Damage",
+    "text": "II. Damage",
+    "start_line": 110,
+    "end_line": 110,
+    "before_context": [
+      "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 ",
+      "Page 3 of 133 ",
+      " "
+    ],
+    "after_context": [
+      "Generally, a tort consists of some act done by a person which causes injury to another and for ",
+      "which damages are claimed by the latter against the former. One must have a clear notion with regard to ",
+      "the words damage and damages to understand this. "
+    ],
+    "full_context_preview": "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \nPage 3 of 133 \n \n\nDETECTED_HEADING: II. Damage\n\nGenerally, a tort consists of some act done by a person which causes injury to another and for \nwhich damages are claimed by the latter against the former. One must have a clear notion with regard to \nthe words damage and damages to understand this. ",
+    "is_valid": true
+  },
+  {
+    "id": "L118:Objectives Of Law of Torts",
+    "text": "Objectives Of Law of Torts",
+    "start_line": 118,
+    "end_line": 118,
+    "before_context": [
+      "used, whereas damages mean the compensation claimed by the injured party and awarded by the court. ",
+      "Damages are claimed and awarded by the court to the parties. ",
+      " "
+    ],
+    "after_context": [
+      "1. Compensation: Self-evidently, Compensation is one of the most fundamental ideas behind Tort ",
+      "Law. The whole Law of Torts focuses on compensating the victim or the grieved party through ",
+      "various available remedies. "
+    ],
+    "full_context_preview": "used, whereas damages mean the compensation claimed by the injured party and awarded by the court. \nDamages are claimed and awarded by the court to the parties. \n \n\nDETECTED_HEADING: Objectives Of Law of Torts\n\n1. Compensation: Self-evidently, Compensation is one of the most fundamental ideas behind Tort \nLaw. The whole Law of Torts focuses on compensating the victim or the grieved party through \nvarious available remedies. ",
+    "is_valid": true
+  },
+  {
+    "id": "L140:The Law of Torts in India",
+    "text": "The Law of Torts in India",
+    "start_line": 140,
+    "end_line": 140,
+    "before_context": [
+      "delivered in a righteous mode when the wrongdoer gets punished for his unlawful act or is ",
+      "mandated to undo the harm of such acts by any means. ",
+      " "
+    ],
+    "after_context": [
+      "Under the Hindu law and the Muslim law tort had a much narrower conception than the tort of the ",
+      "English law. The punishment of crimes in these systems occupied a more prominent place than ",
+      "compensation for wrongs. The law of torts in India is mainly the English law of torts which itself is based "
+    ],
+    "full_context_preview": "delivered in a righteous mode when the wrongdoer gets punished for his unlawful act or is \nmandated to undo the harm of such acts by any means. \n \n\nDETECTED_HEADING: The Law of Torts in India\n\nUnder the Hindu law and the Muslim law tort had a much narrower conception than the tort of the \nEnglish law. The punishment of crimes in these systems occupied a more prominent place than \ncompensation for wrongs. The law of torts in India is mainly the English law of torts which itself is based ",
+    "is_valid": true
+  },
+  {
+    "id": "L178:Essential Elements of A Tort",
+    "text": "Essential Elements of A Tort",
+    "start_line": 178,
+    "end_line": 178,
+    "before_context": [
+      "Even for social development, orderly growth of the society and cultural refinances the liberal approach to ",
+      "tortuous liability by court would be conducive. ",
+      " "
+    ],
+    "after_context": [
+      "Three essential elements need to be fulfilled to constitute a Tort, they are: ",
+      "Existence of a Duty of Care ",
+      "Every individual is bound to follow certain duty imposed upon it by the law of the land to practice certain "
+    ],
+    "full_context_preview": "Even for social development, orderly growth of the society and cultural refinances the liberal approach to \ntortuous liability by court would be conducive. \n \n\nDETECTED_HEADING: Essential Elements of A Tort\n\nThree essential elements need to be fulfilled to constitute a Tort, they are: \nExistence of a Duty of Care \nEvery individual is bound to follow certain duty imposed upon it by the law of the land to practice certain ",
+    "is_valid": true
+  },
+  {
+    "id": "L180:Existence of a Duty of Care",
+    "text": "Existence of a Duty of Care",
+    "start_line": 180,
+    "end_line": 180,
+    "before_context": [
+      " ",
+      "Essential Elements of A Tort ",
+      "Three essential elements need to be fulfilled to constitute a Tort, they are: "
+    ],
+    "after_context": [
+      "Every individual is bound to follow certain duty imposed upon it by the law of the land to practice certain ",
+      "tutelage and adequate rationale over his acts which might turn out to be harmful to any other individual. ",
+      "Such duty of care needs to be proved in the court to induct the charges of Tort. "
+    ],
+    "full_context_preview": " \nEssential Elements of A Tort \nThree essential elements need to be fulfilled to constitute a Tort, they are: \n\nDETECTED_HEADING: Existence of a Duty of Care\n\nEvery individual is bound to follow certain duty imposed upon it by the law of the land to practice certain \ntutelage and adequate rationale over his acts which might turn out to be harmful to any other individual. \nSuch duty of care needs to be proved in the court to induct the charges of Tort. ",
+    "is_valid": true
+  },
+  {
+    "id": "L185:Commission or Omission of an Act",
+    "text": "Commission or Omission of an Act",
+    "start_line": 185,
+    "end_line": 185,
+    "before_context": [
+      "tutelage and adequate rationale over his acts which might turn out to be harmful to any other individual. ",
+      "Such duty of care needs to be proved in the court to induct the charges of Tort. ",
+      " "
+    ],
+    "after_context": [
+      "To charge a person for Tort, it must be proved that s/he has either committed an act which is contrary and ",
+      "disobliging to the provisions of the law of the land or has failed to do an act which was his/her duty as per ",
+      "the law of the land to do. "
+    ],
+    "full_context_preview": "tutelage and adequate rationale over his acts which might turn out to be harmful to any other individual. \nSuch duty of care needs to be proved in the court to induct the charges of Tort. \n \n\nDETECTED_HEADING: Commission or Omission of an Act\n\nTo charge a person for Tort, it must be proved that s/he has either committed an act which is contrary and \ndisobliging to the provisions of the law of the land or has failed to do an act which was his/her duty as per \nthe law of the land to do. ",
+    "is_valid": true
+  },
+  {
+    "id": "L200:Legal Injury",
+    "text": "Legal Injury",
+    "start_line": 200,
+    "end_line": 200,
+    "before_context": [
+      "Here, ‘X’ failed to perform his reasonable duty of care towards the people which amounts to omission. It’ll ",
+      "lead to a Tort. ",
+      " "
+    ],
+    "after_context": [
+      "To prove that the wrongful act or omission of the defendant is a Tort, the plaintiff must show that ",
+      "such act or omission caused an injury to him. An injury here means violation of a legal right vested in the ",
+      "plaintiff and recognized by the law of the land. The legal maxims ‘Injuria sine Damno’ and ‘Damnum sine "
+    ],
+    "full_context_preview": "Here, ‘X’ failed to perform his reasonable duty of care towards the people which amounts to omission. It’ll \nlead to a Tort. \n \n\nDETECTED_HEADING: Legal Injury\n\nTo prove that the wrongful act or omission of the defendant is a Tort, the plaintiff must show that \nsuch act or omission caused an injury to him. An injury here means violation of a legal right vested in the \nplaintiff and recognized by the law of the land. The legal maxims ‘Injuria sine Damno’ and ‘Damnum sine ",
+    "is_valid": true
+  },
+  {
+    "id": "L217:Legal Remedy",
+    "text": "Legal Remedy",
+    "start_line": 217,
+    "end_line": 217,
+    "before_context": [
+      "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 ",
+      "Page 5 of 133 ",
+      " "
+    ],
+    "after_context": [
+      "As the last condition to constitute a Tort, the unlawful act or omission of the defendant must fall ",
+      "under a category of unlawful acts which have a civil action for damages as their remedy. The law of torts ",
+      "bases itself on the maxim, ‘Ubi jus ibi remedium’ which means "
+    ],
+    "full_context_preview": "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \nPage 5 of 133 \n \n\nDETECTED_HEADING: Legal Remedy\n\nAs the last condition to constitute a Tort, the unlawful act or omission of the defendant must fall \nunder a category of unlawful acts which have a civil action for damages as their remedy. The law of torts \nbases itself on the maxim, ‘Ubi jus ibi remedium’ which means ",
+    "is_valid": true
+  },
+  {
+    "id": "L226:1.2 Distinction from Crime, Breach of Contract etc., who may",
+    "text": "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.",
+    "start_line": 226,
+    "end_line": 226,
+    "before_context": [
+      "The court applies certain tests such as the test of foresee ability, the test of directness, etc. before ",
+      "determining the remedies to be awarded in a case. The nature of the damages is unliquidated. ",
+      " "
+    ],
+    "after_context": [
+      "a. Distinction between Crime and Breach of Contract ",
+      "(1) In crime, the injured party cannot sue for damages. The injury to the victim is deemed as an injury to ",
+      "the society. It is the violation of public right. Hence the State prosecutes the accused. The burden of proof "
+    ],
+    "full_context_preview": "The court applies certain tests such as the test of foresee ability, the test of directness, etc. before \ndetermining the remedies to be awarded in a case. The nature of the damages is unliquidated. \n \n\nDETECTED_HEADING: 1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.\n\na. Distinction between Crime and Breach of Contract \n(1) In crime, the injured party cannot sue for damages. The injury to the victim is deemed as an injury to \nthe society. It is the violation of public right. Hence the State prosecutes the accused. The burden of proof ",
+    "is_valid": true
+  },
+  {
+    "id": "L249:Introduction",
+    "text": "Introduction",
+    "start_line": 249,
+    "end_line": 249,
+    "before_context": [
+      "(7) In crime, the victims are not paid damages. The accused is sent to jail or imposed fine or both. The fine ",
+      "goes to the State. However, in breach of contract, the party is entitled only for actual damages. ",
+      "b. who may sue, who may not be sued. "
+    ],
+    "after_context": [
+      "In the concept of a tort, usually a person who suffers injury has a right to file a case against the ",
+      "person who caused him harm, but there are certain categories of people who cannot sue a person for their ",
+      "loss and also there are some people who cannot be sued by any person. "
+    ],
+    "full_context_preview": "(7) In crime, the victims are not paid damages. The accused is sent to jail or imposed fine or both. The fine \ngoes to the State. However, in breach of contract, the party is entitled only for actual damages. \nb. who may sue, who may not be sued. \n\nDETECTED_HEADING: Introduction\n\nIn the concept of a tort, usually a person who suffers injury has a right to file a case against the \nperson who caused him harm, but there are certain categories of people who cannot sue a person for their \nloss and also there are some people who cannot be sued by any person. ",
+    "is_valid": true
+  }
+]

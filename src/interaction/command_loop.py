@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Optional, Any
 from src.interaction.command_parser import CommandParser, IntentResult
-from src.core.retrieval_engine import RetrievalEngine
+from src.legacy.core.retrieval_engine import RetrievalEngine
 from src.core.content_generation_engine import ContentGenerationEngine
 from src.export.word_exporter import WordExporter
 from src.storage.topic_repository import TopicRepository
@@ -21,7 +21,7 @@ class CommandLoop:
         self.store = KnowledgeStore()
         self.topic_repo = TopicRepository(self.store)
         self.retrieval_engine = RetrievalEngine(self.topic_repo)
-        self.gen_engine = ContentGenerationEngine(self.parser.client)
+        self.gen_engine = ContentGenerationEngine()
         self.word_exporter = WordExporter(output_folder=OUTPUT_FOLDER)
         self.rewriter: Optional[Any] = None
         self.current_file_path: Optional[str] = None
@@ -138,9 +138,8 @@ class CommandLoop:
         """
         Handles the ingestion of a new PDF file.
         """
-        from src.core.pipeline import SmartBookRewriterEnhanced
         import os
-        
+
         print(f"[*] Ingesting file: {file_path}")
         
         # Determine directory and filename
@@ -151,19 +150,12 @@ class CommandLoop:
         output_dir = os.path.join(pdf_dir, "output")
         
         try:
-            self.rewriter = SmartBookRewriterEnhanced(
-                pdf_folder=pdf_dir,
-                output_folder=output_dir
-            )
-            # We need to make sure the rewriter only processes THIS specific file
-            self.rewriter.ingest(specific_file=file_path)
+            # Temporary: ingestion pipeline not wired to the new clean `src/core/pipeline.py` yet.
+            # Keep CLI stable by acknowledging the file and deferring ingestion.
+            self.rewriter = None
             self.current_file_path = file_path
-            
-            # Update repositories in the loop to use the new data
-            self.topic_repo = self.rewriter.topic_repo
-            self.retrieval_engine = RetrievalEngine(self.topic_repo)
-            
-            print(f"[+] Ingestion complete. You can now ask questions about '{self.rewriter.book_title}'.")
+            print("[!] Ingestion is currently disabled in this build (pipeline integration pending).")
+            print(f"[*] Stored file path for later: {self.current_file_path}")
         except Exception as e:
             logger.error(f"Ingestion failed: {e}")
             print(f"[!] Ingestion failed: {e}")

@@ -1,6 +1,7 @@
 import logging
 from typing import List, Dict, Any
-from src.core.gemini.client import GeminiClient
+# Structural reset: Gemini removed.
+# from src.core.gemini.client import GeminiClient
 from src.interaction.command_parser import IntentResult
 
 logger = logging.getLogger(__name__)
@@ -33,10 +34,11 @@ PROMPT_CONTENT_GENERATION = (
 
 class ContentGenerationEngine:
     """
-    A reusable service for generating structured content based on intent and retrieved knowledge.
-    Enforces system-owned formatting and structure.
+    Structural reset: content generation engine disabled until replacement is implemented.
+
+    Runtime placeholder: allow the CLI to boot; real generation will be re-enabled later.
     """
-    def __init__(self, client: GeminiClient):
+    def __init__(self, client: Any = None):
         self.client = client
 
     def generate(self, intent: IntentResult, chunks: List[str], knowledge_gap: bool) -> str:
@@ -55,10 +57,9 @@ class ContentGenerationEngine:
             query=intent.normalized_query
         )
 
-        # Use a lower temperature for deterministic output
-        response = self.client.generate_content(
-            prompt=prompt,
-            generation_config={"temperature": 0.2}
+        # Placeholder response to keep CLI functional during stabilization.
+        return (
+            f"# Question: {intent.normalized_query}\n\n"
+            "1. Content generation is currently disabled in this build.\n"
+            "2. The rest of the pipeline (ingestion/structure) can be stabilized independently.\n"
         )
-
-        return response if response else "Error: Content generation failed."

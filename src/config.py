@@ -18,11 +18,38 @@ CHUNK_OVERLAP_WORDS = 150
 # Active model for summarization (e.g., "gemini")
 ACTIVE_MODEL = "GEMINI"
 
+# Global debug flag for structural pipeline tracing
+DEBUG_STRUCTURE = True
+
 # Embedding model for FAISS (using Universal Sentence Encoder)
 # EMBEDDING_MODEL is no longer directly used as we are loading the model via tensorflow_hub
 
 # Gemini configuration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+def _load_dotenv_value(key: str) -> str:
+    """
+    Minimal .env loader (no external deps).
+    Loads the first matching KEY=... line from a `.env` file at project root.
+    """
+    try:
+        env_path = os.path.join(BASE_DIR, ".env")
+        if not os.path.exists(env_path):
+            return ""
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                s = line.strip()
+                if not s or s.startswith("#") or "=" not in s:
+                    continue
+                k, v = s.split("=", 1)
+                if k.strip() != key:
+                    continue
+                v = v.strip().strip('"').strip("'")
+                return v
+    except Exception:
+        return ""
+    return ""
+
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or _load_dotenv_value("GEMINI_API_KEY") or _load_dotenv_value("GOOGLE_API_KEY") or ""
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
 # Token limits for summarization (reverted to chunk-by-chunk focus)

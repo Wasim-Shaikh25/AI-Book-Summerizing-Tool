@@ -1,6 +1,7 @@
 import logging
 from src.storage.topic_repository import TopicRepository
-from src.core.gemini.client import GeminiClient
+# Structural reset: Gemini removed.
+# from src.core.gemini.client import GeminiClient
 from src.interaction.command_parser import IntentResult
 from src.core.retrieval_engine import RetrievalEngine
 from src.core.content_generation_engine import ContentGenerationEngine
@@ -11,12 +12,12 @@ logger = logging.getLogger(__name__)
 
 class AskHandler:
     """
-    Handles the 'ask' command using Retrieval, Generation, and Output engines.
+    Handles the 'ask' command.
+
+    Structural reset: disabled until an LLM client replacement is implemented.
     """
-    def __init__(self, topic_repo: TopicRepository, client: GeminiClient):
-        self.retrieval_engine = RetrievalEngine(topic_repo)
-        self.generation_engine = ContentGenerationEngine(client)
-        self.output_manager = OutputManager(OUTPUT_FOLDER)
+    def __init__(self, topic_repo: TopicRepository, client: object = None):
+        raise NotImplementedError("AskHandler not yet implemented.")
 
     def handle_intent(self, intent: IntentResult):
         """

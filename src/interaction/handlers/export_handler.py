@@ -1,7 +1,8 @@
 import logging
 from src.core.pipeline import SmartBookRewriterEnhanced
 from src.storage.topic_repository import TopicRepository
-from src.core.gemini.client import GeminiClient
+# Structural reset: Gemini removed.
+# from src.core.gemini.client import GeminiClient
 from src.export.word_exporter import WordExporter
 from src.interaction.command_parser import IntentResult
 from src.core.retrieval_engine import RetrievalEngine
@@ -13,13 +14,12 @@ logger = logging.getLogger(__name__)
 
 class ExportHandler:
     """
-    Handles 'export' intent using Retrieval, Generation, and Output engines.
+    Handles 'export' intent.
+
+    Structural reset: disabled until an LLM client replacement is implemented.
     """
-    def __init__(self, rewriter: SmartBookRewriterEnhanced, topic_repo: TopicRepository, client: GeminiClient, exporter: WordExporter):
-        self.rewriter = rewriter
-        self.retrieval_engine = RetrievalEngine(topic_repo)
-        self.generation_engine = ContentGenerationEngine(client)
-        self.output_manager = OutputManager(OUTPUT_FOLDER)
+    def __init__(self, rewriter: SmartBookRewriterEnhanced, topic_repo: TopicRepository, client: object = None, exporter: WordExporter = None):
+        raise NotImplementedError("ExportHandler not yet implemented.")
 
     def handle_intent(self, intent: IntentResult):
         """

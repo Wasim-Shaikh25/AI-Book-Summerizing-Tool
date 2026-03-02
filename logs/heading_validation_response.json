@@ -1,0 +1,289 @@
+{
+  "raw_text": "[\n  { \"id\": \"L1:Page 1 of 133\", \"is_valid\": false },\n  { \"id\": \"L5:MODULE 1:\", \"is_valid\": true },\n  { \"id\": \"L6:General Principles of Tort\", \"is_valid\": true },\n  { \"id\": \"L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort\", \"is_valid\": true },\n  { \"id\": \"L8:1.2 Distinction from Crime, Breach of Contract etc., who may\", \"is_valid\": true },\n  { \"id\": \"L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum\", \"is_valid\": true },\n  { \"id\": \"L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium\", \"is_valid\": true },\n  { \"id\": \"L11:1.5 Extinguishment of Liability in Tort\", \"is_valid\": true },\n  { \"id\": \"L12:1.6 General Defenses and Discharge of Torts\", \"is_valid\": true },\n  { \"id\": \"L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort\", \"is_valid\": true },\n  { \"id\": \"L16:A. INTRODUCTION:\", \"is_valid\": true },\n  { \"id\": \"L17:1. The Tort is of French origin. The root is ‘Tortum’ in Lat\", \"is_valid\": false },\n  { \"id\": \"L20:Definition of Tort\", \"is_valid\": true },\n  { \"id\": \"L32:for tort are given below:\", \"is_valid\": false },\n  { \"id\": \"L35:duty is towards persons generally and its breach is redressi\", \"is_valid\": false },\n  { \"id\": \"L39:equitable obligation.\", \"is_valid\": false },\n  { \"id\": \"L44:by a determinate person:-\", \"is_valid\": false },\n  { \"id\": \"L49:c) It may be an act violation the absolute right (especially\", \"is_valid\": false },\n  { \"id\": \"L52:d) It may be an act or omission causing harm which the perso\", \"is_valid\": false },\n  { \"id\": \"L55:Page 2 of 133\", \"is_valid\": false },\n  { \"id\": \"L58:absolutely or within limits, to avoid or prevent.\", \"is_valid\": false },\n  { \"id\": \"L60:Nature of Torts\", \"is_valid\": true },\n  { \"id\": \"L61:A. Tort and crime\", \"is_valid\": true },\n  { \"id\": \"L78:there may be and often other remedies also.\", \"is_valid\": false },\n  { \"id\": \"L80:Scope of Tort Law\", \"is_valid\": true },\n  { \"id\": \"L88:tort,\", \"is_valid\": false },\n  { \"id\": \"L92:c) Unliquidated damages should be the legal remedy for the w\", \"is_valid\": false },\n  { \"id\": \"L94:I. Wrongful Act\", \"is_valid\": true },\n  { \"id\": \"L108:Page 3 of 133\", \"is_valid\": false },\n  { \"id\": \"L110:II. Damage\", \"is_valid\": true },\n  { \"id\": \"L116:Damages are claimed and awarded by the court to the parties.\", \"is_valid\": false },\n  { \"id\": \"L118:Objectives Of Law of Torts\", \"is_valid\": true },\n  { \"id\": \"L119:1. Compensation: Self-evidently, Compensation is one of the \", \"is_valid\": false },\n  { \"id\": \"L122:2. Safeguarding Interests: Another primary objective that th\", \"is_valid\": false },\n  { \"id\": \"L124:3. Deterrence: Deterrence theory about law says that the thr\", \"is_valid\": false },\n  { \"id\": \"L129:4. Vindication: The Law of Torts provides enough room for de\", \"is_valid\": false },\n  { \"id\": \"L132:5. Scattering Losses: Law of Torts also aims at being an ins\", \"is_valid\": false },\n  { \"id\": \"L135:6. Moral Objective: The Law of Torts also serves the very in\", \"is_valid\": false },\n  { \"id\": \"L138:mandated to undo the harm of such acts by any means.\", \"is_valid\": false },\n  { \"id\": \"L140:The Law of Torts in India\", \"is_valid\": true },\n  { \"id\": \"L162:Page 4 of 133\", \"is_valid\": false },\n  { \"id\": \"L172:In a more recent judgement of Jay Laxmi Salt Works (p) ltd. \", \"is_valid\": false },\n  { \"id\": \"L176:tortuous liability by court would be conducive.\", \"is_valid\": false },\n  { \"id\": \"L178:Essential Elements of A Tort\", \"is_valid\": true },\n  { \"id\": \"L179:Three essential elements need to be fulfilled to constitute \", \"is_valid\": false },\n  { \"id\": \"L180:Existence of a Duty of Care\", \"is_valid\": true },\n  { \"id\": \"L183:Such duty of care needs to be proved in the court to induct \", \"is_valid\": false },\n  { \"id\": \"L185:Commission or Omission of an Act\", \"is_valid\": true },\n  { \"id\": \"L188:the law of the land to do.\", \"is_valid\": false },\n  { \"id\": \"L191:of Defamation on X’s part as the law forbids the publication\", \"is_valid\": false },\n  { \"id\": \"L195:from X’s garden.\", \"is_valid\": false },\n  { \"id\": \"L198:lead to a Tort.\", \"is_valid\": false },\n  { \"id\": \"L200:Legal Injury\", \"is_valid\": true },\n  { \"id\": \"L204:Injuria’ encapsulate the damage and injury part.\", \"is_valid\": false },\n  { \"id\": \"L209:White.[6]\", \"is_valid\": false },\n  { \"id\": \"L215:Page 5 of 133\", \"is_valid\": false },\n  { \"id\": \"L217:Legal Remedy\", \"is_valid\": true },\n  { \"id\": \"L224:determining the remedies to be awarded in a case. The nature\", \"is_valid\": false },\n  { \"id\": \"L226:1.2 Distinction from Crime, Breach of Contract etc., who may\", \"is_valid\": true },\n  { \"id\": \"L249:Introduction\", \"is_valid\": true },\n  { \"id\": \"L255:Who can/can not Sue?\", \"is_valid\": true },\n  { \"id\": \"L256:Who can sue?\", \"is_valid\": true },\n  { \"id\": \"L259:Who cannot sue?\", \"is_valid\": true },\n  { \"id\": \"L260:There are seven categories of persons cannot sue, only subje\", \"is_valid\": false },\n  { \"id\": \"L261:An Alien enemy\", \"is_valid\": false },\n  { \"id\": \"L262:Convict\", \"is_valid\": false },\n  { \"id\": \"L263:Bankrupt\", \"is_valid\": false },\n  { \"id\": \"L264:Husband and wife\", \"is_valid\": false },\n  { \"id\": \"L265:Corporation\", \"is_valid\": false },\n  { \"id\": \"L266:An Infant/Minor\", \"is_valid\": false },\n  { \"id\": \"L267:A foreign state\", \"is_valid\": false }\n]",
+  "parsed_json": [
+    {
+      "id": "L1:Page 1 of 133",
+      "is_valid": false
+    },
+    {
+      "id": "L5:MODULE 1:",
+      "is_valid": true
+    },
+    {
+      "id": "L6:General Principles of Tort",
+      "is_valid": true
+    },
+    {
+      "id": "L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+      "is_valid": true
+    },
+    {
+      "id": "L8:1.2 Distinction from Crime, Breach of Contract etc., who may",
+      "is_valid": true
+    },
+    {
+      "id": "L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum",
+      "is_valid": true
+    },
+    {
+      "id": "L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium",
+      "is_valid": true
+    },
+    {
+      "id": "L11:1.5 Extinguishment of Liability in Tort",
+      "is_valid": true
+    },
+    {
+      "id": "L12:1.6 General Defenses and Discharge of Torts",
+      "is_valid": true
+    },
+    {
+      "id": "L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+      "is_valid": true
+    },
+    {
+      "id": "L16:A. INTRODUCTION:",
+      "is_valid": true
+    },
+    {
+      "id": "L17:1. The Tort is of French origin. The root is ‘Tortum’ in Lat",
+      "is_valid": false
+    },
+    {
+      "id": "L20:Definition of Tort",
+      "is_valid": true
+    },
+    {
+      "id": "L32:for tort are given below:",
+      "is_valid": false
+    },
+    {
+      "id": "L35:duty is towards persons generally and its breach is redressi",
+      "is_valid": false
+    },
+    {
+      "id": "L39:equitable obligation.",
+      "is_valid": false
+    },
+    {
+      "id": "L44:by a determinate person:-",
+      "is_valid": false
+    },
+    {
+      "id": "L49:c) It may be an act violation the absolute right (especially",
+      "is_valid": false
+    },
+    {
+      "id": "L52:d) It may be an act or omission causing harm which the perso",
+      "is_valid": false
+    },
+    {
+      "id": "L55:Page 2 of 133",
+      "is_valid": false
+    },
+    {
+      "id": "L58:absolutely or within limits, to avoid or prevent.",
+      "is_valid": false
+    },
+    {
+      "id": "L60:Nature of Torts",
+      "is_valid": true
+    },
+    {
+      "id": "L61:A. Tort and crime",
+      "is_valid": true
+    },
+    {
+      "id": "L78:there may be and often other remedies also.",
+      "is_valid": false
+    },
+    {
+      "id": "L80:Scope of Tort Law",
+      "is_valid": true
+    },
+    {
+      "id": "L88:tort,",
+      "is_valid": false
+    },
+    {
+      "id": "L92:c) Unliquidated damages should be the legal remedy for the w",
+      "is_valid": false
+    },
+    {
+      "id": "L94:I. Wrongful Act",
+      "is_valid": true
+    },
+    {
+      "id": "L108:Page 3 of 133",
+      "is_valid": false
+    },
+    {
+      "id": "L110:II. Damage",
+      "is_valid": true
+    },
+    {
+      "id": "L116:Damages are claimed and awarded by the court to the parties.",
+      "is_valid": false
+    },
+    {
+      "id": "L118:Objectives Of Law of Torts",
+      "is_valid": true
+    },
+    {
+      "id": "L119:1. Compensation: Self-evidently, Compensation is one of the ",
+      "is_valid": false
+    },
+    {
+      "id": "L122:2. Safeguarding Interests: Another primary objective that th",
+      "is_valid": false
+    },
+    {
+      "id": "L124:3. Deterrence: Deterrence theory about law says that the thr",
+      "is_valid": false
+    },
+    {
+      "id": "L129:4. Vindication: The Law of Torts provides enough room for de",
+      "is_valid": false
+    },
+    {
+      "id": "L132:5. Scattering Losses: Law of Torts also aims at being an ins",
+      "is_valid": false
+    },
+    {
+      "id": "L135:6. Moral Objective: The Law of Torts also serves the very in",
+      "is_valid": false
+    },
+    {
+      "id": "L138:mandated to undo the harm of such acts by any means.",
+      "is_valid": false
+    },
+    {
+      "id": "L140:The Law of Torts in India",
+      "is_valid": true
+    },
+    {
+      "id": "L162:Page 4 of 133",
+      "is_valid": false
+    },
+    {
+      "id": "L172:In a more recent judgement of Jay Laxmi Salt Works (p) ltd. ",
+      "is_valid": false
+    },
+    {
+      "id": "L176:tortuous liability by court would be conducive.",
+      "is_valid": false
+    },
+    {
+      "id": "L178:Essential Elements of A Tort",
+      "is_valid": true
+    },
+    {
+      "id": "L179:Three essential elements need to be fulfilled to constitute ",
+      "is_valid": false
+    },
+    {
+      "id": "L180:Existence of a Duty of Care",
+      "is_valid": true
+    },
+    {
+      "id": "L183:Such duty of care needs to be proved in the court to induct ",
+      "is_valid": false
+    },
+    {
+      "id": "L185:Commission or Omission of an Act",
+      "is_valid": true
+    },
+    {
+      "id": "L188:the law of the land to do.",
+      "is_valid": false
+    },
+    {
+      "id": "L191:of Defamation on X’s part as the law forbids the publication",
+      "is_valid": false
+    },
+    {
+      "id": "L195:from X’s garden.",
+      "is_valid": false
+    },
+    {
+      "id": "L198:lead to a Tort.",
+      "is_valid": false
+    },
+    {
+      "id": "L200:Legal Injury",
+      "is_valid": true
+    },
+    {
+      "id": "L204:Injuria’ encapsulate the damage and injury part.",
+      "is_valid": false
+    },
+    {
+      "id": "L209:White.[6]",
+      "is_valid": false
+    },
+    {
+      "id": "L215:Page 5 of 133",
+      "is_valid": false
+    },
+    {
+      "id": "L217:Legal Remedy",
+      "is_valid": true
+    },
+    {
+      "id": "L224:determining the remedies to be awarded in a case. The nature",
+      "is_valid": false
+    },
+    {
+      "id": "L226:1.2 Distinction from Crime, Breach of Contract etc., who may",
+      "is_valid": true
+    },
+    {
+      "id": "L249:Introduction",
+      "is_valid": true
+    },
+    {
+      "id": "L255:Who can/can not Sue?",
+      "is_valid": true
+    },
+    {
+      "id": "L256:Who can sue?",
+      "is_valid": true
+    },
+    {
+      "id": "L259:Who cannot sue?",
+      "is_valid": true
+    },
+    {
+      "id": "L260:There are seven categories of persons cannot sue, only subje",
+      "is_valid": false
+    },
+    {
+      "id": "L261:An Alien enemy",
+      "is_valid": false
+    },
+    {
+      "id": "L262:Convict",
+      "is_valid": false
+    },
+    {
+      "id": "L263:Bankrupt",
+      "is_valid": false
+    },
+    {
+      "id": "L264:Husband and wife",
+      "is_valid": false
+    },
+    {
+      "id": "L265:Corporation",
+      "is_valid": false
+    },
+    {
+      "id": "L266:An Infant/Minor",
+      "is_valid": false
+    },
+    {
+      "id": "L267:A foreign state",
+      "is_valid": false
+    }
+  ]
+}

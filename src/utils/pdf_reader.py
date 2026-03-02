@@ -40,7 +40,13 @@ class PDFReader:
         pdf_filenames: List[str] = []
         
         if specific_file:
+            # `specific_file` may be:
+            #  - absolute path
+            #  - path relative to CWD (e.g., "reference_files/law_of_tort.pdf")
+            #  - bare filename relative to `pdf_folder`
             if os.path.isabs(specific_file):
+                files = [specific_file]
+            elif os.path.exists(specific_file):
                 files = [specific_file]
             else:
                 files = [os.path.join(self.pdf_folder, specific_file)]

@@ -1,0 +1,117 @@
+{
+  "raw_text": "[\n  {\n    \"id\": \"L5:MODULE 1:\",\n    \"level\": 1\n  },\n  {\n    \"id\": \"L6:General Principles of Tort\",\n    \"level\": 2\n  },\n  {\n    \"id\": \"L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort\",\n    \"level\": 3\n  },\n  {\n    \"id\": \"L8:1.2 Distinction from Crime, Breach of Contract etc., who may\",\n    \"level\": 3\n  },\n  {\n    \"id\": \"L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum\",\n    \"level\": 3\n  },\n  {\n    \"id\": \"L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium\",\n    \"level\": 3\n  },\n  {\n    \"id\": \"L11:1.5 Extinguishment of Liability in Tort\",\n    \"level\": 3\n  },\n  {\n    \"id\": \"L12:1.6 General Defenses and Discharge of Torts\",\n    \"level\": 3\n  },\n  {\n    \"id\": \"L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort\",\n    \"level\": 3\n  },\n  {\n    \"id\": \"L16:A. INTRODUCTION:\",\n    \"level\": 4\n  },\n  {\n    \"id\": \"L20:Definition of Tort\",\n    \"level\": 4\n  },\n  {\n    \"id\": \"L60:Nature of Torts\",\n    \"level\": 4\n  },\n  {\n    \"id\": \"L61:A. Tort and crime\",\n    \"level\": 5\n  },\n  {\n    \"id\": \"L80:Scope of Tort Law\",\n    \"level\": 4\n  },\n  {\n    \"id\": \"L94:I. Wrongful Act\",\n    \"level\": 5\n  },\n  {\n    \"id\": \"L110:II. Damage\",\n    \"level\": 5\n  },\n  {\n    \"id\": \"L118:Objectives Of Law of Torts\",\n    \"level\": 4\n  },\n  {\n    \"id\": \"L140:The Law of Torts in India\",\n    \"level\": 4\n  },\n  {\n    \"id\": \"L178:Essential Elements of A Tort\",\n    \"level\": 4\n  },\n  {\n    \"id\": \"L180:Existence of a Duty of Care\",\n    \"level\": 5\n  },\n  {\n    \"id\": \"L185:Commission or Omission of an Act\",\n    \"level\": 5\n  },\n  {\n    \"id\": \"L200:Legal Injury\",\n    \"level\": 5\n  },\n  {\n    \"id\": \"L217:Legal Remedy\",\n    \"level\": 5\n  },\n  {\n    \"id\": \"L226:1.2 Distinction from Crime, Breach of Contract etc., who may\",\n    \"level\": 3\n  },\n  {\n    \"id\": \"L249:Introduction\",\n    \"level\": 4\n  },\n  {\n    \"id\": \"L255:Who can/can not Sue?\",\n    \"level\": 4\n  },\n  {\n    \"id\": \"L256:Who can sue?\",\n    \"level\": 5\n  },\n  {\n    \"id\": \"L259:Who cannot sue?\",\n    \"level\": 5\n  }\n]",
+  "parsed_json": [
+    {
+      "id": "L5:MODULE 1:",
+      "level": 1
+    },
+    {
+      "id": "L6:General Principles of Tort",
+      "level": 2
+    },
+    {
+      "id": "L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+      "level": 3
+    },
+    {
+      "id": "L8:1.2 Distinction from Crime, Breach of Contract etc., who may",
+      "level": 3
+    },
+    {
+      "id": "L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum",
+      "level": 3
+    },
+    {
+      "id": "L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium",
+      "level": 3
+    },
+    {
+      "id": "L11:1.5 Extinguishment of Liability in Tort",
+      "level": 3
+    },
+    {
+      "id": "L12:1.6 General Defenses and Discharge of Torts",
+      "level": 3
+    },
+    {
+      "id": "L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+      "level": 3
+    },
+    {
+      "id": "L16:A. INTRODUCTION:",
+      "level": 4
+    },
+    {
+      "id": "L20:Definition of Tort",
+      "level": 4
+    },
+    {
+      "id": "L60:Nature of Torts",
+      "level": 4
+    },
+    {
+      "id": "L61:A. Tort and crime",
+      "level": 5
+    },
+    {
+      "id": "L80:Scope of Tort Law",
+      "level": 4
+    },
+    {
+      "id": "L94:I. Wrongful Act",
+      "level": 5
+    },
+    {
+      "id": "L110:II. Damage",
+      "level": 5
+    },
+    {
+      "id": "L118:Objectives Of Law of Torts",
+      "level": 4
+    },
+    {
+      "id": "L140:The Law of Torts in India",
+      "level": 4
+    },
+    {
+      "id": "L178:Essential Elements of A Tort",
+      "level": 4
+    },
+    {
+      "id": "L180:Existence of a Duty of Care",
+      "level": 5
+    },
+    {
+      "id": "L185:Commission or Omission of an Act",
+      "level": 5
+    },
+    {
+      "id": "L200:Legal Injury",
+      "level": 5
+    },
+    {
+      "id": "L217:Legal Remedy",
+      "level": 5
+    },
+    {
+      "id": "L226:1.2 Distinction from Crime, Breach of Contract etc., who may",
+      "level": 3
+    },
+    {
+      "id": "L249:Introduction",
+      "level": 4
+    },
+    {
+      "id": "L255:Who can/can not Sue?",
+      "level": 4
+    },
+    {
+      "id": "L256:Who can sue?",
+      "level": 5
+    },
+    {
+      "id": "L259:Who cannot sue?",
+      "level": 5
+    }
+  ]
+}

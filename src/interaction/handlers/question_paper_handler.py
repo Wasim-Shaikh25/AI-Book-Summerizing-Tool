@@ -3,7 +3,8 @@ import os
 from typing import List
 from src.core.pipeline import SmartBookRewriterEnhanced
 from src.storage.topic_repository import TopicRepository
-from src.core.gemini.client import GeminiClient
+# Structural reset: Gemini removed.
+# from src.core.gemini.client import GeminiClient
 from src.interaction.command_parser import IntentResult
 from src.core.retrieval_engine import RetrievalEngine
 from src.core.content_generation_engine import ContentGenerationEngine
@@ -15,15 +16,12 @@ logger = logging.getLogger(__name__)
 
 class QuestionPaperHandler:
     """
-    Handles 'question_paper' intent by processing multiple questions using Retrieval and Generation engines.
+    Handles 'question_paper' intent.
+
+    Structural reset: disabled until an LLM client replacement is implemented.
     """
-    def __init__(self, rewriter: SmartBookRewriterEnhanced, topic_repo: TopicRepository, client: GeminiClient):
-        self.rewriter = rewriter
-        self.retrieval_engine = RetrievalEngine(topic_repo)
-        self.generation_engine = ContentGenerationEngine(client)
-        self.output_manager = OutputManager(OUTPUT_FOLDER)
-        self.pdf_reader = PDFReader(pdf_folder=os.path.join(os.getcwd(), "pdfs"))
-        self.client = client
+    def __init__(self, rewriter: SmartBookRewriterEnhanced, topic_repo: TopicRepository, client: object = None):
+        raise NotImplementedError("QuestionPaperHandler not yet implemented.")
 
     def handle_intent(self, intent: IntentResult):
         """
@@ -78,19 +76,4 @@ class QuestionPaperHandler:
         )
 
     def _extract_questions_from_text(self, text: str) -> List[str]:
-        """
-        Uses Gemini to extract a clean list of questions from raw paper text.
-        """
-        prompt = (
-            "Extract a clean list of individual questions from the following question paper text. "
-            "Return ONLY a JSON array of strings. No other text.\n\n"
-            f"PAPER TEXT:\n{text}"
-        )
-        result = self.client.generate_content(prompt, generation_config={"temperature": 0.1})
-        try:
-            import json
-            clean_result = result.replace("```json", "").replace("```", "").strip()
-            return json.loads(clean_result)
-        except:
-            logger.error("Failed to parse questions from LLM response.")
-            return [text[:100]] # Fallback
+        raise NotImplementedError("Question extraction not yet implemented.")

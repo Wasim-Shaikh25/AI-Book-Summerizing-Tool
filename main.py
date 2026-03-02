@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.config import PDF_FOLDER, OUTPUT_FOLDER
-from src.core.pipeline import SmartBookRewriterEnhanced
 from src.interaction.command_loop import CommandLoop
 
 # Configure logging
