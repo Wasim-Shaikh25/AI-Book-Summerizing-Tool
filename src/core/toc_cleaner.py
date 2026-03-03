@@ -63,7 +63,7 @@ def _frag_text(h: FinalHeading, text_by_fragment_id: Dict[str, str]) -> str:
 def _dedupe_keep_stronger(
     headings: Sequence[FinalHeading],
     text_by_fragment_id: Dict[str, str],
-) -> Tuple[List[FinalHeading], List[Dict]]:
+) -> Tuple[List[FinalHeading], List[Dict], Dict[str, bool]]:
     """
     Remove duplicate headings (same normalized text). Keep the one with more fragment text.
 
@@ -77,12 +77,15 @@ def _dedupe_keep_stronger(
     key_to_best: Dict[str, FinalHeading] = {}
     key_to_best_len: Dict[str, int] = {}
     removed: List[Dict] = []
+    # Only mark keys as "evaluated_by_dedupe" if duplicates actually existed for that key.
+    evaluated_by_dedupe: Dict[str, bool] = {}
 
     for h in headings:
         key = _normalize_heading_key(h.text)
         cur_len = len(_frag_text(h, text_by_fragment_id))
         if key not in key_to_best or cur_len > key_to_best_len[key]:
             if key in key_to_best:
+                evaluated_by_dedupe[key] = True
                 prev = key_to_best[key]
                 removed.append(
                     {
@@ -97,6 +100,7 @@ def _dedupe_keep_stronger(
             key_to_best[key] = h
             key_to_best_len[key] = cur_len
         else:
+            evaluated_by_dedupe[key] = True
             removed.append(
                 {
                     "removed_id": h.id,
@@ -111,7 +115,7 @@ def _dedupe_keep_stronger(
     # Preserve original order of kept headings
     kept_ids = {h.id for h in key_to_best.values()}
     kept_ordered = [h for h in headings if h.id in kept_ids]
-    return kept_ordered, removed
+    return kept_ordered, removed, evaluated_by_dedupe
 
 
 def _gemini_is_toc(heading_text: str, content_preview: str) -> bool:
@@ -162,7 +166,7 @@ def clean_toc(
     removals: List[Dict] = []
 
     # Step 1: de-dupe by normalized heading text, keep stronger content.
-    deduped, removed_dupes = _dedupe_keep_stronger(headings, text_by_fragment_id)
+    deduped, removed_dupes, evaluated_by_dedupe = _dedupe_keep_stronger(headings, text_by_fragment_id)
     removals.extend(removed_dupes)
 
     # Step 2: Gemini check for low-content headings (likely TOC rows that slipped through).
@@ -175,7 +179,15 @@ def clean_toc(
         frag_chars = len(frag_text)
         frag_lines = _fragment_lines(frag_text)
 
+        key = _normalize_heading_key(h.text)
         needs_eval = frag_lines < min_lines_after_heading or frag_chars < min_fragment_chars
+
+        # If this heading-key had duplicates, consider it already “evaluated” by dedupe.
+        # This prevents the (1.1 duplicate removed) + (kept 1.1 later removed by Gemini) double-processing pattern.
+        if evaluated_by_dedupe.get(key, False):
+            cleaned.append(h)
+            continue
+
         if not needs_eval or not enable_gemini_toc_check:
             cleaned.append(h)
             continue

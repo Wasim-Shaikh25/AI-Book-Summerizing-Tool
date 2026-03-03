@@ -50,7 +50,10 @@ def _load_dotenv_value(key: str) -> str:
 
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or _load_dotenv_value("GEMINI_API_KEY") or _load_dotenv_value("GOOGLE_API_KEY") or ""
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+# Use a stable, widely available model by default.
+# google.genai expects full model id like "gemini-1.5-flash" (no "models/" prefix).
+# Use a stable, widely available model by default.
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "models/gemini-3.1-flash-lite-preview")
 
 # Token limits for summarization (reverted to chunk-by-chunk focus)
 REWRITE_MAX_TOKENS = 15000 # Increased to allow for more content expansion
