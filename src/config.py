@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Define paths for PDF and output folders
 PDF_FOLDER = os.path.join(BASE_DIR, "pdfs")
 OUTPUT_FOLDER = os.path.join(BASE_DIR, "output")
-REFERENCE_DOCX_PATH = os.path.join(BASE_DIR, "reference_files", "reference.docx")
+REFERENCE_DOCX_PATH = os.path.join(BASE_DIR, "reference.docx")
 
 # Ensure output folder exists
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
