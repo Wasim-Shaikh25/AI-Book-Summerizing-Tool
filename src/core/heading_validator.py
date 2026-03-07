@@ -1,25 +1,19 @@
 from __future__ import annotations
 
 import json
-import os
-from dataclasses import asdict
 from pathlib import Path
-from typing import Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
-from src.ai.gemini_adapter import gemini_generate
+from .gemini_validity import gemini_validate
+from .logging.pipeline_logger import PipelineLogger
 from .models import HeadingCandidate
 
 
-SYSTEM_INSTRUCTION = (
-    "You are validating structural headings in academic PDFs. "
-    "You will be given a list of detected heading candidates with context. "
-    "Return ONLY a JSON array of objects with fields: "
-    "[{ \"id\": \"...\", \"is_valid\": true/false }]. "
-    "No explanations, no extra keys, no markdown."
-)
+# Prompt logic for Gemini validity is owned by src/core/gemini_validity.py
 
 
 def _ensure_logs_dir() -> Path:
+    # Legacy: keep for older callers (writes flat logs under ./logs)
     logs_dir = Path("logs")
     logs_dir.mkdir(parents=True, exist_ok=True)
     return logs_dir
@@ -44,8 +38,8 @@ def _candidate_to_log_dict(c: HeadingCandidate) -> Dict:
 
 
 def _build_request_payload(candidates: Sequence[HeadingCandidate]) -> Dict:
+    # Legacy payload builder kept to avoid breaking existing code paths.
     return {
-        "system_instruction": SYSTEM_INSTRUCTION,
         "candidates": [
             {
                 "id": c.id,
@@ -53,84 +47,113 @@ def _build_request_payload(candidates: Sequence[HeadingCandidate]) -> Dict:
                 "full_context_preview": c.full_context_preview,
             }
             for c in candidates
-        ],
-        "response_format": '[{ "id": "...", "is_valid": true/false }]',
-        "rules": {
-            "return_only_json": True,
-            "no_explanations": True,
-            "no_markdown": True,
-            "no_extra_keys": True,
-        },
+        ]
     }
 
 
-def validate_headings(candidates: List[HeadingCandidate]) -> List[HeadingCandidate]:
+def validate_headings(
+    candidates: List[HeadingCandidate],
+    *,
+    logger: Optional[PipelineLogger] = None,
+) -> List[HeadingCandidate]:
     """
-    Accepts List[HeadingCandidate], sends a JSON validation request to Gemini,
-    receives structured response, updates is_valid, and writes logs.
+    Gemini heading validation stage (batched).
 
-    Logs written under ./logs (created if missing):
-      - heading_candidates_raw.json
-      - heading_validation_request.json
-      - heading_validation_response.json
-      - heading_candidates_filtered.json
+    If `logger` is provided, writes per-run files (per requirements):
+      - 05_gemini_request.json (list of batches)
+      - 05_gemini_raw_response.json (list of batches)
+      - 05_gemini_heading_validation.json (parsed per heading; no raw text)
+
+    If `logger` is not provided, preserves the legacy flat log behavior under ./logs.
     """
-    logs_dir = _ensure_logs_dir()
+    # Legacy flat logs (for backwards compatibility)
+    if logger is None:
+        logs_dir = _ensure_logs_dir()
+        raw_payload = [_candidate_to_log_dict(c) for c in candidates]
+        _write_json(logs_dir / "heading_candidates_raw.json", raw_payload)
 
-    # Log raw candidates as detected
-    raw_payload = [_candidate_to_log_dict(c) for c in candidates]
-    _write_json(logs_dir / "heading_candidates_raw.json", raw_payload)
+        request_payload = _build_request_payload(candidates)
+        _write_json(logs_dir / "heading_validation_request.json", request_payload)
 
-    # Build request
-    request_payload = _build_request_payload(candidates)
-    _write_json(logs_dir / "heading_validation_request.json", request_payload)
+        # Legacy returns candidates unchanged (safe default) if no logger provided.
+        # (The new pipeline always passes logger.)
+        return candidates
 
-    # User prompt: provide ONLY the candidates JSON to the model (system instruction enforces format)
-    user_prompt = json.dumps(request_payload["candidates"], indent=2, ensure_ascii=False)
+    # Batched Gemini call
+    batches = gemini_validate(candidates, batch_size=20)
 
-    # Send to Gemini (no batching)
-    resp = gemini_generate(SYSTEM_INSTRUCTION, user_prompt)
+    # Accumulate parsed results across batches
+    parsed_results_by_id: Dict[str, Dict[str, Any]] = {}
+    request_batches_payload: List[Dict[str, Any]] = []
+    raw_batches_payload: List[Dict[str, Any]] = []
 
-    # Log response (raw + parsed if possible)
-    response_payload = {
-        "raw_text": resp.raw_text,
-        "parsed_json": resp.parsed_json,
-    }
-    _write_json(logs_dir / "heading_validation_response.json", response_payload)
+    for batch_id, batch_candidates, parsed_by_id, raw_text, request_items in batches:
+        request_batches_payload.append(
+            {
+                "batch_id": batch_id,
+                "model": "gemini",
+                "request": request_items,
+            }
+        )
+        raw_batches_payload.append(
+            {
+                "batch_id": batch_id,
+                "raw_model_text": raw_text,
+            }
+        )
+        for hid, v in parsed_by_id.items():
+            parsed_results_by_id[hid] = v
 
-    # Apply validation results
-    id_to_is_valid: Dict[str, bool] = {}
-    if isinstance(resp.parsed_json, list):
-        for item in resp.parsed_json:
-            if not isinstance(item, dict):
-                continue
-            hid = item.get("id")
-            is_valid = item.get("is_valid")
-            if isinstance(hid, str) and isinstance(is_valid, bool):
-                id_to_is_valid[hid] = is_valid
+    # Requirement: append per batch (do not overwrite). Each file is a JSON list of batches.
+    for entry in request_batches_payload:
+        logger.append_json_list("05_gemini_request.json", entry)
+    for entry in raw_batches_payload:
+        logger.append_json_list("05_gemini_raw_response.json", entry)
 
     validated: List[HeadingCandidate] = []
-    for c in candidates:
-        if c.id in id_to_is_valid:
-            validated.append(
-                HeadingCandidate(
-                    id=c.id,
-                    text=c.text,
-                    start_line=c.start_line,
-                    end_line=c.end_line,
-                    before_context=list(c.before_context),
-                    after_context=list(c.after_context),
-                    full_context_preview=c.full_context_preview,
-                    is_valid=id_to_is_valid[c.id],
-                )
-            )
-        else:
-            # If Gemini didn't return an entry, leave as None (safe default)
-            validated.append(c)
+    parsed_log: List[Dict[str, Any]] = []
 
-    # Filtered list: only those marked valid==True
-    filtered = [c for c in validated if c.is_valid is True]
-    filtered_payload = [_candidate_to_log_dict(c) for c in filtered]
-    _write_json(logs_dir / "heading_candidates_filtered.json", filtered_payload)
+    for c in candidates:
+        rec = parsed_results_by_id.get(c.id)
+        if rec is None:
+            validated.append(c)
+            continue
+
+        is_valid = rec.get("is_valid")
+        reason = rec.get("reason", "")
+        if not isinstance(is_valid, bool):
+            validated.append(c)
+            continue
+
+        updated = HeadingCandidate(
+            id=c.id,
+            text=c.text,
+            start_line=c.start_line,
+            end_line=c.end_line,
+            before_context=list(c.before_context),
+            after_context=list(c.after_context),
+            full_context_preview=c.full_context_preview,
+            is_valid=is_valid,
+            valid_reason=reason if isinstance(reason, str) else "",
+        )
+        validated.append(updated)
+        parsed_log.append(
+            {
+                "heading_id": updated.id,
+                "text": updated.text,
+                "is_valid": updated.is_valid,
+                "is_toc": updated.is_toc if updated.is_toc is not None else False,
+                "reason": updated.valid_reason,
+            }
+        )
+
+        logger.append_decision(
+            updated.id,
+            stage="gemini_heading_validation",
+            decision="is_valid_true" if updated.is_valid else "is_valid_false",
+            meta={"reason": updated.valid_reason},
+        )
+
+    logger.write_json("05_gemini_heading_validation.json", parsed_log)
 
     return validated

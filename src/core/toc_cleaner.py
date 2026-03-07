@@ -143,78 +143,12 @@ def clean_toc(
     enable_gemini_toc_check: bool = True,
 ) -> List[FinalHeading]:
     """
-    Removes TOC-only entries after heading filtering.
+    NOTE (disabled):
+    This stage previously performed:
+      1) duplicate removal by normalized text
+      2) low-content + Gemini TOC removal
 
-    Steps (simple, debug-friendly):
-      1) Remove duplicate headings (same normalized text); keep the one with more fragment text.
-      2) For remaining headings with low content (lines < min_lines_after_heading or chars < min_fragment_chars),
-         optionally ask Gemini if it's a TOC heading; if yes, remove it.
-
-    Notes:
-      - Fragment text can be provided via `fragments` or `fragment_text_by_id`.
-      - If no fragment text is available, this function is a no-op.
-      - Never removes the first heading (conservative).
+    Per current configuration, toc_cleaner does not remove anything and returns
+    the headings unchanged (identity function).
     """
-    if len(headings) <= 1:
-        return list(headings)
-
-    text_by_fragment_id = _build_fragment_text_by_id(fragments, fragment_text_by_id)
-    if not text_by_fragment_id:
-        return list(headings)
-
-    trace_dir = _ensure_toc_trace_dir()
-    removals: List[Dict] = []
-
-    # Step 1: de-dupe by normalized heading text, keep stronger content.
-    deduped, removed_dupes, evaluated_by_dedupe = _dedupe_keep_stronger(headings, text_by_fragment_id)
-    removals.extend(removed_dupes)
-
-    # Step 2: Gemini check for low-content headings (likely TOC rows that slipped through).
-    # Only headings still "flagged" as low_content are evaluated here (simple 2-phase logic).
-    cleaned: List[FinalHeading] = []
-    cleaned.append(deduped[0])  # never remove first
-
-    for h in deduped[1:]:
-        frag_text = _frag_text(h, text_by_fragment_id)
-        frag_chars = len(frag_text)
-        frag_lines = _fragment_lines(frag_text)
-
-        key = _normalize_heading_key(h.text)
-        needs_eval = frag_lines < min_lines_after_heading or frag_chars < min_fragment_chars
-
-        # If this heading-key had duplicates, consider it already “evaluated” by dedupe.
-        # This prevents the (1.1 duplicate removed) + (kept 1.1 later removed by Gemini) double-processing pattern.
-        if evaluated_by_dedupe.get(key, False):
-            cleaned.append(h)
-            continue
-
-        if not needs_eval or not enable_gemini_toc_check:
-            cleaned.append(h)
-            continue
-
-        preview = frag_text.strip()[:900]
-        is_toc = _gemini_is_toc(h.text, preview)
-        # evaluated once -> flag is effectively cleared by decision (keep/remove)
-        if is_toc:
-            removals.append(
-                {
-                    "removed_id": h.id,
-                    "reason": "gemini_toc",
-                    "fragment_chars": frag_chars,
-                    "fragment_lines": frag_lines,
-                }
-            )
-            continue
-
-        cleaned.append(h)
-
-    # Trace (single file, easy to diff)
-    _write_json(
-        trace_dir / "toc_removals.json",
-        {
-            "removed": removals,
-            "final_count": len(cleaned),
-        },
-    )
-
-    return cleaned
+    return list(headings)
