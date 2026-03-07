@@ -106,7 +106,7 @@ def run(pdf_path: str) -> Path:
         )
         for f in frag_result.fragments
     ]
-    hierarchy = assign_hierarchy(final_heads)
+    hierarchy = assign_hierarchy(final_heads, logger=run_logger)
     _write_json(out_dir / "04_hierarchy.preview.json", _preview_lines(hierarchy, 40))
 
     # TOC cleaning (currently disabled as a removal stage), but we still log a deterministic
