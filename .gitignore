@@ -1,29 +1,19 @@
-# Virtual environment
-venv/
-.venv/
-env/
-.env/
-
-# Byte-compiled Python files
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+.venv/
+venv/
 
-# Editor-specific files
-.vscode/
-.idea/
-
-# Operating system files
+# OS / editor
 .DS_Store
 Thumbs.db
+.vscode/
 
-# Logs and temporary files
-*.log
-*.tmp
-*.swp
+# Logs / debug artifacts (never commit)
+logs/run_*/
+logs/toc_trace/
+logs/*.json
 
-# Sensitive information (e.g., API keys, passwords)
-.env
-
-# Project specific
-output/
+# Local model binaries
+models/*.gguf
+*.gguf
