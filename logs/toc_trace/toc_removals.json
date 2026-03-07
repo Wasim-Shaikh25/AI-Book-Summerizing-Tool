@@ -1,0 +1,29 @@
+{
+  "removed": [
+    {
+      "removed_id": "L60:Nature of Torts",
+      "reason": "gemini_toc",
+      "fragment_chars": 16,
+      "fragment_lines": 1
+    },
+    {
+      "removed_id": "L179:Essential Elements of A Tort",
+      "reason": "gemini_toc",
+      "fragment_chars": 29,
+      "fragment_lines": 1
+    },
+    {
+      "removed_id": "L257:Who can/can not Sue?",
+      "reason": "gemini_toc",
+      "fragment_chars": 21,
+      "fragment_lines": 1
+    },
+    {
+      "removed_id": "L261:Who cannot sue?",
+      "reason": "gemini_toc",
+      "fragment_chars": 16,
+      "fragment_lines": 1
+    }
+  ],
+  "final_count": 15
+}

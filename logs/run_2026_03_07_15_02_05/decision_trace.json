@@ -1,0 +1,1461 @@
+[
+  {
+    "heading_id": "L1:Page 1 of 133",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a page number/footer, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a page number footer/header, not a section heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L5:MODULE 1:",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear structural module heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a structural outline heading typical of a syllabus or TOC."
+        }
+      },
+      {
+        "stage": "toc_section_resolver",
+        "decision": "removed",
+        "meta": {
+          "reason": "toc_block_3plus"
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L6:General Principles of Tort",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear structural section heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a structural outline heading typical of a syllabus or TOC."
+        }
+      },
+      {
+        "stage": "toc_section_resolver",
+        "decision": "removed",
+        "meta": {
+          "reason": "toc_block_3plus"
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a numbered subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a structural outline heading typical of a syllabus or TOC."
+        }
+      },
+      {
+        "stage": "toc_section_resolver",
+        "decision": "removed",
+        "meta": {
+          "reason": "toc_block_3plus"
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L8:1.2 Distinction from Crime, Breach of Contract etc., who may",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a numbered subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a structural outline heading typical of a syllabus or TOC."
+        }
+      },
+      {
+        "stage": "toc_section_resolver",
+        "decision": "removed",
+        "meta": {
+          "reason": "toc_block_3plus"
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a numbered subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a structural outline heading typical of a syllabus or TOC."
+        }
+      },
+      {
+        "stage": "toc_section_resolver",
+        "decision": "removed",
+        "meta": {
+          "reason": "toc_block_3plus"
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a numbered subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a structural outline heading typical of a syllabus or TOC."
+        }
+      },
+      {
+        "stage": "toc_section_resolver",
+        "decision": "removed",
+        "meta": {
+          "reason": "toc_block_3plus"
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L11:1.5 Extinguishment of Liability in Tort",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a numbered subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a structural outline heading typical of a syllabus or TOC."
+        }
+      },
+      {
+        "stage": "toc_section_resolver",
+        "decision": "removed",
+        "meta": {
+          "reason": "toc_block_3plus"
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L12:1.6 General Defenses and Discharge of Torts",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a numbered subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a structural outline heading typical of a syllabus or TOC."
+        }
+      },
+      {
+        "stage": "toc_section_resolver",
+        "decision": "removed",
+        "meta": {
+          "reason": "toc_block_3plus"
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a repeated structural heading marking the start of the content section."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a section heading in the main body of the text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L16:A. INTRODUCTION:",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear structural sub-heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a section heading in the main body of the text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L17:1. The Tort is of French origin. The root is ‘Tortum’ in Lat",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is the first sentence of a paragraph, not a heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a paragraph start, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L20:Definition of Tort",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This functions as a sub-heading for the definition section."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a section heading in the main body of the text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L32:for tort are given below:",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a lead-in sentence for a list, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment/introductory text, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L35:duty is towards persons generally and its breach is redressi",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a continuation of a quote/paragraph, not a heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L39:equitable obligation.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is the end of a sentence, not a heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L44:by a determinate person:-",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a lead-in phrase for a list, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list introduction, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L49:c) It may be an act violation the absolute right (especially",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L52:d) It may be an act or omission causing harm which the perso",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L55:Page 2 of 133",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a page number/footer, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a page number footer/header, not a section heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L58:absolutely or within limits, to avoid or prevent.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the preceding paragraph, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L60:Nature of Torts",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear section title."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a section heading in the main body."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L61:A. Tort and crime",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear subsection title."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sub-section heading in the main body."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L78:there may be and often other remedies also.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is the concluding sentence of the previous paragraph."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L80:Scope of Tort Law",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear section title."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a section heading in the main body."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L88:tort,",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a fragment of a sentence, not a heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a fragment of a sentence, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L92:c) Unliquidated damages should be the legal remedy for the w",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item in the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L94:I. Wrongful Act",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear section title."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a section heading in the main body."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L106:violation of a legal duty.’",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is the end of a sentence."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L109:Page 3 of 133",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a page header/footer, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a page header/footer, not a section heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L111:II. Damage",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear section title."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a section heading in the main body."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L117:Damages are claimed and awarded by the court to the parties.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a sentence, not a heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence from the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L119:Objectives Of Law of Torts",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear section title."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a section heading in the main body."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L120:1. Compensation: Self-evidently, Compensation is one of the ",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading in the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L123:2. Safeguarding Interests: Another primary objective that th",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading in the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L125:3. Deterrence: Deterrence theory about law says that the thr",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading in the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L130:4. Vindication: The Law of Torts provides enough room for de",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading in the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L133:5. Scattering Losses: Law of Torts also aims at being an ins",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading in the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L136:6. Moral Objective: The Law of Torts also serves the very in",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading in the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L139:mandated to undo the harm of such acts by any means.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is the end of a sentence."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L141:The Law of Torts in India",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear section heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a standard section heading introducing a new topic in the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L163:Page 4 of 133",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a page number/header, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a page number/header/footer artifact, not a section heading."
+        }
+      },
+      {
+        "stage": "toc_safeguard",
+        "decision": "override_is_toc_false",
+        "meta": {
+          "reason": "followed_by_large_paragraph",
+          "chars": 1028
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L173:In a more recent judgement of Jay Laxmi Salt Works (p) ltd. ",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment or introductory clause within a paragraph, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L177:tortuous liability by court would be conducive.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is the end of a paragraph."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is the end of a sentence, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L179:Essential Elements of A Tort",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear section heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a clear section heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L180:Three essential elements need to be fulfilled to constitute ",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is the first sentence of the paragraph following the heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L181:Existence of a Duty of Care",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sub-section heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L184:Such duty of care needs to be proved in the court to induct ",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a sentence from the body text."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L186:Commission or Omission of an Act",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sub-section heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L189:the law of the land to do.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is the end of a paragraph."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L192:of Defamation on X’s part as the law forbids the publication",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L196:from X’s garden.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L199:lead to a Tort.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is the end of a paragraph."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L201:Legal Injury",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sub-section heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L205:Injuria’ encapsulate the damage and injury part.",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L210:White.[6]",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a citation/end of a sentence."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a citation/reference, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L214:Gloucester Grammar School case[7] can be referred to underst",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L217:Page 5 of 133",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a page number/header."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_true",
+        "meta": {
+          "reason": "This is a page number/header/footer artifact, not a section heading."
+        }
+      },
+      {
+        "stage": "toc_safeguard",
+        "decision": "override_is_toc_false",
+        "meta": {
+          "reason": "followed_by_large_paragraph",
+          "chars": 821
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L219:Legal Remedy",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sub-section heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L226:determining the remedies to be awarded in a case. The nature",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a sentence fragment from the body text."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sentence fragment, not a heading."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L228:1.2 Distinction from Crime, Breach of Contract etc., who may",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a numbered section heading indicating a new topic in the main body."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a standard section heading introducing a new topic in the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L251:Introduction",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "The context suggests this is a misplaced or redundant label rather than a structural heading for the section."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a standard section heading introducing the concept of a tort."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L257:Who can/can not Sue?",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This acts as a primary section heading for the following subsections."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a section heading acting as a sub-header for the following content."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L258:Who can sue?",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sub-heading within the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L261:Who cannot sue?",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_true",
+        "meta": {
+          "reason": "This is a clear subsection heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a sub-heading within the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L262:There are seven categories of persons cannot sue, only subje",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a lead-in sentence to a list, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is an introductory sentence acting as a heading for a list."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L263:An Alien enemy",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading within the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L264:Convict",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading within the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L265:Bankrupt",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading within the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L266:Husband and wife",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading within the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L267:Corporation",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading within the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L268:An Infant/Minor",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading within the body text."
+        }
+      }
+    ]
+  },
+  {
+    "heading_id": "L269:A foreign state",
+    "history": [
+      {
+        "stage": "gemini_heading_validation",
+        "decision": "is_valid_false",
+        "meta": {
+          "reason": "This is a list item, not a structural heading."
+        }
+      },
+      {
+        "stage": "gemini_toc",
+        "decision": "is_toc_false",
+        "meta": {
+          "reason": "This is a list item heading within the body text."
+        }
+      }
+    ]
+  }
+]

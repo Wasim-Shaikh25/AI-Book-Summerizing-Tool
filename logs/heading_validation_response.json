@@ -1,6 +1,10 @@
 {
-  "raw_text": "[\n  { \"id\": \"L1:Page 1 of 133\", \"is_valid\": false },\n  { \"id\": \"L5:MODULE 1:\", \"is_valid\": true },\n  { \"id\": \"L6:General Principles of Tort\", \"is_valid\": true },\n  { \"id\": \"L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort\", \"is_valid\": true },\n  { \"id\": \"L8:1.2 Distinction from Crime, Breach of Contract etc., who may\", \"is_valid\": true },\n  { \"id\": \"L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum\", \"is_valid\": true },\n  { \"id\": \"L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium\", \"is_valid\": true },\n  { \"id\": \"L11:1.5 Extinguishment of Liability in Tort\", \"is_valid\": true },\n  { \"id\": \"L12:1.6 General Defenses and Discharge of Torts\", \"is_valid\": true },\n  { \"id\": \"L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort\", \"is_valid\": true },\n  { \"id\": \"L16:A. INTRODUCTION:\", \"is_valid\": true },\n  { \"id\": \"L17:1. The Tort is of French origin. The root is ‘Tortum’ in Lat\", \"is_valid\": false },\n  { \"id\": \"L20:Definition of Tort\", \"is_valid\": true },\n  { \"id\": \"L32:for tort are given below:\", \"is_valid\": false },\n  { \"id\": \"L35:duty is towards persons generally and its breach is redressi\", \"is_valid\": false },\n  { \"id\": \"L39:equitable obligation.\", \"is_valid\": false },\n  { \"id\": \"L44:by a determinate person:-\", \"is_valid\": false },\n  { \"id\": \"L49:c) It may be an act violation the absolute right (especially\", \"is_valid\": false },\n  { \"id\": \"L52:d) It may be an act or omission causing harm which the perso\", \"is_valid\": false },\n  { \"id\": \"L55:Page 2 of 133\", \"is_valid\": false },\n  { \"id\": \"L58:absolutely or within limits, to avoid or prevent.\", \"is_valid\": false },\n  { \"id\": \"L60:Nature of Torts\", \"is_valid\": true },\n  { \"id\": \"L61:A. Tort and crime\", \"is_valid\": true },\n  { \"id\": \"L78:there may be and often other remedies also.\", \"is_valid\": false },\n  { \"id\": \"L80:Scope of Tort Law\", \"is_valid\": true },\n  { \"id\": \"L88:tort,\", \"is_valid\": false },\n  { \"id\": \"L92:c) Unliquidated damages should be the legal remedy for the w\", \"is_valid\": false },\n  { \"id\": \"L94:I. Wrongful Act\", \"is_valid\": true },\n  { \"id\": \"L108:Page 3 of 133\", \"is_valid\": false },\n  { \"id\": \"L110:II. Damage\", \"is_valid\": true },\n  { \"id\": \"L116:Damages are claimed and awarded by the court to the parties.\", \"is_valid\": false },\n  { \"id\": \"L118:Objectives Of Law of Torts\", \"is_valid\": true },\n  { \"id\": \"L119:1. Compensation: Self-evidently, Compensation is one of the \", \"is_valid\": false },\n  { \"id\": \"L122:2. Safeguarding Interests: Another primary objective that th\", \"is_valid\": false },\n  { \"id\": \"L124:3. Deterrence: Deterrence theory about law says that the thr\", \"is_valid\": false },\n  { \"id\": \"L129:4. Vindication: The Law of Torts provides enough room for de\", \"is_valid\": false },\n  { \"id\": \"L132:5. Scattering Losses: Law of Torts also aims at being an ins\", \"is_valid\": false },\n  { \"id\": \"L135:6. Moral Objective: The Law of Torts also serves the very in\", \"is_valid\": false },\n  { \"id\": \"L138:mandated to undo the harm of such acts by any means.\", \"is_valid\": false },\n  { \"id\": \"L140:The Law of Torts in India\", \"is_valid\": true },\n  { \"id\": \"L162:Page 4 of 133\", \"is_valid\": false },\n  { \"id\": \"L172:In a more recent judgement of Jay Laxmi Salt Works (p) ltd. \", \"is_valid\": false },\n  { \"id\": \"L176:tortuous liability by court would be conducive.\", \"is_valid\": false },\n  { \"id\": \"L178:Essential Elements of A Tort\", \"is_valid\": true },\n  { \"id\": \"L179:Three essential elements need to be fulfilled to constitute \", \"is_valid\": false },\n  { \"id\": \"L180:Existence of a Duty of Care\", \"is_valid\": true },\n  { \"id\": \"L183:Such duty of care needs to be proved in the court to induct \", \"is_valid\": false },\n  { \"id\": \"L185:Commission or Omission of an Act\", \"is_valid\": true },\n  { \"id\": \"L188:the law of the land to do.\", \"is_valid\": false },\n  { \"id\": \"L191:of Defamation on X’s part as the law forbids the publication\", \"is_valid\": false },\n  { \"id\": \"L195:from X’s garden.\", \"is_valid\": false },\n  { \"id\": \"L198:lead to a Tort.\", \"is_valid\": false },\n  { \"id\": \"L200:Legal Injury\", \"is_valid\": true },\n  { \"id\": \"L204:Injuria’ encapsulate the damage and injury part.\", \"is_valid\": false },\n  { \"id\": \"L209:White.[6]\", \"is_valid\": false },\n  { \"id\": \"L215:Page 5 of 133\", \"is_valid\": false },\n  { \"id\": \"L217:Legal Remedy\", \"is_valid\": true },\n  { \"id\": \"L224:determining the remedies to be awarded in a case. The nature\", \"is_valid\": false },\n  { \"id\": \"L226:1.2 Distinction from Crime, Breach of Contract etc., who may\", \"is_valid\": true },\n  { \"id\": \"L249:Introduction\", \"is_valid\": true },\n  { \"id\": \"L255:Who can/can not Sue?\", \"is_valid\": true },\n  { \"id\": \"L256:Who can sue?\", \"is_valid\": true },\n  { \"id\": \"L259:Who cannot sue?\", \"is_valid\": true },\n  { \"id\": \"L260:There are seven categories of persons cannot sue, only subje\", \"is_valid\": false },\n  { \"id\": \"L261:An Alien enemy\", \"is_valid\": false },\n  { \"id\": \"L262:Convict\", \"is_valid\": false },\n  { \"id\": \"L263:Bankrupt\", \"is_valid\": false },\n  { \"id\": \"L264:Husband and wife\", \"is_valid\": false },\n  { \"id\": \"L265:Corporation\", \"is_valid\": false },\n  { \"id\": \"L266:An Infant/Minor\", \"is_valid\": false },\n  { \"id\": \"L267:A foreign state\", \"is_valid\": false }\n]",
+  "raw_text": "[\n  { \"id\": \"L0:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – \", \"is_valid\": false },\n  { \"id\": \"L1:Page 1 of 133\", \"is_valid\": false },\n  { \"id\": \"L5:MODULE 1:\", \"is_valid\": true },\n  { \"id\": \"L6:General Principles of Tort\", \"is_valid\": true },\n  { \"id\": \"L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort\", \"is_valid\": true },\n  { \"id\": \"L8:1.2 Distinction from Crime, Breach of Contract etc., who may\", \"is_valid\": true },\n  { \"id\": \"L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum\", \"is_valid\": true },\n  { \"id\": \"L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium\", \"is_valid\": true },\n  { \"id\": \"L11:1.5 Extinguishment of Liability in Tort\", \"is_valid\": true },\n  { \"id\": \"L12:1.6 General Defenses and Discharge of Torts\", \"is_valid\": true },\n  { \"id\": \"L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort\", \"is_valid\": true },\n  { \"id\": \"L16:A. INTRODUCTION:\", \"is_valid\": true },\n  { \"id\": \"L17:1. The Tort is of French origin. The root is ‘Tortum’ in Lat\", \"is_valid\": false },\n  { \"id\": \"L18:which is ‘tortious’ , or, twisted.. The equivalent word in E\", \"is_valid\": false },\n  { \"id\": \"L20:Definition of Tort\", \"is_valid\": true },\n  { \"id\": \"L21:The term tort is the French equivalent of the English word ‘\", \"is_valid\": false },\n  { \"id\": \"L22:word tort is derived from the Latin word tortum which means \", \"is_valid\": false },\n  { \"id\": \"L23:contrast to the word rectum which means straight. Everyone i\", \"is_valid\": false },\n  { \"id\": \"L24:manner and when one deviates from this straight path into cr\", \"is_valid\": false },\n  { \"id\": \"L25:tort is a conduct which is twisted or crooked and not straig\", \"is_valid\": false },\n  { \"id\": \"L26:acquired a special meaning as a species of civil injury or w\", \"is_valid\": false },\n  { \"id\": \"L28:Tort now means a breach of some duty independent of contract\", \"is_valid\": false },\n  { \"id\": \"L29:and for which compensation is recoverable. In spite of vario\", \"is_valid\": false },\n  { \"id\": \"L30:of tort still awaits its master. In general terms, a tort ma\", \"is_valid\": false },\n  { \"id\": \"L31:contract for which the appropriate remedy is an action for u\", \"is_valid\": false },\n  { \"id\": \"L34:Winfield and Jolowicz- Tortuous liability arises from the br\", \"is_valid\": false },\n  { \"id\": \"L35:duty is towards persons generally and its breach is redressi\", \"is_valid\": false },\n  { \"id\": \"L37:Salmond and Hueston- A tort is a civil wrong for which the r\", \"is_valid\": false },\n  { \"id\": \"L38:damages, and which is not exclusively the breach of a contra\", \"is_valid\": false },\n  { \"id\": \"L41:Sir Frederick Pollock- Every tort is an act or omission (not\", \"is_valid\": false },\n  { \"id\": \"L42:of a personal relation, or undertaken by contract) which is \", \"is_valid\": false },\n  { \"id\": \"L43:(including reference with an absolute right, whether there b\", \"is_valid\": false },\n  { \"id\": \"L45:a) It may be an act which, without lawful justification or e\", \"is_valid\": false },\n  { \"id\": \"L47:b) It may be an act in itself contrary to law, or an omissio\", \"is_valid\": false },\n  { \"id\": \"L49:c) It may be an act violation the absolute right (especially\", \"is_valid\": false },\n  { \"id\": \"L50:wrongful without regard to the actor’s intention or knowledg\", \"is_valid\": false },\n  { \"id\": \"L51:extension of the general conceptions which are common to Eng\", \"is_valid\": false },\n  { \"id\": \"L52:d) It may be an act or omission causing harm which the perso\", \"is_valid\": false },\n  { \"id\": \"L54:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – \", \"is_valid\": false },\n  { \"id\": \"L60:Nature of Torts\", \"is_valid\": true },\n  { \"id\": \"L61:A. Tort and crime\", \"is_valid\": true },\n  { \"id\": \"L62:Historically tort had its roots in criminal procedure. Even \", \"is_valid\": false },\n  { \"id\": \"L63:aspects of the rules on damages. However tort is a species i\", \"is_valid\": false },\n  { \"id\": \"L64:civil and criminal wrongs depends on the nature of the remed\", \"is_valid\": false },\n  { \"id\": \"L65:gives rise to civil proceedings. A civil proceeding concerns\", \"is_valid\": false },\n  { \"id\": \"L66:the plaintiff as against the defendant whereas criminal proc\", \"is_valid\": false },\n  { \"id\": \"L67:of the defendant for some act of which he is accused. Someti\", \"is_valid\": false },\n  { \"id\": \"L68:the subject of proceedings of both kinds. For example assaul\", \"is_valid\": false },\n  { \"id\": \"L69:in such cases the wrong doer may be punished criminally and \", \"is_valid\": false },\n  { \"id\": \"L71:Not every civil wrong is a tort. A civil wrong may be labele\", \"is_valid\": false },\n  { \"id\": \"L72:remedy for it is an action for unliquidated damages. Thus fo\", \"is_valid\": false },\n  { \"id\": \"L73:because the civil remedy of injunction may be available at t\", \"is_valid\": false },\n  { \"id\": \"L74:those exceptional cases in which a private person may recove\", \"is_valid\": false },\n  { \"id\": \"L75:consequence thereof. However it has to be born in mind that \", \"is_valid\": false },\n  { \"id\": \"L76:whether or not an action for damages has been given against \", \"is_valid\": false },\n  { \"id\": \"L77:commits the tort. Although an action fro damages is an essen\", \"is_valid\": false },\n  { \"id\": \"L80:Scope of Tort Law\", \"is_valid\": true },\n  { \"id\": \"L81:The main aim of implementing tort law was to use it as a too\", \"is_valid\": false },\n  { \"id\": \"L82:reasonable prudent man and to make them respectful towards e\", \"is_valid\": false },\n  { \"id\": \"L83:achieve its aim law of torts allows the victim to claim comp\", \"is_valid\": false },\n  { \"id\": \"L84:But here it is needed to be mentioned that only certain acce\", \"is_valid\": false },\n  { \"id\": \"L85:by law which when infringed by others becomes redressal unde\", \"is_valid\": false },\n  { \"id\": \"L86:individuals or group of individuals are not redress able as \", \"is_valid\": false },\n  { \"id\": \"L87:Thus to summaries the scope of tort one can conclude that ev\", \"is_valid\": false },\n  { \"id\": \"L91:b) The nature of the wrongful act should be such to have a r\", \"is_valid\": false },\n  { \"id\": \"L92:c) Unliquidated damages should be the legal remedy for the w\", \"is_valid\": false },\n  { \"id\": \"L94:I. Wrongful Act\", \"is_valid\": true },\n  { \"id\": \"L95:An act becomes a wrongful act if only it violates a legal ri\", \"is_valid\": false },\n  { \"id\": \"L96:In Rogers v. Ranjendro Dutt, the Judges opined that the act \", \"is_valid\": false },\n  { \"id\": \"L97:a legal wrongful act. Thus, mere harm in to another person’s\", \"is_valid\": false },\n  { \"id\": \"L99:‘A legal right, as defined by Austin, is a faculty which res\", \"is_valid\": false },\n  { \"id\": \"L100:virtue of a given law, and which avails against a party (or \", \"is_valid\": false },\n  { \"id\": \"L101:parties) other than the party or parties in whom it resides.\", \"is_valid\": false },\n  { \"id\": \"L103:They may be divided again into public rights and private rig\", \"is_valid\": false },\n  { \"id\": \"L104:obligation to perform some act or refrain from performing an\", \"is_valid\": false },\n  { \"id\": \"L105:the wrongful act complained of amounts to either an infringe\", \"is_valid\": false },\n  { \"id\": \"L108:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – \", \"is_valid\": false },\n  { \"id\": \"L111:II. Damage\", \"is_valid\": true },\n  { \"id\": \"L113:which damages are claimed by the latter against the former. \", \"is_valid\": false },\n  { \"id\": \"L115:Ordinarily to convey any loss, injury or if anyone is depriv\", \"is_valid\": false },\n  { \"id\": \"L116:used, whereas damages mean the compensation claimed by the i\", \"is_valid\": false },\n  { \"id\": \"L119:Objectives Of Law of Torts\", \"is_valid\": true },\n  { \"id\": \"L120:1. Compensation: Self-evidently, Compensation is one of the \", \"is_valid\": false },\n  { \"id\": \"L121:Law. The whole Law of Torts focuses on compensating the vict\", \"is_valid\": false },\n  { \"id\": \"L123:2. Safeguarding Interests: Another primary objective that th\", \"is_valid\": false },\n  { \"id\": \"L125:3. Deterrence: Deterrence theory about law says that the thr\", \"is_valid\": false },\n  { \"id\": \"L126:demotivate and discourage people from committing certain act\", \"is_valid\": false },\n  { \"id\": \"L127:eventually prevents the further commission of unlawful acts.\", \"is_valid\": false },\n  { \"id\": \"L128:penalize the guilty, the unliquidated nature of the damages \", \"is_valid\": false },\n  { \"id\": \"L130:4. Vindication: The Law of Torts provides enough room for de\", \"is_valid\": false },\n  { \"id\": \"L131:deems himself/herself as innocent to prove the same in front\", \"is_valid\": false },\n  { \"id\": \"L133:5. Scattering Losses: Law of Torts also aims at being an ins\", \"is_valid\": false },\n  { \"id\": \"L134:losses suffered by the plaintiff. The loss incurred by the p\", \"is_valid\": false },\n  { \"id\": \"L135:defendants and the insurance companies (if any, in the facts\", \"is_valid\": false },\n  { \"id\": \"L136:6. Moral Objective: The Law of Torts also serves the very in\", \"is_valid\": false },\n  { \"id\": \"L137:founding theories of Law i.e., punishment for misconduct. Co\", \"is_valid\": false },\n  { \"id\": \"L138:delivered in a righteous mode when the wrongdoer gets punish\", \"is_valid\": false },\n  { \"id\": \"L141:The Law of Torts in India\", \"is_valid\": true },\n  { \"id\": \"L142:Under the Hindu law and the Muslim law tort had a much narro\", \"is_valid\": false },\n  { \"id\": \"L143:English law. The punishment of crimes in these systems occup\", \"is_valid\": false },\n  { \"id\": \"L144:compensation for wrongs. The law of torts in India is mainly\", \"is_valid\": false },\n  { \"id\": \"L145:on the principles of the common law of England. This was mad\", \"is_valid\": false },\n  { \"id\": \"L146:appeasing to the principles of justice, equity and good cons\", \"is_valid\": false },\n  { \"id\": \"L148:The expression justice, equity and good conscience was inter\", \"is_valid\": false },\n  { \"id\": \"L149:the rules of English Law if found applicable to Indian socie\", \"is_valid\": false },\n  { \"id\": \"L150:applying any rule of English law can see whether it is suite\", \"is_valid\": false },\n  { \"id\": \"L151:application of the English law in India has therefore been a\", \"is_valid\": false },\n  { \"id\": \"L152:has observed that the ability of the common law to adapt its\", \"is_valid\": false },\n  { \"id\": \"L153:countries where it has taken roots is not a weakness but one\", \"is_valid\": false },\n  { \"id\": \"L154:English law on a particular point, the Indian courts are not\", \"is_valid\": false },\n  { \"id\": \"L155:English statute law replacing or modifying the common law ar\", \"is_valid\": false },\n  { \"id\": \"L156:and good conscience, it is open o the courts in India to rej\", \"is_valid\": false },\n  { \"id\": \"L157:apply the new rules. For example, the principles of English \", \"is_valid\": false },\n  { \"id\": \"L158:Negligence) Act, 1945, have been applied in India although t\", \"is_valid\": false },\n  { \"id\": \"L160:The development in Indian law need not be on the same lines \", \"is_valid\": false },\n  { \"id\": \"L162:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – \", \"is_valid\": false },\n  { \"id\": \"L167:in any foreign country. We are certainly prepared to receive\", \"is_valid\": false },\n  { \"id\": \"L169:It has also been held that section 9 of The Code of Civil Pr\", \"is_valid\": false },\n  { \"id\": \"L170:try all suits of a civil nature, impliedly confers jurisdict\", \"is_valid\": false },\n  { \"id\": \"L171:equity and good conscience. Thus the court can draw upon its\", \"is_valid\": false },\n  { \"id\": \"L173:In a more recent judgement of Jay Laxmi Salt Works (p) ltd. \", \"is_valid\": false },\n  { \"id\": \"L174:truly speaking the entire law of torts is founded and struct\", \"is_valid\": false },\n  { \"id\": \"L175:primitive to close strictly or close finally the ever expand\", \"is_valid\": false },\n  { \"id\": \"L176:Even for social development, orderly growth of the society a\", \"is_valid\": false },\n  { \"id\": \"L179:Essential Elements of A Tort\", \"is_valid\": true },\n  { \"id\": \"L181:Existence of a Duty of Care\", \"is_valid\": true },\n  { \"id\": \"L182:Every individual is bound to follow certain duty imposed upo\", \"is_valid\": false },\n  { \"id\": \"L183:tutelage and adequate rationale over his acts which might tu\", \"is_valid\": false },\n  { \"id\": \"L186:Commission or Omission of an Act\", \"is_valid\": true },\n  { \"id\": \"L187:To charge a person for Tort, it must be proved that s/he has\", \"is_valid\": false },\n  { \"id\": \"L188:disobliging to the provisions of the law of the land or has \", \"is_valid\": false },\n  { \"id\": \"L191:Illustration A: ‘X’ publishes a defamatory statement against\", \"is_valid\": false },\n  { \"id\": \"L192:of Defamation on X’s part as the law forbids the publication\", \"is_valid\": false },\n  { \"id\": \"L194:Illustration B: ‘X’ fails to set up proper fencing surroundi\", \"is_valid\": false },\n  { \"id\": \"L195:people to stay away from it. A child dies as a consequence o\", \"is_valid\": false },\n  { \"id\": \"L198:Here, ‘X’ failed to perform his reasonable duty of care towa\", \"is_valid\": false },\n  { \"id\": \"L200:\", \"is_valid\": false },\n  { \"id\": \"L201:Legal Injury\", \"is_valid\": true },\n  { \"id\": \"L202:To prove that the wrongful act or omission of the defendant \", \"is_valid\": false },\n  { \"id\": \"L203:such act or omission caused an injury to him. An injury here\", \"is_valid\": false },\n  { \"id\": \"L204:plaintiff and recognized by the law of the land. The legal m\", \"is_valid\": false },\n  { \"id\": \"L207:The first maxim, Injuria sine Damno means Injury or infringe\", \"is_valid\": false },\n  { \"id\": \"L208:actual Damage i.e. substantial loss suffered by the plaintif\", \"is_valid\": false },\n  { \"id\": \"L209:injury is enough to constitute a Tort. The reader can deduce\", \"is_valid\": false },\n  { \"id\": \"L212:The second maxim, Damnum sine Injuria means damage to the pl\", \"is_valid\": false },\n  { \"id\": \"L213:or violation of any legal right. A case for Tort cannot be m\", \"is_valid\": false },\n  { \"id\": \"L214:Gloucester Grammar School case[7] can be referred to underst\", \"is_valid\": false },\n  { \"id\": \"L216:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – \", \"is_valid\": false },\n  { \"id\": \"L221:under a category of unlawful acts which have a civil action \", \"is_valid\": false },\n  { \"id\": \"L223:‘where there’s a right, there’s a remedy. The remedy require\", \"is_valid\": false },\n  { \"id\": \"L224:damages, injunctions, restitution actions, or equitable reme\", \"is_valid\": false },\n  { \"id\": \"L225:The court applies certain tests such as the test of foresee \", \"is_valid\": false },\n  { \"id\": \"L226:determining the remedies to be awarded in a case. The nature\", \"is_valid\": false },\n  { \"id\": \"L228:1.2 Distinction from Crime, Breach of Contract etc., who may\", \"is_valid\": true },\n  { \"id\": \"L229:a. Distinction between Crime and Breach of Contract\", \"is_valid\": true },\n  { \"id\": \"L230:(1) In crime, the injured party cannot sue for damages. The \", \"is_valid\": false },\n  { \"id\": \"L231:the society. It is the violation of public right. Hence the \", \"is_valid\": false },\n  { \"id\": \"L232:lies upon the State. If the wrongful act is proved, the accu\", \"is_valid\": false },\n  { \"id\": \"L233:both. Such fine is not paid to the victim. It is credited in\", \"is_valid\": false },\n  { \"id\": \"L234:contract, the injured party has right only for liquidated da\", \"is_valid\": false },\n  { \"id\": \"L235:(2) The object of the criminal law is to project the peace o\", \"is_valid\": false },\n  { \"id\": \"L237:(3) Mens rea (ill intention) is an important factor in impos\", \"is_valid\": false },\n  { \"id\": \"L238:where-as, in breach of contract, the motive is not an essent\", \"is_valid\": false },\n  { \"id\": \"L240:(4) A wrongful act is an infringement of right in rem. The w\", \"is_valid\": false },\n  { \"id\": \"L241:do harm or injury to any person. It is a statutory duty. But\", \"is_valid\": false },\n  { \"id\": \"L242:right in personam i.e., a right available only against some \", \"is_valid\": false },\n  { \"id\": \"L244:(5) The Criminal law which deals with crimes and offences is\", \"is_valid\": false },\n  { \"id\": \"L246:(6) The criminal law is completely codified one while the la\", \"is_valid\": false },\n  { \"id\": \"L248:(7) In crime, the victims are not paid damages. The accused \", \"is_valid\": false },\n  { \"id\": \"L249:goes to the State. However, in breach of contract, the party\", \"is_valid\": false },\n  { \"id\": \"L250:b. who may sue, who may not be sued.\", \"is_valid\": true },\n  { \"id\": \"L251:Introduction\", \"is_valid\": true },\n  { \"id\": \"L252:In the concept of a tort, usually a person who suffers injur\", \"is_valid\": false },\n  { \"id\": \"L253:person who caused him harm, but there are certain categories\", \"is_valid\": false },\n  { \"id\": \"L255:So, the question arises why these categories of people are r\", \"is_valid\": false },\n  { \"id\": \"L257:Who can/can not Sue?\", \"is_valid\": true },\n  { \"id\": \"L258:Who can sue?\", \"is_valid\": true },\n  { \"id\": \"L259:Any rational person including businessman, organisation, gov\", \"is_valid\": false },\n  { \"id\": \"L261:Who cannot sue?\", \"is_valid\": true },\n  { \"id\": \"L262:There are seven categories of persons cannot sue, only subje\", \"is_valid\": false }\n]",
   "parsed_json": [
+    {
+      "id": "L0:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – ",
+      "is_valid": false
+    },
     {
       "id": "L1:Page 1 of 133",
       "is_valid": false
@@ -50,11 +54,55 @@
       "is_valid": false
     },
     {
+      "id": "L18:which is ‘tortious’ , or, twisted.. The equivalent word in E",
+      "is_valid": false
+    },
+    {
       "id": "L20:Definition of Tort",
       "is_valid": true
     },
     {
-      "id": "L32:for tort are given below:",
+      "id": "L21:The term tort is the French equivalent of the English word ‘",
+      "is_valid": false
+    },
+    {
+      "id": "L22:word tort is derived from the Latin word tortum which means ",
+      "is_valid": false
+    },
+    {
+      "id": "L23:contrast to the word rectum which means straight. Everyone i",
+      "is_valid": false
+    },
+    {
+      "id": "L24:manner and when one deviates from this straight path into cr",
+      "is_valid": false
+    },
+    {
+      "id": "L25:tort is a conduct which is twisted or crooked and not straig",
+      "is_valid": false
+    },
+    {
+      "id": "L26:acquired a special meaning as a species of civil injury or w",
+      "is_valid": false
+    },
+    {
+      "id": "L28:Tort now means a breach of some duty independent of contract",
+      "is_valid": false
+    },
+    {
+      "id": "L29:and for which compensation is recoverable. In spite of vario",
+      "is_valid": false
+    },
+    {
+      "id": "L30:of tort still awaits its master. In general terms, a tort ma",
+      "is_valid": false
+    },
+    {
+      "id": "L31:contract for which the appropriate remedy is an action for u",
+      "is_valid": false
+    },
+    {
+      "id": "L34:Winfield and Jolowicz- Tortuous liability arises from the br",
       "is_valid": false
     },
     {
@@ -62,11 +110,31 @@
       "is_valid": false
     },
     {
-      "id": "L39:equitable obligation.",
+      "id": "L37:Salmond and Hueston- A tort is a civil wrong for which the r",
       "is_valid": false
     },
     {
-      "id": "L44:by a determinate person:-",
+      "id": "L38:damages, and which is not exclusively the breach of a contra",
+      "is_valid": false
+    },
+    {
+      "id": "L41:Sir Frederick Pollock- Every tort is an act or omission (not",
+      "is_valid": false
+    },
+    {
+      "id": "L42:of a personal relation, or undertaken by contract) which is ",
+      "is_valid": false
+    },
+    {
+      "id": "L43:(including reference with an absolute right, whether there b",
+      "is_valid": false
+    },
+    {
+      "id": "L45:a) It may be an act which, without lawful justification or e",
+      "is_valid": false
+    },
+    {
+      "id": "L47:b) It may be an act in itself contrary to law, or an omissio",
       "is_valid": false
     },
     {
@@ -74,15 +142,19 @@
       "is_valid": false
     },
     {
+      "id": "L50:wrongful without regard to the actor’s intention or knowledg",
+      "is_valid": false
+    },
+    {
+      "id": "L51:extension of the general conceptions which are common to Eng",
+      "is_valid": false
+    },
+    {
       "id": "L52:d) It may be an act or omission causing harm which the perso",
       "is_valid": false
     },
     {
-      "id": "L55:Page 2 of 133",
-      "is_valid": false
-    },
-    {
-      "id": "L58:absolutely or within limits, to avoid or prevent.",
+      "id": "L54:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – ",
       "is_valid": false
     },
     {
@@ -94,7 +166,63 @@
       "is_valid": true
     },
     {
-      "id": "L78:there may be and often other remedies also.",
+      "id": "L62:Historically tort had its roots in criminal procedure. Even ",
+      "is_valid": false
+    },
+    {
+      "id": "L63:aspects of the rules on damages. However tort is a species i",
+      "is_valid": false
+    },
+    {
+      "id": "L64:civil and criminal wrongs depends on the nature of the remed",
+      "is_valid": false
+    },
+    {
+      "id": "L65:gives rise to civil proceedings. A civil proceeding concerns",
+      "is_valid": false
+    },
+    {
+      "id": "L66:the plaintiff as against the defendant whereas criminal proc",
+      "is_valid": false
+    },
+    {
+      "id": "L67:of the defendant for some act of which he is accused. Someti",
+      "is_valid": false
+    },
+    {
+      "id": "L68:the subject of proceedings of both kinds. For example assaul",
+      "is_valid": false
+    },
+    {
+      "id": "L69:in such cases the wrong doer may be punished criminally and ",
+      "is_valid": false
+    },
+    {
+      "id": "L71:Not every civil wrong is a tort. A civil wrong may be labele",
+      "is_valid": false
+    },
+    {
+      "id": "L72:remedy for it is an action for unliquidated damages. Thus fo",
+      "is_valid": false
+    },
+    {
+      "id": "L73:because the civil remedy of injunction may be available at t",
+      "is_valid": false
+    },
+    {
+      "id": "L74:those exceptional cases in which a private person may recove",
+      "is_valid": false
+    },
+    {
+      "id": "L75:consequence thereof. However it has to be born in mind that ",
+      "is_valid": false
+    },
+    {
+      "id": "L76:whether or not an action for damages has been given against ",
+      "is_valid": false
+    },
+    {
+      "id": "L77:commits the tort. Although an action fro damages is an essen",
       "is_valid": false
     },
     {
@@ -102,7 +230,35 @@
       "is_valid": true
     },
     {
-      "id": "L88:tort,",
+      "id": "L81:The main aim of implementing tort law was to use it as a too",
+      "is_valid": false
+    },
+    {
+      "id": "L82:reasonable prudent man and to make them respectful towards e",
+      "is_valid": false
+    },
+    {
+      "id": "L83:achieve its aim law of torts allows the victim to claim comp",
+      "is_valid": false
+    },
+    {
+      "id": "L84:But here it is needed to be mentioned that only certain acce",
+      "is_valid": false
+    },
+    {
+      "id": "L85:by law which when infringed by others becomes redressal unde",
+      "is_valid": false
+    },
+    {
+      "id": "L86:individuals or group of individuals are not redress able as ",
+      "is_valid": false
+    },
+    {
+      "id": "L87:Thus to summaries the scope of tort one can conclude that ev",
+      "is_valid": false
+    },
+    {
+      "id": "L91:b) The nature of the wrongful act should be such to have a r",
       "is_valid": false
     },
     {
@@ -114,175 +270,455 @@
       "is_valid": true
     },
     {
-      "id": "L108:Page 3 of 133",
+      "id": "L95:An act becomes a wrongful act if only it violates a legal ri",
       "is_valid": false
     },
     {
-      "id": "L110:II. Damage",
+      "id": "L96:In Rogers v. Ranjendro Dutt, the Judges opined that the act ",
+      "is_valid": false
+    },
+    {
+      "id": "L97:a legal wrongful act. Thus, mere harm in to another person’s",
+      "is_valid": false
+    },
+    {
+      "id": "L99:‘A legal right, as defined by Austin, is a faculty which res",
+      "is_valid": false
+    },
+    {
+      "id": "L100:virtue of a given law, and which avails against a party (or ",
+      "is_valid": false
+    },
+    {
+      "id": "L101:parties) other than the party or parties in whom it resides.",
+      "is_valid": false
+    },
+    {
+      "id": "L103:They may be divided again into public rights and private rig",
+      "is_valid": false
+    },
+    {
+      "id": "L104:obligation to perform some act or refrain from performing an",
+      "is_valid": false
+    },
+    {
+      "id": "L105:the wrongful act complained of amounts to either an infringe",
+      "is_valid": false
+    },
+    {
+      "id": "L108:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – ",
+      "is_valid": false
+    },
+    {
+      "id": "L111:II. Damage",
       "is_valid": true
     },
     {
-      "id": "L116:Damages are claimed and awarded by the court to the parties.",
+      "id": "L113:which damages are claimed by the latter against the former. ",
       "is_valid": false
     },
     {
-      "id": "L118:Objectives Of Law of Torts",
+      "id": "L115:Ordinarily to convey any loss, injury or if anyone is depriv",
+      "is_valid": false
+    },
+    {
+      "id": "L116:used, whereas damages mean the compensation claimed by the i",
+      "is_valid": false
+    },
+    {
+      "id": "L119:Objectives Of Law of Torts",
       "is_valid": true
     },
     {
-      "id": "L119:1. Compensation: Self-evidently, Compensation is one of the ",
+      "id": "L120:1. Compensation: Self-evidently, Compensation is one of the ",
       "is_valid": false
     },
     {
-      "id": "L122:2. Safeguarding Interests: Another primary objective that th",
+      "id": "L121:Law. The whole Law of Torts focuses on compensating the vict",
       "is_valid": false
     },
     {
-      "id": "L124:3. Deterrence: Deterrence theory about law says that the thr",
+      "id": "L123:2. Safeguarding Interests: Another primary objective that th",
       "is_valid": false
     },
     {
-      "id": "L129:4. Vindication: The Law of Torts provides enough room for de",
+      "id": "L125:3. Deterrence: Deterrence theory about law says that the thr",
       "is_valid": false
     },
     {
-      "id": "L132:5. Scattering Losses: Law of Torts also aims at being an ins",
+      "id": "L126:demotivate and discourage people from committing certain act",
       "is_valid": false
     },
     {
-      "id": "L135:6. Moral Objective: The Law of Torts also serves the very in",
+      "id": "L127:eventually prevents the further commission of unlawful acts.",
       "is_valid": false
     },
     {
-      "id": "L138:mandated to undo the harm of such acts by any means.",
+      "id": "L128:penalize the guilty, the unliquidated nature of the damages ",
       "is_valid": false
     },
     {
-      "id": "L140:The Law of Torts in India",
+      "id": "L130:4. Vindication: The Law of Torts provides enough room for de",
+      "is_valid": false
+    },
+    {
+      "id": "L131:deems himself/herself as innocent to prove the same in front",
+      "is_valid": false
+    },
+    {
+      "id": "L133:5. Scattering Losses: Law of Torts also aims at being an ins",
+      "is_valid": false
+    },
+    {
+      "id": "L134:losses suffered by the plaintiff. The loss incurred by the p",
+      "is_valid": false
+    },
+    {
+      "id": "L135:defendants and the insurance companies (if any, in the facts",
+      "is_valid": false
+    },
+    {
+      "id": "L136:6. Moral Objective: The Law of Torts also serves the very in",
+      "is_valid": false
+    },
+    {
+      "id": "L137:founding theories of Law i.e., punishment for misconduct. Co",
+      "is_valid": false
+    },
+    {
+      "id": "L138:delivered in a righteous mode when the wrongdoer gets punish",
+      "is_valid": false
+    },
+    {
+      "id": "L141:The Law of Torts in India",
       "is_valid": true
     },
     {
-      "id": "L162:Page 4 of 133",
+      "id": "L142:Under the Hindu law and the Muslim law tort had a much narro",
       "is_valid": false
     },
     {
-      "id": "L172:In a more recent judgement of Jay Laxmi Salt Works (p) ltd. ",
+      "id": "L143:English law. The punishment of crimes in these systems occup",
       "is_valid": false
     },
     {
-      "id": "L176:tortuous liability by court would be conducive.",
+      "id": "L144:compensation for wrongs. The law of torts in India is mainly",
       "is_valid": false
     },
     {
-      "id": "L178:Essential Elements of A Tort",
+      "id": "L145:on the principles of the common law of England. This was mad",
+      "is_valid": false
+    },
+    {
+      "id": "L146:appeasing to the principles of justice, equity and good cons",
+      "is_valid": false
+    },
+    {
+      "id": "L148:The expression justice, equity and good conscience was inter",
+      "is_valid": false
+    },
+    {
+      "id": "L149:the rules of English Law if found applicable to Indian socie",
+      "is_valid": false
+    },
+    {
+      "id": "L150:applying any rule of English law can see whether it is suite",
+      "is_valid": false
+    },
+    {
+      "id": "L151:application of the English law in India has therefore been a",
+      "is_valid": false
+    },
+    {
+      "id": "L152:has observed that the ability of the common law to adapt its",
+      "is_valid": false
+    },
+    {
+      "id": "L153:countries where it has taken roots is not a weakness but one",
+      "is_valid": false
+    },
+    {
+      "id": "L154:English law on a particular point, the Indian courts are not",
+      "is_valid": false
+    },
+    {
+      "id": "L155:English statute law replacing or modifying the common law ar",
+      "is_valid": false
+    },
+    {
+      "id": "L156:and good conscience, it is open o the courts in India to rej",
+      "is_valid": false
+    },
+    {
+      "id": "L157:apply the new rules. For example, the principles of English ",
+      "is_valid": false
+    },
+    {
+      "id": "L158:Negligence) Act, 1945, have been applied in India although t",
+      "is_valid": false
+    },
+    {
+      "id": "L160:The development in Indian law need not be on the same lines ",
+      "is_valid": false
+    },
+    {
+      "id": "L162:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – ",
+      "is_valid": false
+    },
+    {
+      "id": "L167:in any foreign country. We are certainly prepared to receive",
+      "is_valid": false
+    },
+    {
+      "id": "L169:It has also been held that section 9 of The Code of Civil Pr",
+      "is_valid": false
+    },
+    {
+      "id": "L170:try all suits of a civil nature, impliedly confers jurisdict",
+      "is_valid": false
+    },
+    {
+      "id": "L171:equity and good conscience. Thus the court can draw upon its",
+      "is_valid": false
+    },
+    {
+      "id": "L173:In a more recent judgement of Jay Laxmi Salt Works (p) ltd. ",
+      "is_valid": false
+    },
+    {
+      "id": "L174:truly speaking the entire law of torts is founded and struct",
+      "is_valid": false
+    },
+    {
+      "id": "L175:primitive to close strictly or close finally the ever expand",
+      "is_valid": false
+    },
+    {
+      "id": "L176:Even for social development, orderly growth of the society a",
+      "is_valid": false
+    },
+    {
+      "id": "L179:Essential Elements of A Tort",
       "is_valid": true
     },
     {
-      "id": "L179:Three essential elements need to be fulfilled to constitute ",
-      "is_valid": false
-    },
-    {
-      "id": "L180:Existence of a Duty of Care",
+      "id": "L181:Existence of a Duty of Care",
       "is_valid": true
     },
     {
-      "id": "L183:Such duty of care needs to be proved in the court to induct ",
+      "id": "L182:Every individual is bound to follow certain duty imposed upo",
       "is_valid": false
     },
     {
-      "id": "L185:Commission or Omission of an Act",
+      "id": "L183:tutelage and adequate rationale over his acts which might tu",
+      "is_valid": false
+    },
+    {
+      "id": "L186:Commission or Omission of an Act",
       "is_valid": true
     },
     {
-      "id": "L188:the law of the land to do.",
+      "id": "L187:To charge a person for Tort, it must be proved that s/he has",
       "is_valid": false
     },
     {
-      "id": "L191:of Defamation on X’s part as the law forbids the publication",
+      "id": "L188:disobliging to the provisions of the law of the land or has ",
       "is_valid": false
     },
     {
-      "id": "L195:from X’s garden.",
+      "id": "L191:Illustration A: ‘X’ publishes a defamatory statement against",
       "is_valid": false
     },
     {
-      "id": "L198:lead to a Tort.",
+      "id": "L192:of Defamation on X’s part as the law forbids the publication",
       "is_valid": false
     },
     {
-      "id": "L200:Legal Injury",
+      "id": "L194:Illustration B: ‘X’ fails to set up proper fencing surroundi",
+      "is_valid": false
+    },
+    {
+      "id": "L195:people to stay away from it. A child dies as a consequence o",
+      "is_valid": false
+    },
+    {
+      "id": "L198:Here, ‘X’ failed to perform his reasonable duty of care towa",
+      "is_valid": false
+    },
+    {
+      "id": "L200:",
+      "is_valid": false
+    },
+    {
+      "id": "L201:Legal Injury",
       "is_valid": true
     },
     {
-      "id": "L204:Injuria’ encapsulate the damage and injury part.",
+      "id": "L202:To prove that the wrongful act or omission of the defendant ",
       "is_valid": false
     },
     {
-      "id": "L209:White.[6]",
+      "id": "L203:such act or omission caused an injury to him. An injury here",
       "is_valid": false
     },
     {
-      "id": "L215:Page 5 of 133",
+      "id": "L204:plaintiff and recognized by the law of the land. The legal m",
       "is_valid": false
     },
     {
-      "id": "L217:Legal Remedy",
+      "id": "L207:The first maxim, Injuria sine Damno means Injury or infringe",
+      "is_valid": false
+    },
+    {
+      "id": "L208:actual Damage i.e. substantial loss suffered by the plaintif",
+      "is_valid": false
+    },
+    {
+      "id": "L209:injury is enough to constitute a Tort. The reader can deduce",
+      "is_valid": false
+    },
+    {
+      "id": "L212:The second maxim, Damnum sine Injuria means damage to the pl",
+      "is_valid": false
+    },
+    {
+      "id": "L213:or violation of any legal right. A case for Tort cannot be m",
+      "is_valid": false
+    },
+    {
+      "id": "L214:Gloucester Grammar School case[7] can be referred to underst",
+      "is_valid": false
+    },
+    {
+      "id": "L216:Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – ",
+      "is_valid": false
+    },
+    {
+      "id": "L221:under a category of unlawful acts which have a civil action ",
+      "is_valid": false
+    },
+    {
+      "id": "L223:‘where there’s a right, there’s a remedy. The remedy require",
+      "is_valid": false
+    },
+    {
+      "id": "L224:damages, injunctions, restitution actions, or equitable reme",
+      "is_valid": false
+    },
+    {
+      "id": "L225:The court applies certain tests such as the test of foresee ",
+      "is_valid": false
+    },
+    {
+      "id": "L226:determining the remedies to be awarded in a case. The nature",
+      "is_valid": false
+    },
+    {
+      "id": "L228:1.2 Distinction from Crime, Breach of Contract etc., who may",
       "is_valid": true
     },
     {
-      "id": "L224:determining the remedies to be awarded in a case. The nature",
-      "is_valid": false
-    },
-    {
-      "id": "L226:1.2 Distinction from Crime, Breach of Contract etc., who may",
+      "id": "L229:a. Distinction between Crime and Breach of Contract",
       "is_valid": true
     },
     {
-      "id": "L249:Introduction",
+      "id": "L230:(1) In crime, the injured party cannot sue for damages. The ",
+      "is_valid": false
+    },
+    {
+      "id": "L231:the society. It is the violation of public right. Hence the ",
+      "is_valid": false
+    },
+    {
+      "id": "L232:lies upon the State. If the wrongful act is proved, the accu",
+      "is_valid": false
+    },
+    {
+      "id": "L233:both. Such fine is not paid to the victim. It is credited in",
+      "is_valid": false
+    },
+    {
+      "id": "L234:contract, the injured party has right only for liquidated da",
+      "is_valid": false
+    },
+    {
+      "id": "L235:(2) The object of the criminal law is to project the peace o",
+      "is_valid": false
+    },
+    {
+      "id": "L237:(3) Mens rea (ill intention) is an important factor in impos",
+      "is_valid": false
+    },
+    {
+      "id": "L238:where-as, in breach of contract, the motive is not an essent",
+      "is_valid": false
+    },
+    {
+      "id": "L240:(4) A wrongful act is an infringement of right in rem. The w",
+      "is_valid": false
+    },
+    {
+      "id": "L241:do harm or injury to any person. It is a statutory duty. But",
+      "is_valid": false
+    },
+    {
+      "id": "L242:right in personam i.e., a right available only against some ",
+      "is_valid": false
+    },
+    {
+      "id": "L244:(5) The Criminal law which deals with crimes and offences is",
+      "is_valid": false
+    },
+    {
+      "id": "L246:(6) The criminal law is completely codified one while the la",
+      "is_valid": false
+    },
+    {
+      "id": "L248:(7) In crime, the victims are not paid damages. The accused ",
+      "is_valid": false
+    },
+    {
+      "id": "L249:goes to the State. However, in breach of contract, the party",
+      "is_valid": false
+    },
+    {
+      "id": "L250:b. who may sue, who may not be sued.",
       "is_valid": true
     },
     {
-      "id": "L255:Who can/can not Sue?",
+      "id": "L251:Introduction",
       "is_valid": true
     },
     {
-      "id": "L256:Who can sue?",
+      "id": "L252:In the concept of a tort, usually a person who suffers injur",
+      "is_valid": false
+    },
+    {
+      "id": "L253:person who caused him harm, but there are certain categories",
+      "is_valid": false
+    },
+    {
+      "id": "L255:So, the question arises why these categories of people are r",
+      "is_valid": false
+    },
+    {
+      "id": "L257:Who can/can not Sue?",
       "is_valid": true
     },
     {
-      "id": "L259:Who cannot sue?",
+      "id": "L258:Who can sue?",
       "is_valid": true
     },
     {
-      "id": "L260:There are seven categories of persons cannot sue, only subje",
+      "id": "L259:Any rational person including businessman, organisation, gov",
       "is_valid": false
     },
     {
-      "id": "L261:An Alien enemy",
-      "is_valid": false
+      "id": "L261:Who cannot sue?",
+      "is_valid": true
     },
     {
-      "id": "L262:Convict",
-      "is_valid": false
-    },
-    {
-      "id": "L263:Bankrupt",
-      "is_valid": false
-    },
-    {
-      "id": "L264:Husband and wife",
-      "is_valid": false
-    },
-    {
-      "id": "L265:Corporation",
-      "is_valid": false
-    },
-    {
-      "id": "L266:An Infant/Minor",
-      "is_valid": false
-    },
-    {
-      "id": "L267:A foreign state",
+      "id": "L262:There are seven categories of persons cannot sue, only subje",
       "is_valid": false
     }
   ]

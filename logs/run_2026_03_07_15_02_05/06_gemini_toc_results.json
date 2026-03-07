@@ -1,0 +1,440 @@
+[
+  {
+    "heading_id": "L1:Page 1 of 133",
+    "text": "Page 1 of 133",
+    "is_toc": false,
+    "reason": "This is a page number footer/header, not a section heading."
+  },
+  {
+    "heading_id": "L5:MODULE 1:",
+    "text": "MODULE 1:",
+    "is_toc": true,
+    "reason": "This is a structural outline heading typical of a syllabus or TOC."
+  },
+  {
+    "heading_id": "L6:General Principles of Tort",
+    "text": "General Principles of Tort",
+    "is_toc": true,
+    "reason": "This is a structural outline heading typical of a syllabus or TOC."
+  },
+  {
+    "heading_id": "L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+    "text": "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.",
+    "is_toc": true,
+    "reason": "This is a structural outline heading typical of a syllabus or TOC."
+  },
+  {
+    "heading_id": "L8:1.2 Distinction from Crime, Breach of Contract etc., who may",
+    "text": "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.",
+    "is_toc": true,
+    "reason": "This is a structural outline heading typical of a syllabus or TOC."
+  },
+  {
+    "heading_id": "L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum",
+    "text": "1.3 Damnum Sine Injuria, Injuria Sine Damnum",
+    "is_toc": true,
+    "reason": "This is a structural outline heading typical of a syllabus or TOC."
+  },
+  {
+    "heading_id": "L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium",
+    "text": "1.4 Volenti non-fit Injuria, Ubi jus ibi remedium",
+    "is_toc": true,
+    "reason": "This is a structural outline heading typical of a syllabus or TOC."
+  },
+  {
+    "heading_id": "L11:1.5 Extinguishment of Liability in Tort",
+    "text": "1.5 Extinguishment of Liability in Tort",
+    "is_toc": true,
+    "reason": "This is a structural outline heading typical of a syllabus or TOC."
+  },
+  {
+    "heading_id": "L12:1.6 General Defenses and Discharge of Torts",
+    "text": "1.6 General Defenses and Discharge of Torts",
+    "is_toc": true,
+    "reason": "This is a structural outline heading typical of a syllabus or TOC."
+  },
+  {
+    "heading_id": "L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+    "text": "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.",
+    "is_toc": false,
+    "reason": "This is a section heading in the main body of the text."
+  },
+  {
+    "heading_id": "L16:A. INTRODUCTION:",
+    "text": "A. INTRODUCTION:",
+    "is_toc": false,
+    "reason": "This is a section heading in the main body of the text."
+  },
+  {
+    "heading_id": "L17:1. The Tort is of French origin. The root is ‘Tortum’ in Lat",
+    "text": "1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct",
+    "is_toc": false,
+    "reason": "This is a paragraph start, not a heading."
+  },
+  {
+    "heading_id": "L20:Definition of Tort",
+    "text": "Definition of Tort",
+    "is_toc": false,
+    "reason": "This is a section heading in the main body of the text."
+  },
+  {
+    "heading_id": "L32:for tort are given below:",
+    "text": "for tort are given below:",
+    "is_toc": false,
+    "reason": "This is a sentence fragment/introductory text, not a heading."
+  },
+  {
+    "heading_id": "L35:duty is towards persons generally and its breach is redressi",
+    "text": "duty is towards persons generally and its breach is redressible by an action for unliquidated damages.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L39:equitable obligation.",
+    "text": "equitable obligation.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L44:by a determinate person:-",
+    "text": "by a determinate person:-",
+    "is_toc": false,
+    "reason": "This is a list introduction, not a heading."
+  },
+  {
+    "heading_id": "L49:c) It may be an act violation the absolute right (especially",
+    "text": "c) It may be an act violation the absolute right (especially rights of possession or property), and treated as",
+    "is_toc": false,
+    "reason": "This is a list item, not a heading."
+  },
+  {
+    "heading_id": "L52:d) It may be an act or omission causing harm which the perso",
+    "text": "d) It may be an act or omission causing harm which the person so acting or omitting to act did not intend",
+    "is_toc": false,
+    "reason": "This is a list item, not a heading."
+  },
+  {
+    "heading_id": "L55:Page 2 of 133",
+    "text": "Page 2 of 133",
+    "is_toc": false,
+    "reason": "This is a page number footer/header, not a section heading."
+  },
+  {
+    "heading_id": "L58:absolutely or within limits, to avoid or prevent.",
+    "text": "absolutely or within limits, to avoid or prevent.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment from the body text, not a heading."
+  },
+  {
+    "heading_id": "L60:Nature of Torts",
+    "text": "Nature of Torts",
+    "is_toc": false,
+    "reason": "This is a section heading in the main body."
+  },
+  {
+    "heading_id": "L61:A. Tort and crime",
+    "text": "A. Tort and crime",
+    "is_toc": false,
+    "reason": "This is a sub-section heading in the main body."
+  },
+  {
+    "heading_id": "L78:there may be and often other remedies also.",
+    "text": "there may be and often other remedies also.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment from the body text, not a heading."
+  },
+  {
+    "heading_id": "L80:Scope of Tort Law",
+    "text": "Scope of Tort Law",
+    "is_toc": false,
+    "reason": "This is a section heading in the main body."
+  },
+  {
+    "heading_id": "L88:tort,",
+    "text": "tort,",
+    "is_toc": false,
+    "reason": "This is a fragment of a sentence, not a heading."
+  },
+  {
+    "heading_id": "L92:c) Unliquidated damages should be the legal remedy for the w",
+    "text": "c) Unliquidated damages should be the legal remedy for the wrongful act.",
+    "is_toc": false,
+    "reason": "This is a list item in the body text."
+  },
+  {
+    "heading_id": "L94:I. Wrongful Act",
+    "text": "I. Wrongful Act",
+    "is_toc": false,
+    "reason": "This is a section heading in the main body."
+  },
+  {
+    "heading_id": "L106:violation of a legal duty.’",
+    "text": "violation of a legal duty.’",
+    "is_toc": false,
+    "reason": "This is a sentence fragment from the body text."
+  },
+  {
+    "heading_id": "L109:Page 3 of 133",
+    "text": "Page 3 of 133",
+    "is_toc": false,
+    "reason": "This is a page header/footer, not a section heading."
+  },
+  {
+    "heading_id": "L111:II. Damage",
+    "text": "II. Damage",
+    "is_toc": false,
+    "reason": "This is a section heading in the main body."
+  },
+  {
+    "heading_id": "L117:Damages are claimed and awarded by the court to the parties.",
+    "text": "Damages are claimed and awarded by the court to the parties.",
+    "is_toc": false,
+    "reason": "This is a sentence from the body text."
+  },
+  {
+    "heading_id": "L119:Objectives Of Law of Torts",
+    "text": "Objectives Of Law of Torts",
+    "is_toc": false,
+    "reason": "This is a section heading in the main body."
+  },
+  {
+    "heading_id": "L120:1. Compensation: Self-evidently, Compensation is one of the ",
+    "text": "1. Compensation: Self-evidently, Compensation is one of the most fundamental ideas behind Tort",
+    "is_toc": false,
+    "reason": "This is a list item heading in the body text."
+  },
+  {
+    "heading_id": "L123:2. Safeguarding Interests: Another primary objective that th",
+    "text": "2. Safeguarding Interests: Another primary objective that the Law of Torts serves is safeguarding or",
+    "is_toc": false,
+    "reason": "This is a list item heading in the body text."
+  },
+  {
+    "heading_id": "L125:3. Deterrence: Deterrence theory about law says that the thr",
+    "text": "3. Deterrence: Deterrence theory about law says that the threat or the fear imposed by law will",
+    "is_toc": false,
+    "reason": "This is a list item heading in the body text."
+  },
+  {
+    "heading_id": "L130:4. Vindication: The Law of Torts provides enough room for de",
+    "text": "4. Vindication: The Law of Torts provides enough room for dear opportunities to a person who",
+    "is_toc": false,
+    "reason": "This is a list item heading in the body text."
+  },
+  {
+    "heading_id": "L133:5. Scattering Losses: Law of Torts also aims at being an ins",
+    "text": "5. Scattering Losses: Law of Torts also aims at being an instrument to distribute the burden of the",
+    "is_toc": false,
+    "reason": "This is a list item heading in the body text."
+  },
+  {
+    "heading_id": "L136:6. Moral Objective: The Law of Torts also serves the very in",
+    "text": "6. Moral Objective: The Law of Torts also serves the very integral principle of society and one of the",
+    "is_toc": false,
+    "reason": "This is a list item heading in the body text."
+  },
+  {
+    "heading_id": "L139:mandated to undo the harm of such acts by any means.",
+    "text": "mandated to undo the harm of such acts by any means.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment from the body text."
+  },
+  {
+    "heading_id": "L141:The Law of Torts in India",
+    "text": "The Law of Torts in India",
+    "is_toc": false,
+    "reason": "This is a standard section heading introducing a new topic in the body text."
+  },
+  {
+    "heading_id": "L163:Page 4 of 133",
+    "text": "Page 4 of 133",
+    "is_toc": true,
+    "reason": "This is a page number/header/footer artifact, not a section heading."
+  },
+  {
+    "heading_id": "L173:In a more recent judgement of Jay Laxmi Salt Works (p) ltd. ",
+    "text": "In a more recent judgement of Jay Laxmi Salt Works (p) ltd. v. State of Gujarat, Sahai, J., observed:",
+    "is_toc": false,
+    "reason": "This is a sentence fragment or introductory clause within a paragraph, not a heading."
+  },
+  {
+    "heading_id": "L177:tortuous liability by court would be conducive.",
+    "text": "tortuous liability by court would be conducive.",
+    "is_toc": false,
+    "reason": "This is the end of a sentence, not a heading."
+  },
+  {
+    "heading_id": "L179:Essential Elements of A Tort",
+    "text": "Essential Elements of A Tort",
+    "is_toc": false,
+    "reason": "This is a clear section heading."
+  },
+  {
+    "heading_id": "L180:Three essential elements need to be fulfilled to constitute ",
+    "text": "Three essential elements need to be fulfilled to constitute a Tort, they are:",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L181:Existence of a Duty of Care",
+    "text": "Existence of a Duty of Care",
+    "is_toc": false,
+    "reason": "This is a sub-section heading."
+  },
+  {
+    "heading_id": "L184:Such duty of care needs to be proved in the court to induct ",
+    "text": "Such duty of care needs to be proved in the court to induct the charges of Tort.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L186:Commission or Omission of an Act",
+    "text": "Commission or Omission of an Act",
+    "is_toc": false,
+    "reason": "This is a sub-section heading."
+  },
+  {
+    "heading_id": "L189:the law of the land to do.",
+    "text": "the law of the land to do.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L192:of Defamation on X’s part as the law forbids the publication",
+    "text": "of Defamation on X’s part as the law forbids the publication of defamatory statements against a person.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L196:from X’s garden.",
+    "text": "from X’s garden.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L199:lead to a Tort.",
+    "text": "lead to a Tort.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L201:Legal Injury",
+    "text": "Legal Injury",
+    "is_toc": false,
+    "reason": "This is a sub-section heading."
+  },
+  {
+    "heading_id": "L205:Injuria’ encapsulate the damage and injury part.",
+    "text": "Injuria’ encapsulate the damage and injury part.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L210:White.[6]",
+    "text": "White.[6]",
+    "is_toc": false,
+    "reason": "This is a citation/reference, not a heading."
+  },
+  {
+    "heading_id": "L214:Gloucester Grammar School case[7] can be referred to underst",
+    "text": "Gloucester Grammar School case[7] can be referred to understand the maxim to its bottom.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L217:Page 5 of 133",
+    "text": "Page 5 of 133",
+    "is_toc": true,
+    "reason": "This is a page number/header/footer artifact, not a section heading."
+  },
+  {
+    "heading_id": "L219:Legal Remedy",
+    "text": "Legal Remedy",
+    "is_toc": false,
+    "reason": "This is a sub-section heading."
+  },
+  {
+    "heading_id": "L226:determining the remedies to be awarded in a case. The nature",
+    "text": "determining the remedies to be awarded in a case. The nature of the damages is unliquidated.",
+    "is_toc": false,
+    "reason": "This is a sentence fragment, not a heading."
+  },
+  {
+    "heading_id": "L228:1.2 Distinction from Crime, Breach of Contract etc., who may",
+    "text": "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.",
+    "is_toc": false,
+    "reason": "This is a standard section heading introducing a new topic in the body text."
+  },
+  {
+    "heading_id": "L251:Introduction",
+    "text": "Introduction",
+    "is_toc": false,
+    "reason": "This is a standard section heading introducing the concept of a tort."
+  },
+  {
+    "heading_id": "L257:Who can/can not Sue?",
+    "text": "Who can/can not Sue?",
+    "is_toc": false,
+    "reason": "This is a section heading acting as a sub-header for the following content."
+  },
+  {
+    "heading_id": "L258:Who can sue?",
+    "text": "Who can sue?",
+    "is_toc": false,
+    "reason": "This is a sub-heading within the body text."
+  },
+  {
+    "heading_id": "L261:Who cannot sue?",
+    "text": "Who cannot sue?",
+    "is_toc": false,
+    "reason": "This is a sub-heading within the body text."
+  },
+  {
+    "heading_id": "L262:There are seven categories of persons cannot sue, only subje",
+    "text": "There are seven categories of persons cannot sue, only subject to certain limitations:",
+    "is_toc": false,
+    "reason": "This is an introductory sentence acting as a heading for a list."
+  },
+  {
+    "heading_id": "L263:An Alien enemy",
+    "text": "An Alien enemy",
+    "is_toc": false,
+    "reason": "This is a list item heading within the body text."
+  },
+  {
+    "heading_id": "L264:Convict",
+    "text": "Convict",
+    "is_toc": false,
+    "reason": "This is a list item heading within the body text."
+  },
+  {
+    "heading_id": "L265:Bankrupt",
+    "text": "Bankrupt",
+    "is_toc": false,
+    "reason": "This is a list item heading within the body text."
+  },
+  {
+    "heading_id": "L266:Husband and wife",
+    "text": "Husband and wife",
+    "is_toc": false,
+    "reason": "This is a list item heading within the body text."
+  },
+  {
+    "heading_id": "L267:Corporation",
+    "text": "Corporation",
+    "is_toc": false,
+    "reason": "This is a list item heading within the body text."
+  },
+  {
+    "heading_id": "L268:An Infant/Minor",
+    "text": "An Infant/Minor",
+    "is_toc": false,
+    "reason": "This is a list item heading within the body text."
+  },
+  {
+    "heading_id": "L269:A foreign state",
+    "text": "A foreign state",
+    "is_toc": false,
+    "reason": "This is a list item heading within the body text."
+  }
+]

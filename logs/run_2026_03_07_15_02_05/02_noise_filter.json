@@ -1,0 +1,137 @@
+[
+  {
+    "summary": {
+      "total_pages": 5,
+      "threshold_pages_repeat_rule": 2,
+      "sampled_lines": 30,
+      "noise_lines": 10,
+      "page_num_occurrence_keys": [
+        {
+          "key": "__page_number__",
+          "bucket": "bottom",
+          "pages": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "text_occurrence_keys_eligible_for_noise": [
+        {
+          "key": "page of",
+          "bucket": "bottom",
+          "pages": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "key": "sub- law of torts, sem -, mumbai university new syllabus – -, marks -",
+          "bucket": "top",
+          "pages": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "line_id": 0,
+    "text": "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 ",
+    "page_number": 1,
+    "bucket": "top",
+    "decision": "noise",
+    "noise_type": "header",
+    "reason": "repeats_on_5_pages(>=2) + bucket=top"
+  },
+  {
+    "line_id": 1,
+    "text": "Page 1 of 133 ",
+    "page_number": 1,
+    "bucket": "bottom",
+    "decision": "noise",
+    "noise_type": "page_number",
+    "reason": "page_number_pattern + repeats_on_5_pages + bucket=bottom"
+  },
+  {
+    "line_id": 54,
+    "text": "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 ",
+    "page_number": 2,
+    "bucket": "top",
+    "decision": "noise",
+    "noise_type": "header",
+    "reason": "repeats_on_5_pages(>=2) + bucket=top"
+  },
+  {
+    "line_id": 55,
+    "text": "Page 2 of 133 ",
+    "page_number": 2,
+    "bucket": "bottom",
+    "decision": "noise",
+    "noise_type": "page_number",
+    "reason": "page_number_pattern + repeats_on_5_pages + bucket=bottom"
+  },
+  {
+    "line_id": 108,
+    "text": "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 ",
+    "page_number": 3,
+    "bucket": "top",
+    "decision": "noise",
+    "noise_type": "header",
+    "reason": "repeats_on_5_pages(>=2) + bucket=top"
+  },
+  {
+    "line_id": 109,
+    "text": "Page 3 of 133 ",
+    "page_number": 3,
+    "bucket": "bottom",
+    "decision": "noise",
+    "noise_type": "page_number",
+    "reason": "page_number_pattern + repeats_on_5_pages + bucket=bottom"
+  },
+  {
+    "line_id": 162,
+    "text": "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 ",
+    "page_number": 4,
+    "bucket": "top",
+    "decision": "noise",
+    "noise_type": "header",
+    "reason": "repeats_on_5_pages(>=2) + bucket=top"
+  },
+  {
+    "line_id": 163,
+    "text": "Page 4 of 133 ",
+    "page_number": 4,
+    "bucket": "bottom",
+    "decision": "noise",
+    "noise_type": "page_number",
+    "reason": "page_number_pattern + repeats_on_5_pages + bucket=bottom"
+  },
+  {
+    "line_id": 216,
+    "text": "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 ",
+    "page_number": 5,
+    "bucket": "top",
+    "decision": "noise",
+    "noise_type": "header",
+    "reason": "repeats_on_5_pages(>=2) + bucket=top"
+  },
+  {
+    "line_id": 217,
+    "text": "Page 5 of 133 ",
+    "page_number": 5,
+    "bucket": "bottom",
+    "decision": "noise",
+    "noise_type": "page_number",
+    "reason": "page_number_pattern + repeats_on_5_pages + bucket=bottom"
+  }
+]

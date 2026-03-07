@@ -1,0 +1,391 @@
+[
+  {
+    "batch_id": 1,
+    "model": "gemini",
+    "request": [
+      {
+        "heading_id": "L1:Page 1 of 133",
+        "text": "Page 1 of 133",
+        "context_preview": "\n\nSub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \n\nDETECTED_HEADING: Page 1 of 133\n\n \n \nLAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION "
+      },
+      {
+        "heading_id": "L5:MODULE 1:",
+        "text": "MODULE 1:",
+        "context_preview": " \n \nLAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION \n\nDETECTED_HEADING: MODULE 1:\n\nGeneral Principles of Tort \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. "
+      },
+      {
+        "heading_id": "L6:General Principles of Tort",
+        "text": "General Principles of Tort",
+        "context_preview": " \nLAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION \nMODULE 1: \n\nDETECTED_HEADING: General Principles of Tort\n\n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n1.3 Damnum Sine Injuria, Injuria Sine Damnum "
+      },
+      {
+        "heading_id": "L7:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+        "text": "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.",
+        "context_preview": "LAW OF TORTS, MOTOR ACCIDENT CLAIMS AND CONSUMER PROTECTION \nMODULE 1: \nGeneral Principles of Tort \n\nDETECTED_HEADING: 1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.\n\n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n1.3 Damnum Sine Injuria, Injuria Sine Damnum \n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium "
+      },
+      {
+        "heading_id": "L8:1.2 Distinction from Crime, Breach of Contract etc., who may",
+        "text": "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.",
+        "context_preview": "MODULE 1: \nGeneral Principles of Tort \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n\nDETECTED_HEADING: 1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.\n\n1.3 Damnum Sine Injuria, Injuria Sine Damnum \n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium \n1.5 Extinguishment of Liability in Tort "
+      },
+      {
+        "heading_id": "L9:1.3 Damnum Sine Injuria, Injuria Sine Damnum",
+        "text": "1.3 Damnum Sine Injuria, Injuria Sine Damnum",
+        "context_preview": "General Principles of Tort \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n\nDETECTED_HEADING: 1.3 Damnum Sine Injuria, Injuria Sine Damnum\n\n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium \n1.5 Extinguishment of Liability in Tort \n1.6 General Defenses and Discharge of Torts "
+      },
+      {
+        "heading_id": "L10:1.4 Volenti non-fit Injuria, Ubi jus ibi remedium",
+        "text": "1.4 Volenti non-fit Injuria, Ubi jus ibi remedium",
+        "context_preview": "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n1.3 Damnum Sine Injuria, Injuria Sine Damnum \n\nDETECTED_HEADING: 1.4 Volenti non-fit Injuria, Ubi jus ibi remedium\n\n1.5 Extinguishment of Liability in Tort \n1.6 General Defenses and Discharge of Torts \n "
+      },
+      {
+        "heading_id": "L11:1.5 Extinguishment of Liability in Tort",
+        "text": "1.5 Extinguishment of Liability in Tort",
+        "context_preview": "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \n1.3 Damnum Sine Injuria, Injuria Sine Damnum \n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium \n\nDETECTED_HEADING: 1.5 Extinguishment of Liability in Tort\n\n1.6 General Defenses and Discharge of Torts \n \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. "
+      },
+      {
+        "heading_id": "L12:1.6 General Defenses and Discharge of Torts",
+        "text": "1.6 General Defenses and Discharge of Torts",
+        "context_preview": "1.3 Damnum Sine Injuria, Injuria Sine Damnum \n1.4 Volenti non-fit Injuria, Ubi jus ibi remedium \n1.5 Extinguishment of Liability in Tort \n\nDETECTED_HEADING: 1.6 General Defenses and Discharge of Torts\n\n \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n "
+      },
+      {
+        "heading_id": "L14:1.1 Tort: Definition, Nature, Scope and object of Tort, Tort",
+        "text": "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.",
+        "context_preview": "1.5 Extinguishment of Liability in Tort \n1.6 General Defenses and Discharge of Torts \n \n\nDETECTED_HEADING: 1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India.\n\n \nA. INTRODUCTION: \n 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct "
+      },
+      {
+        "heading_id": "L16:A. INTRODUCTION:",
+        "text": "A. INTRODUCTION:",
+        "context_preview": " \n1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n \n\nDETECTED_HEADING: A. INTRODUCTION:\n\n 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct \nwhich is ‘tortious’ ,  or, twisted.. The equivalent word in English is “Wrong”. In Roman it is “delict” and in \nSanskrit it is “Jimha” which means ‘crooked’. "
+      },
+      {
+        "heading_id": "L17:1. The Tort is of French origin. The root is ‘Tortum’ in Lat",
+        "text": "1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct",
+        "context_preview": "1.1 Tort: Definition, Nature, Scope and object of Tort, Tort in India. \n \nA. INTRODUCTION: \n\nDETECTED_HEADING: 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct\n\nwhich is ‘tortious’ ,  or, twisted.. The equivalent word in English is “Wrong”. In Roman it is “delict” and in \nSanskrit it is “Jimha” which means ‘crooked’. \nDefinition of Tort "
+      },
+      {
+        "heading_id": "L20:Definition of Tort",
+        "text": "Definition of Tort",
+        "context_preview": " 1. The Tort is of French origin. The root is ‘Tortum’ in Latin which means ‘twist’. It implies a conduct \nwhich is ‘tortious’ ,  or, twisted.. The equivalent word in English is “Wrong”. In Roman it is “delict” and in \nSanskrit it is “Jimha” which means ‘crooked’. \n\nDETECTED_HEADING: Definition of Tort\n\nThe term tort is the French equivalent of the English word ‘wrong’ and of the Roman law term ‘delict’. The \nword tort is derived from the Latin word tortum which means twisted or crooked or wrong and is in \ncontrast to the word rectum which means straight. Everyone is expected to behave in a straightforward "
+      },
+      {
+        "heading_id": "L32:for tort are given below:",
+        "text": "for tort are given below:",
+        "context_preview": "and for which compensation is recoverable. In spite of various attempts an entirely satisfactory definition \nof tort still awaits its master. In general terms, a tort may be defined as a civil wrong independent of \ncontract for which the appropriate remedy is an action for unliquidated damages. Some other definitions \n\nDETECTED_HEADING: for tort are given below:\n\n \nWinfield and Jolowicz- Tortuous liability arises from the breach of a duty primarily fixed by law; this \nduty is towards persons generally and its breach is redressible by an action for unliquidated damages. "
+      },
+      {
+        "heading_id": "L35:duty is towards persons generally and its breach is redressi",
+        "text": "duty is towards persons generally and its breach is redressible by an action for unliquidated damages.",
+        "context_preview": "for tort are given below: \n \nWinfield and Jolowicz- Tortuous liability arises from the breach of a duty primarily fixed by law; this \n\nDETECTED_HEADING: duty is towards persons generally and its breach is redressible by an action for unliquidated damages.\n\n \nSalmond and Hueston- A tort is a civil wrong for which the remedy is a common action for unliquidated \ndamages, and which is not exclusively the breach of a contract or the breach of a trust or other mere "
+      },
+      {
+        "heading_id": "L39:equitable obligation.",
+        "text": "equitable obligation.",
+        "context_preview": " \nSalmond and Hueston- A tort is a civil wrong for which the remedy is a common action for unliquidated \ndamages, and which is not exclusively the breach of a contract or the breach of a trust or other mere \n\nDETECTED_HEADING: equitable obligation.\n\n \nSir Frederick Pollock- Every tort is an act or omission (not being merely the breach of a duty arising out \nof a personal relation, or undertaken by contract) which is related in one of the following ways to harm "
+      },
+      {
+        "heading_id": "L44:by a determinate person:-",
+        "text": "by a determinate person:-",
+        "context_preview": "Sir Frederick Pollock- Every tort is an act or omission (not being merely the breach of a duty arising out \nof a personal relation, or undertaken by contract) which is related in one of the following ways to harm \n(including reference with an absolute right, whether there be measurable actual damage or not), suffered \n\nDETECTED_HEADING: by a determinate person:-\n\na) It may be an act which, without lawful justification or excuse, is intended by the agent to cause harm, \nand does cause the harm complained of. \nb) It may be an act in itself contrary to law, or an omission of specific legal duty, which causes harm not "
+      },
+      {
+        "heading_id": "L49:c) It may be an act violation the absolute right (especially",
+        "text": "c) It may be an act violation the absolute right (especially rights of possession or property), and treated as",
+        "context_preview": "and does cause the harm complained of. \nb) It may be an act in itself contrary to law, or an omission of specific legal duty, which causes harm not \nintended by the person so acting or omitting. \n\nDETECTED_HEADING: c) It may be an act violation the absolute right (especially rights of possession or property), and treated as\n\nwrongful without regard to the actor’s intention or knowledge. This, as we have seen is an artificial \nextension of the general conceptions which are common to English and Roman law. \nd) It may be an act or omission causing harm which the person so acting or omitting to act did not intend "
+      },
+      {
+        "heading_id": "L52:d) It may be an act or omission causing harm which the perso",
+        "text": "d) It may be an act or omission causing harm which the person so acting or omitting to act did not intend",
+        "context_preview": "c) It may be an act violation the absolute right (especially rights of possession or property), and treated as \nwrongful without regard to the actor’s intention or knowledge. This, as we have seen is an artificial \nextension of the general conceptions which are common to English and Roman law. \n\nDETECTED_HEADING: d) It may be an act or omission causing harm which the person so acting or omitting to act did not intend\n\nto cause, but might and should with due diligence have foreseen and prevented. \nSub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \nPage 2 of 133 "
+      },
+      {
+        "heading_id": "L55:Page 2 of 133",
+        "text": "Page 2 of 133",
+        "context_preview": "d) It may be an act or omission causing harm which the person so acting or omitting to act did not intend \nto cause, but might and should with due diligence have foreseen and prevented. \nSub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \n\nDETECTED_HEADING: Page 2 of 133\n\n \ne) It may, in special cases, consist merely in not avoiding or preventing harm which the party was bound \nabsolutely or within limits, to avoid or prevent. "
+      }
+    ]
+  },
+  {
+    "batch_id": 2,
+    "model": "gemini",
+    "request": [
+      {
+        "heading_id": "L58:absolutely or within limits, to avoid or prevent.",
+        "text": "absolutely or within limits, to avoid or prevent.",
+        "context_preview": "Page 2 of 133 \n \ne) It may, in special cases, consist merely in not avoiding or preventing harm which the party was bound \n\nDETECTED_HEADING: absolutely or within limits, to avoid or prevent.\n\n \nNature of Torts \nA. Tort and crime "
+      },
+      {
+        "heading_id": "L60:Nature of Torts",
+        "text": "Nature of Torts",
+        "context_preview": "e) It may, in special cases, consist merely in not avoiding or preventing harm which the party was bound \nabsolutely or within limits, to avoid or prevent. \n \n\nDETECTED_HEADING: Nature of Torts\n\nA. Tort and crime \nHistorically tort had its roots in criminal procedure. Even today there is a punitive element in some \naspects of the rules on damages. However tort is a species if civil injury or wrong. The distinction between "
+      },
+      {
+        "heading_id": "L61:A. Tort and crime",
+        "text": "A. Tort and crime",
+        "context_preview": "absolutely or within limits, to avoid or prevent. \n \nNature of Torts \n\nDETECTED_HEADING: A. Tort and crime\n\nHistorically tort had its roots in criminal procedure. Even today there is a punitive element in some \naspects of the rules on damages. However tort is a species if civil injury or wrong. The distinction between \ncivil and criminal wrongs depends on the nature of the remedy provided by law. A civil wrong is one which "
+      },
+      {
+        "heading_id": "L78:there may be and often other remedies also.",
+        "text": "there may be and often other remedies also.",
+        "context_preview": "consequence thereof. However it has to be born in mind that a person is liable in tort irrespective of \nwhether or not an action for damages has been given against him. The party is liable from the moment he \ncommits the tort. Although an action fro damages is an essential mark of tort and its characteristic remedy, \n\nDETECTED_HEADING: there may be and often other remedies also.\n\n \nScope of Tort Law \nThe main aim of implementing tort law was to use it as a tool to make people to follow the behavior of a "
+      },
+      {
+        "heading_id": "L80:Scope of Tort Law",
+        "text": "Scope of Tort Law",
+        "context_preview": "commits the tort. Although an action fro damages is an essential mark of tort and its characteristic remedy, \nthere may be and often other remedies also. \n \n\nDETECTED_HEADING: Scope of Tort Law\n\nThe main aim of implementing tort law was to use it as a tool to make people to follow the behavior of a \nreasonable prudent man and to make them respectful towards each other’s rights and duties. In order to \nachieve its aim law of torts allows the victim to claim compensation for the infringement of his right. "
+      },
+      {
+        "heading_id": "L88:tort,",
+        "text": "tort,",
+        "context_preview": "by law which when infringed by others becomes redressal under tort law. Hence all expectations of \nindividuals or group of individuals are not redress able as only recognized interests are protected by law. \nThus to summaries the scope of tort one can conclude that every wrongful act is not a tort. To constitute a \n\nDETECTED_HEADING: tort,\n\n \na) Commission of wrongful act by a person; \nb) The nature of the wrongful act should be such to have a resort to legal remedy and "
+      },
+      {
+        "heading_id": "L92:c) Unliquidated damages should be the legal remedy for the w",
+        "text": "c) Unliquidated damages should be the legal remedy for the wrongful act.",
+        "context_preview": " \na) Commission of wrongful act by a person; \nb) The nature of the wrongful act should be such to have a resort to legal remedy and \n\nDETECTED_HEADING: c) Unliquidated damages should be the legal remedy for the wrongful act.\n\n \nI. Wrongful Act \nAn act becomes a wrongful act if only it violates a legal right of another individual. "
+      },
+      {
+        "heading_id": "L94:I. Wrongful Act",
+        "text": "I. Wrongful Act",
+        "context_preview": "b) The nature of the wrongful act should be such to have a resort to legal remedy and \nc) Unliquidated damages should be the legal remedy for the wrongful act. \n \n\nDETECTED_HEADING: I. Wrongful Act\n\nAn act becomes a wrongful act if only it violates a legal right of another individual. \nIn Rogers v. Ranjendro Dutt, the Judges opined that the act for which the plaintiff is complaining should be \na legal wrongful act. Thus, mere harm in to another person’s interest is not sufficient but the act should be "
+      },
+      {
+        "heading_id": "L106:violation of a legal duty.’",
+        "text": "violation of a legal duty.’",
+        "context_preview": "They may be divided again into public rights and private rights. Every right carries a legal duty or \nobligation to perform some act or refrain from performing an act. Therefore, liability for tort arises, when \nthe wrongful act complained of amounts to either an infringement of a legal private right or a breach or \n\nDETECTED_HEADING: violation of a legal duty.’\n\n \nSub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \nPage 3 of 133 "
+      },
+      {
+        "heading_id": "L109:Page 3 of 133",
+        "text": "Page 3 of 133",
+        "context_preview": "violation of a legal duty.’ \n \nSub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \n\nDETECTED_HEADING: Page 3 of 133\n\n \nII. Damage \nGenerally, a tort consists of some act done by a person which causes injury to another and for "
+      },
+      {
+        "heading_id": "L111:II. Damage",
+        "text": "II. Damage",
+        "context_preview": "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \nPage 3 of 133 \n \n\nDETECTED_HEADING: II. Damage\n\nGenerally, a tort consists of some act done by a person which causes injury to another and for \nwhich damages are claimed by the latter against the former. One must have a clear notion with regard to \nthe words damage and damages to understand this. "
+      },
+      {
+        "heading_id": "L117:Damages are claimed and awarded by the court to the parties.",
+        "text": "Damages are claimed and awarded by the court to the parties.",
+        "context_preview": "the words damage and damages to understand this. \nOrdinarily to convey any loss, injury or if anyone is deprived from anything the word damage is \nused, whereas damages mean the compensation claimed by the injured party and awarded by the court. \n\nDETECTED_HEADING: Damages are claimed and awarded by the court to the parties.\n\n \nObjectives Of Law of Torts \n1. Compensation: Self-evidently, Compensation is one of the most fundamental ideas behind Tort "
+      },
+      {
+        "heading_id": "L119:Objectives Of Law of Torts",
+        "text": "Objectives Of Law of Torts",
+        "context_preview": "used, whereas damages mean the compensation claimed by the injured party and awarded by the court. \nDamages are claimed and awarded by the court to the parties. \n \n\nDETECTED_HEADING: Objectives Of Law of Torts\n\n1. Compensation: Self-evidently, Compensation is one of the most fundamental ideas behind Tort \nLaw. The whole Law of Torts focuses on compensating the victim or the grieved party through \nvarious available remedies. "
+      },
+      {
+        "heading_id": "L120:1. Compensation: Self-evidently, Compensation is one of the ",
+        "text": "1. Compensation: Self-evidently, Compensation is one of the most fundamental ideas behind Tort",
+        "context_preview": "Damages are claimed and awarded by the court to the parties. \n \nObjectives Of Law of Torts \n\nDETECTED_HEADING: 1. Compensation: Self-evidently, Compensation is one of the most fundamental ideas behind Tort\n\nLaw. The whole Law of Torts focuses on compensating the victim or the grieved party through \nvarious available remedies. \n2. Safeguarding Interests: Another primary objective that the Law of Torts serves is safeguarding or "
+      },
+      {
+        "heading_id": "L123:2. Safeguarding Interests: Another primary objective that th",
+        "text": "2. Safeguarding Interests: Another primary objective that the Law of Torts serves is safeguarding or",
+        "context_preview": "1. Compensation: Self-evidently, Compensation is one of the most fundamental ideas behind Tort \nLaw. The whole Law of Torts focuses on compensating the victim or the grieved party through \nvarious available remedies. \n\nDETECTED_HEADING: 2. Safeguarding Interests: Another primary objective that the Law of Torts serves is safeguarding or\n\nprotecting an individual’s interest in his integrity or his property. \n3. Deterrence: Deterrence theory about law says that the threat or the fear imposed by law will \ndemotivate and discourage people from committing certain acts which are tagged as unlawful. This "
+      },
+      {
+        "heading_id": "L125:3. Deterrence: Deterrence theory about law says that the thr",
+        "text": "3. Deterrence: Deterrence theory about law says that the threat or the fear imposed by law will",
+        "context_preview": "various available remedies. \n2. Safeguarding Interests: Another primary objective that the Law of Torts serves is safeguarding or \nprotecting an individual’s interest in his integrity or his property. \n\nDETECTED_HEADING: 3. Deterrence: Deterrence theory about law says that the threat or the fear imposed by law will\n\ndemotivate and discourage people from committing certain acts which are tagged as unlawful. This \neventually prevents the further commission of unlawful acts. Although the Law of Torts doesn’t \npenalize the guilty, the unliquidated nature of the damages or the compensation which s/he might "
+      },
+      {
+        "heading_id": "L130:4. Vindication: The Law of Torts provides enough room for de",
+        "text": "4. Vindication: The Law of Torts provides enough room for dear opportunities to a person who",
+        "context_preview": "eventually prevents the further commission of unlawful acts. Although the Law of Torts doesn’t \npenalize the guilty, the unliquidated nature of the damages or the compensation which s/he might \nhave to pay acts as a deterrence. \n\nDETECTED_HEADING: 4. Vindication: The Law of Torts provides enough room for dear opportunities to a person who\n\ndeems himself/herself as innocent to prove the same in front of the court. This gives room for the \ncharges of Libel, Slander, and malicious prosecution. \n5. Scattering Losses: Law of Torts also aims at being an instrument to distribute the burden of the "
+      },
+      {
+        "heading_id": "L133:5. Scattering Losses: Law of Torts also aims at being an ins",
+        "text": "5. Scattering Losses: Law of Torts also aims at being an instrument to distribute the burden of the",
+        "context_preview": "4. Vindication: The Law of Torts provides enough room for dear opportunities to a person who \ndeems himself/herself as innocent to prove the same in front of the court. This gives room for the \ncharges of Libel, Slander, and malicious prosecution. \n\nDETECTED_HEADING: 5. Scattering Losses: Law of Torts also aims at being an instrument to distribute the burden of the\n\nlosses suffered by the plaintiff. The loss incurred by the plaintiff is usually divided between the \ndefendants and the insurance companies (if any, in the facts of the respective case). \n6. Moral Objective: The Law of Torts also serves the very integral principle of society and one of the "
+      },
+      {
+        "heading_id": "L136:6. Moral Objective: The Law of Torts also serves the very in",
+        "text": "6. Moral Objective: The Law of Torts also serves the very integral principle of society and one of the",
+        "context_preview": "5. Scattering Losses: Law of Torts also aims at being an instrument to distribute the burden of the \nlosses suffered by the plaintiff. The loss incurred by the plaintiff is usually divided between the \ndefendants and the insurance companies (if any, in the facts of the respective case). \n\nDETECTED_HEADING: 6. Moral Objective: The Law of Torts also serves the very integral principle of society and one of the\n\nfounding theories of Law i.e., punishment for misconduct. Complete justice is believed to be \ndelivered in a righteous mode when the wrongdoer gets punished for his unlawful act or is \nmandated to undo the harm of such acts by any means. "
+      },
+      {
+        "heading_id": "L139:mandated to undo the harm of such acts by any means.",
+        "text": "mandated to undo the harm of such acts by any means.",
+        "context_preview": "6. Moral Objective: The Law of Torts also serves the very integral principle of society and one of the \nfounding theories of Law i.e., punishment for misconduct. Complete justice is believed to be \ndelivered in a righteous mode when the wrongdoer gets punished for his unlawful act or is \n\nDETECTED_HEADING: mandated to undo the harm of such acts by any means.\n\n \nThe Law of Torts in India \nUnder the Hindu law and the Muslim law tort had a much narrower conception than the tort of the "
+      }
+    ]
+  },
+  {
+    "batch_id": 3,
+    "model": "gemini",
+    "request": [
+      {
+        "heading_id": "L141:The Law of Torts in India",
+        "text": "The Law of Torts in India",
+        "context_preview": "delivered in a righteous mode when the wrongdoer gets punished for his unlawful act or is \nmandated to undo the harm of such acts by any means. \n \n\nDETECTED_HEADING: The Law of Torts in India\n\nUnder the Hindu law and the Muslim law tort had a much narrower conception than the tort of the \nEnglish law. The punishment of crimes in these systems occupied a more prominent place than \ncompensation for wrongs. The law of torts in India is mainly the English law of torts which itself is based "
+      },
+      {
+        "heading_id": "L163:Page 4 of 133",
+        "text": "Page 4 of 133",
+        "context_preview": "The development in Indian law need not be on the same lines as in England. In M.C. Mehta v. Union \nof India , Justice Bhagwati said, we have to evolve new principles and lay down new norms which will \nSub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \n\nDETECTED_HEADING: Page 4 of 133\n\n \nadequately deal with new problems which arise in a highly industrialized economy. We cannot allow our \njudicial thinking to be constructed by reference to the law as it prevails in England or for the matter of that "
+      },
+      {
+        "heading_id": "L173:In a more recent judgement of Jay Laxmi Salt Works (p) ltd. ",
+        "text": "In a more recent judgement of Jay Laxmi Salt Works (p) ltd. v. State of Gujarat, Sahai, J., observed:",
+        "context_preview": "try all suits of a civil nature, impliedly confers jurisdiction to apply the Law of Torts as principles of justice, \nequity and good conscience. Thus the court can draw upon its inherent powers under section 9 for \ndeveloping this field of liability. \n\nDETECTED_HEADING: In a more recent judgement of Jay Laxmi Salt Works (p) ltd. v. State of Gujarat, Sahai, J., observed:\n\ntruly speaking the entire law of torts is founded and structured on morality. Therefore, it would be \nprimitive to close strictly or close finally the ever expanding and growing horizon of tortuous liability. \nEven for social development, orderly growth of the society and cultural refinances the liberal approach to "
+      },
+      {
+        "heading_id": "L177:tortuous liability by court would be conducive.",
+        "text": "tortuous liability by court would be conducive.",
+        "context_preview": "truly speaking the entire law of torts is founded and structured on morality. Therefore, it would be \nprimitive to close strictly or close finally the ever expanding and growing horizon of tortuous liability. \nEven for social development, orderly growth of the society and cultural refinances the liberal approach to \n\nDETECTED_HEADING: tortuous liability by court would be conducive.\n\n \nEssential Elements of A Tort \nThree essential elements need to be fulfilled to constitute a Tort, they are: "
+      },
+      {
+        "heading_id": "L179:Essential Elements of A Tort",
+        "text": "Essential Elements of A Tort",
+        "context_preview": "Even for social development, orderly growth of the society and cultural refinances the liberal approach to \ntortuous liability by court would be conducive. \n \n\nDETECTED_HEADING: Essential Elements of A Tort\n\nThree essential elements need to be fulfilled to constitute a Tort, they are: \nExistence of a Duty of Care \nEvery individual is bound to follow certain duty imposed upon it by the law of the land to practice certain "
+      },
+      {
+        "heading_id": "L180:Three essential elements need to be fulfilled to constitute ",
+        "text": "Three essential elements need to be fulfilled to constitute a Tort, they are:",
+        "context_preview": "tortuous liability by court would be conducive. \n \nEssential Elements of A Tort \n\nDETECTED_HEADING: Three essential elements need to be fulfilled to constitute a Tort, they are:\n\nExistence of a Duty of Care \nEvery individual is bound to follow certain duty imposed upon it by the law of the land to practice certain \ntutelage and adequate rationale over his acts which might turn out to be harmful to any other individual. "
+      },
+      {
+        "heading_id": "L181:Existence of a Duty of Care",
+        "text": "Existence of a Duty of Care",
+        "context_preview": " \nEssential Elements of A Tort \nThree essential elements need to be fulfilled to constitute a Tort, they are: \n\nDETECTED_HEADING: Existence of a Duty of Care\n\nEvery individual is bound to follow certain duty imposed upon it by the law of the land to practice certain \ntutelage and adequate rationale over his acts which might turn out to be harmful to any other individual. \nSuch duty of care needs to be proved in the court to induct the charges of Tort. "
+      },
+      {
+        "heading_id": "L184:Such duty of care needs to be proved in the court to induct ",
+        "text": "Such duty of care needs to be proved in the court to induct the charges of Tort.",
+        "context_preview": "Existence of a Duty of Care \nEvery individual is bound to follow certain duty imposed upon it by the law of the land to practice certain \ntutelage and adequate rationale over his acts which might turn out to be harmful to any other individual. \n\nDETECTED_HEADING: Such duty of care needs to be proved in the court to induct the charges of Tort.\n\n \nCommission or Omission of an Act \nTo charge a person for Tort, it must be proved that s/he has either committed an act which is contrary and "
+      },
+      {
+        "heading_id": "L186:Commission or Omission of an Act",
+        "text": "Commission or Omission of an Act",
+        "context_preview": "tutelage and adequate rationale over his acts which might turn out to be harmful to any other individual. \nSuch duty of care needs to be proved in the court to induct the charges of Tort. \n \n\nDETECTED_HEADING: Commission or Omission of an Act\n\nTo charge a person for Tort, it must be proved that s/he has either committed an act which is contrary and \ndisobliging to the provisions of the law of the land or has failed to do an act which was his/her duty as per \nthe law of the land to do. "
+      },
+      {
+        "heading_id": "L189:the law of the land to do.",
+        "text": "the law of the land to do.",
+        "context_preview": "Commission or Omission of an Act \nTo charge a person for Tort, it must be proved that s/he has either committed an act which is contrary and \ndisobliging to the provisions of the law of the land or has failed to do an act which was his/her duty as per \n\nDETECTED_HEADING: the law of the land to do.\n\n \nIllustration A: ‘X’ publishes a defamatory statement against ‘Y’. The same would lead to the Tortious wrong \nof Defamation on X’s part as the law forbids the publication of defamatory statements against a person. "
+      },
+      {
+        "heading_id": "L192:of Defamation on X’s part as the law forbids the publication",
+        "text": "of Defamation on X’s part as the law forbids the publication of defamatory statements against a person.",
+        "context_preview": "the law of the land to do. \n \nIllustration A: ‘X’ publishes a defamatory statement against ‘Y’. The same would lead to the Tortious wrong \n\nDETECTED_HEADING: of Defamation on X’s part as the law forbids the publication of defamatory statements against a person.\n\n \nIllustration B: ‘X’ fails to set up proper fencing surrounding his garden which has poisonous trees to warn \npeople to stay away from it. A child dies as a consequence of eating fruit from one of the poisonous trees "
+      },
+      {
+        "heading_id": "L196:from X’s garden.",
+        "text": "from X’s garden.",
+        "context_preview": " \nIllustration B: ‘X’ fails to set up proper fencing surrounding his garden which has poisonous trees to warn \npeople to stay away from it. A child dies as a consequence of eating fruit from one of the poisonous trees \n\nDETECTED_HEADING: from X’s garden.\n\n \nHere, ‘X’ failed to perform his reasonable duty of care towards the people which amounts to omission. It’ll \nlead to a Tort. "
+      },
+      {
+        "heading_id": "L199:lead to a Tort.",
+        "text": "lead to a Tort.",
+        "context_preview": "from X’s garden. \n \nHere, ‘X’ failed to perform his reasonable duty of care towards the people which amounts to omission. It’ll \n\nDETECTED_HEADING: lead to a Tort.\n\n \nLegal Injury \nTo prove that the wrongful act or omission of the defendant is a Tort, the plaintiff must show that "
+      },
+      {
+        "heading_id": "L201:Legal Injury",
+        "text": "Legal Injury",
+        "context_preview": "Here, ‘X’ failed to perform his reasonable duty of care towards the people which amounts to omission. It’ll \nlead to a Tort. \n \n\nDETECTED_HEADING: Legal Injury\n\nTo prove that the wrongful act or omission of the defendant is a Tort, the plaintiff must show that \nsuch act or omission caused an injury to him. An injury here means violation of a legal right vested in the \nplaintiff and recognized by the law of the land. The legal maxims ‘Injuria sine Damno’ and ‘Damnum sine "
+      },
+      {
+        "heading_id": "L205:Injuria’ encapsulate the damage and injury part.",
+        "text": "Injuria’ encapsulate the damage and injury part.",
+        "context_preview": "To prove that the wrongful act or omission of the defendant is a Tort, the plaintiff must show that \nsuch act or omission caused an injury to him. An injury here means violation of a legal right vested in the \nplaintiff and recognized by the law of the land. The legal maxims ‘Injuria sine Damno’ and ‘Damnum sine \n\nDETECTED_HEADING: Injuria’ encapsulate the damage and injury part.\n\n \nThe first maxim, Injuria sine Damno means Injury or infringement of a legal right without any \nactual Damage i.e. substantial loss suffered by the plaintiff. Mere violation of a legal right or proof of a legal "
+      },
+      {
+        "heading_id": "L210:White.[6]",
+        "text": "White.[6]",
+        "context_preview": "The first maxim, Injuria sine Damno means Injury or infringement of a legal right without any \nactual Damage i.e. substantial loss suffered by the plaintiff. Mere violation of a legal right or proof of a legal \ninjury is enough to constitute a Tort. The reader can deduce the maxim further from the case of Ashby v. \n\nDETECTED_HEADING: White.[6]\n\n \nThe second maxim, Damnum sine Injuria means damage to the plaintiff in absence of a legal injury \nor violation of any legal right. A case for Tort cannot be made up in absence of a legal injury. The "
+      },
+      {
+        "heading_id": "L214:Gloucester Grammar School case[7] can be referred to underst",
+        "text": "Gloucester Grammar School case[7] can be referred to understand the maxim to its bottom.",
+        "context_preview": " \nThe second maxim, Damnum sine Injuria means damage to the plaintiff in absence of a legal injury \nor violation of any legal right. A case for Tort cannot be made up in absence of a legal injury. The \n\nDETECTED_HEADING: Gloucester Grammar School case[7] can be referred to understand the maxim to its bottom.\n\n \nSub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \nPage 5 of 133 "
+      },
+      {
+        "heading_id": "L217:Page 5 of 133",
+        "text": "Page 5 of 133",
+        "context_preview": "Gloucester Grammar School case[7] can be referred to understand the maxim to its bottom. \n \nSub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \n\nDETECTED_HEADING: Page 5 of 133\n\n \nLegal Remedy \nAs the last condition to constitute a Tort, the unlawful act or omission of the defendant must fall "
+      },
+      {
+        "heading_id": "L219:Legal Remedy",
+        "text": "Legal Remedy",
+        "context_preview": "Sub- LAW OF TORTS, SEM -1, Mumbai University New Syllabus – 2022-2023, Marks -75 \nPage 5 of 133 \n \n\nDETECTED_HEADING: Legal Remedy\n\nAs the last condition to constitute a Tort, the unlawful act or omission of the defendant must fall \nunder a category of unlawful acts which have a civil action for damages as their remedy. The law of torts \nbases itself on the maxim, ‘Ubi jus ibi remedium’ which means "
+      },
+      {
+        "heading_id": "L226:determining the remedies to be awarded in a case. The nature",
+        "text": "determining the remedies to be awarded in a case. The nature of the damages is unliquidated.",
+        "context_preview": "‘where there’s a right, there’s a remedy. The remedy required to constitute a Tort can be action for \ndamages, injunctions, restitution actions, or equitable remedies (specific performance). \nThe court applies certain tests such as the test of foresee ability, the test of directness, etc. before \n\nDETECTED_HEADING: determining the remedies to be awarded in a case. The nature of the damages is unliquidated.\n\n \n1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued. \na. Distinction between Crime and Breach of Contract "
+      }
+    ]
+  },
+  {
+    "batch_id": 4,
+    "model": "gemini",
+    "request": [
+      {
+        "heading_id": "L228:1.2 Distinction from Crime, Breach of Contract etc., who may",
+        "text": "1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.",
+        "context_preview": "The court applies certain tests such as the test of foresee ability, the test of directness, etc. before \ndetermining the remedies to be awarded in a case. The nature of the damages is unliquidated. \n \n\nDETECTED_HEADING: 1.2 Distinction from Crime, Breach of Contract etc., who may sue, who may not be sued.\n\na. Distinction between Crime and Breach of Contract \n(1) In crime, the injured party cannot sue for damages. The injury to the victim is deemed as an injury to \nthe society. It is the violation of public right. Hence the State prosecutes the accused. The burden of proof "
+      },
+      {
+        "heading_id": "L251:Introduction",
+        "text": "Introduction",
+        "context_preview": "(7) In crime, the victims are not paid damages. The accused is sent to jail or imposed fine or both. The fine \ngoes to the State. However, in breach of contract, the party is entitled only for actual damages. \nb. who may sue, who may not be sued. \n\nDETECTED_HEADING: Introduction\n\nIn the concept of a tort, usually a person who suffers injury has a right to file a case against the \nperson who caused him harm, but there are certain categories of people who cannot sue a person for their \nloss and also there are some people who cannot be sued by any person. "
+      },
+      {
+        "heading_id": "L257:Who can/can not Sue?",
+        "text": "Who can/can not Sue?",
+        "context_preview": "loss and also there are some people who cannot be sued by any person. \nSo, the question arises why these categories of people are restricted from filing a case and also why do \ncertain people are protected from such suits. \n\nDETECTED_HEADING: Who can/can not Sue?\n\nWho can sue? \nAny rational person including businessman, organisation, government and other individuals can sue, \nprovided that, they are of sound mind and are not disqualified by law. "
+      },
+      {
+        "heading_id": "L258:Who can sue?",
+        "text": "Who can sue?",
+        "context_preview": "So, the question arises why these categories of people are restricted from filing a case and also why do \ncertain people are protected from such suits. \nWho can/can not Sue? \n\nDETECTED_HEADING: Who can sue?\n\nAny rational person including businessman, organisation, government and other individuals can sue, \nprovided that, they are of sound mind and are not disqualified by law. \nWho cannot sue? "
+      },
+      {
+        "heading_id": "L261:Who cannot sue?",
+        "text": "Who cannot sue?",
+        "context_preview": "Who can sue? \nAny rational person including businessman, organisation, government and other individuals can sue, \nprovided that, they are of sound mind and are not disqualified by law. \n\nDETECTED_HEADING: Who cannot sue?\n\nThere are seven categories of persons cannot sue, only subject to certain limitations: \nAn Alien enemy \nConvict "
+      },
+      {
+        "heading_id": "L262:There are seven categories of persons cannot sue, only subje",
+        "text": "There are seven categories of persons cannot sue, only subject to certain limitations:",
+        "context_preview": "Any rational person including businessman, organisation, government and other individuals can sue, \nprovided that, they are of sound mind and are not disqualified by law. \nWho cannot sue? \n\nDETECTED_HEADING: There are seven categories of persons cannot sue, only subject to certain limitations:\n\nAn Alien enemy \nConvict \nBankrupt "
+      },
+      {
+        "heading_id": "L263:An Alien enemy",
+        "text": "An Alien enemy",
+        "context_preview": "provided that, they are of sound mind and are not disqualified by law. \nWho cannot sue? \nThere are seven categories of persons cannot sue, only subject to certain limitations: \n\nDETECTED_HEADING: An Alien enemy\n\nConvict \nBankrupt \nHusband and wife "
+      },
+      {
+        "heading_id": "L264:Convict",
+        "text": "Convict",
+        "context_preview": "Who cannot sue? \nThere are seven categories of persons cannot sue, only subject to certain limitations: \nAn Alien enemy \n\nDETECTED_HEADING: Convict\n\nBankrupt \nHusband and wife \nCorporation "
+      },
+      {
+        "heading_id": "L265:Bankrupt",
+        "text": "Bankrupt",
+        "context_preview": "There are seven categories of persons cannot sue, only subject to certain limitations: \nAn Alien enemy \nConvict \n\nDETECTED_HEADING: Bankrupt\n\nHusband and wife \nCorporation \nAn Infant/Minor "
+      },
+      {
+        "heading_id": "L266:Husband and wife",
+        "text": "Husband and wife",
+        "context_preview": "An Alien enemy \nConvict \nBankrupt \n\nDETECTED_HEADING: Husband and wife\n\nCorporation \nAn Infant/Minor \nA foreign state "
+      },
+      {
+        "heading_id": "L267:Corporation",
+        "text": "Corporation",
+        "context_preview": "Convict \nBankrupt \nHusband and wife \n\nDETECTED_HEADING: Corporation\n\nAn Infant/Minor \nA foreign state \n"
+      },
+      {
+        "heading_id": "L268:An Infant/Minor",
+        "text": "An Infant/Minor",
+        "context_preview": "Bankrupt \nHusband and wife \nCorporation \n\nDETECTED_HEADING: An Infant/Minor\n\nA foreign state \n\n"
+      },
+      {
+        "heading_id": "L269:A foreign state",
+        "text": "A foreign state",
+        "context_preview": "Husband and wife \nCorporation \nAn Infant/Minor \n\nDETECTED_HEADING: A foreign state\n\n\n\n"
+      }
+    ]
+  }
+]

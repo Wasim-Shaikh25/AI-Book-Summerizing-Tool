@@ -6,9 +6,29 @@ from typing import List, Optional
 
 @dataclass(frozen=True, slots=True)
 class NormalizedLine:
-    id: int
+    # Core identity
+    line_id: int
     text: str
     page_number: Optional[int]
+
+    # Layout metadata (PyMuPDF-derived)
+    y_pos: float
+    page_height: float
+    font_size: float
+    is_bold: bool
+    x_center: float
+    page_width: float
+    vertical_gap_above: float
+    is_link: bool
+
+    # Derived signals (per-page)
+    centered: bool
+    large_font: bool
+    large_gap: bool
+
+    # Noise marking (never delete lines)
+    is_noise: bool = False
+    noise_type: Optional[str] = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,7 +40,14 @@ class HeadingCandidate:
     before_context: List[str]
     after_context: List[str]
     full_context_preview: str
+
+    # Gemini call #1
     is_valid: Optional[bool] = None
+    valid_reason: Optional[str] = None
+
+    # Gemini call #2
+    is_toc: Optional[bool] = None
+    toc_reason: Optional[str] = None
 
 
 @dataclass(frozen=True, slots=True)
