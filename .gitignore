@@ -17,3 +17,6 @@ logs/*.json
 # Local model binaries
 models/*.gguf
 *.gguf
+
+# Local scratch
+tmp/
