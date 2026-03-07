@@ -139,7 +139,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         pdf = sys.argv[1]
     else:
-        pdf = os.getenv("PDF_PATH", "reference/law_of_tort.pdf")
+        # Default to a drop-in folder so you can copy/paste PDFs here for debugging:
+        #   src/debug/pdf_files/<your.pdf>
+        pdf = os.getenv("PDF_PATH", "src/debug/pdf_files/input.pdf")
 
     out = run(pdf)
     print(f"[+] TOC trace written to: {out}")
