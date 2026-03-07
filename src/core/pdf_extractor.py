@@ -46,7 +46,9 @@ def extract_pdf(pdf_path: str) -> Tuple[List[NormalizedLine], str]:
     - book_title: reuses the existing filename-based extractor from PDFReader for compatibility.
     """
     # Title: keep existing behavior (filename-based) without changing logic.
-    reader = PDFReader(pdf_folder="reference_files")
+    # Use a stable default folder, but still allow passing explicit paths anywhere in the repo.
+    from src.config import PDF_FOLDER
+    reader = PDFReader(pdf_folder=PDF_FOLDER)
     _pages_data, book_title = reader.read_all_pdfs(specific_file=pdf_path)
 
     # Layout: true structured extraction for universal pipeline

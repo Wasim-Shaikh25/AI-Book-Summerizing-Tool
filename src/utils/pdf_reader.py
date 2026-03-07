@@ -49,7 +49,12 @@ class PDFReader:
             elif os.path.exists(specific_file):
                 files = [specific_file]
             else:
-                files = [os.path.join(self.pdf_folder, specific_file)]
+                # Treat "path-like" values as relative-to-CWD paths (not relative to pdf_folder)
+                # so callers can pass e.g. "src/debug/pdf_files/file.pdf".
+                if any(sep in specific_file for sep in (os.sep, "/", "\\")):
+                    files = [specific_file]
+                else:
+                    files = [os.path.join(self.pdf_folder, specific_file)]
         else:
             if not os.path.exists(self.pdf_folder):
                 raise FileNotFoundError(f"PDF folder '{self.pdf_folder}' does not exist.")
