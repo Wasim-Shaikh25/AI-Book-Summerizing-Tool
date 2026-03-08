@@ -9,6 +9,9 @@ venv/
 Thumbs.db
 .vscode/
 
+# Env
+.env
+
 # Logs / debug artifacts (never commit)
 logs/run_*/
 logs/toc_trace/
