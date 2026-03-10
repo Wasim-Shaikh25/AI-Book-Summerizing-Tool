@@ -21,14 +21,34 @@ def build_context_preview(lines: Sequence[NormalizedLine], idx: int) -> str:
 
     ZERO text loss: do not strip or truncate any line content.
     """
-    def _get(i: int) -> str:
-        if 0 <= i < len(lines):
-            return lines[i].text
-        return ""
+    def _get_valid_lines(start: int, end: int, exclude_idx: int = None) -> List[str]:
+        result = []
+        for i in range(start, end):
+            if 0 <= i < len(lines) and (exclude_idx is None or i != exclude_idx):
+                txt = lines[i].text
+                if len(txt.strip()) >= 5:
+                    result.append(txt)
+        return result
 
-    before = [_get(idx - 3), _get(idx - 2), _get(idx - 1)]
-    detected = _get(idx)
-    after = [_get(idx + 1), _get(idx + 2), _get(idx + 3)]
+    # Collect 5 valid lines before
+    before = []
+    i = idx - 1
+    while len(before) < 5 and i >= 0:
+        txt = lines[i].text
+        if len(txt.strip()) >= 5:
+            before.insert(0, txt)
+        i -= 1
+
+    # Collect 5 valid lines after
+    after = []
+    i = idx + 1
+    while len(after) < 5 and i < len(lines):
+        txt = lines[i].text
+        if len(txt.strip()) >= 5:
+            after.append(txt)
+        i += 1
+
+    detected = lines[idx].text if 0 <= idx < len(lines) else ""
 
     parts: List[str] = []
     parts.extend(before)

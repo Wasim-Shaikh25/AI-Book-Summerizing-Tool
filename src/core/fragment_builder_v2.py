@@ -13,6 +13,9 @@ class BuildFragmentsResultV2:
 
 
 def _to_lines(normalized: Sequence[NormalizedLine]) -> List[str]:
+    # Backward compatible helper; build_fragments_v2 uses line_id-aware filtering
+    # during fragment text assembly (so noise/TOC ranges can be excluded without
+    # breaking start/end line_id boundaries).
     return [ln.text for ln in normalized]
 
 
@@ -44,6 +47,11 @@ def build_fragments_v2(
       (result, log_payload_for_07_fragments_json)
     """
     lines = _to_lines(normalized)
+
+    # NOTE: resolve_toc_sections() runs before this stage and removes TOC blocks.
+    # We exclude noise lines during text assembly; TOC blocks are excluded because the
+    # TOC headings are removed from the headings list (so fragments are only created for
+    # non-TOC headings).
     kept = [h for h in headings if h.is_valid is True and h.is_toc is False]
     kept_sorted = sorted(kept, key=lambda h: (h.start_line, h.end_line, h.id))
 
@@ -56,10 +64,15 @@ def build_fragments_v2(
         end = (kept_sorted[idx + 1].start_line - 1) if idx + 1 < len(kept_sorted) else (len(lines) - 1)
         if start < 0:
             start = 0
-        if end < start:
-            frag_lines: List[str] = []
-        else:
-            frag_lines = list(lines[start : end + 1])
+        # Build fragment text from NormalizedLine to keep line_id alignment and filter noise.
+        frag_lines: List[str] = []
+        if end >= start:
+            for ln in normalized:
+                if ln.line_id < start or ln.line_id > end:
+                    continue
+                if getattr(ln, "is_noise", False):
+                    continue
+                frag_lines.append(ln.text)
 
         frag_text = _join_lines(frag_lines)
         fid = f"F{idx}"

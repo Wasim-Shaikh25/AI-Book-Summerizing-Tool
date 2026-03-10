@@ -8,12 +8,16 @@ from .models import HeadingCandidate
 
 
 SYSTEM_INSTRUCTION_TOC = (
-    "You are detecting whether a heading is coming from a PDF Table of Contents (TOC) "
-    "or is a real section heading in the main body.\n"
+    "You are classifying headings as either coming from a PDF Table of Contents (TOC) or as real section headings in the main body.\n"
     "You will be given a list of headings with context previews.\n"
+    "A TOC heading is one that appears in the table of contents, often summarizing sections, chapters, or topics, and is not part of the main content flow.\n"
+    "A real section heading is part of the main body content and marks the start of a new section, topic, or chapter within the document.\n"
+    "Carefully examine the context preview to distinguish between TOC headings and real section headings.\n"
     "Return ONLY a JSON array of objects:\n"
     "[{ \"id\": \"...\", \"is_toc\": true/false, \"reason\": \"...\" }]\n"
-    "No markdown. No extra keys. No explanations outside JSON."
+    "No markdown. No extra keys. No explanations outside JSON.\n"
+    "Do not mark real section headings as TOC. Only mark headings as TOC if they clearly belong to the table of contents.\n"
+    "Do not mark section headings as TOC unless there is a clear signal such as appearing in a syllabus, explicit TOC, or summary list. Section headings in the main body should not be marked as TOC."
 )
 
 

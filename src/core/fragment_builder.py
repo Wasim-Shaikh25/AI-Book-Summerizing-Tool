@@ -18,7 +18,9 @@ def _to_lines(normalized: Sequence[NormalizedLine] | Sequence[str]) -> List[str]
     if len(normalized) == 0:
         return []
     if isinstance(normalized[0], NormalizedLine):  # type: ignore[index]
-        return [ln.text for ln in normalized]  # type: ignore[union-attr]
+        # Keep line ordering, but exclude noise lines from fragment text.
+        # Ranges (start_line/end_line) still reference the original line_id space for overlays/debugging.
+        return [ln.text for ln in normalized if not getattr(ln, "is_noise", False)]  # type: ignore[union-attr]
     return [str(x) for x in normalized]
 
 
@@ -31,11 +33,16 @@ def _build_provisional_fragments(
     lines: Sequence[str], candidates: Sequence[HeadingCandidate]
 ) -> Tuple[List[Fragment], Dict[str, str], List[Tuple[str, int, int]]]:
     """
-    Build fragments between ALL detected heading candidates (permissive / pre-validation).
-    Returns:
-      - fragments
-      - heading_id -> fragment_id mapping
-      - spans: list of (heading_id, start_line, end_line) for diagnostics/merge stage
+    Build fragments for ALL detected heading candidates (permissive / pre-validation).
+
+    Policy:
+      - Each fragment starts at the heading line itself (start = cand.start_line)
+      - Each fragment ends at the line immediately before the next heading starts
+        (end = next_cand.start_line - 1), or EOF for the last heading.
+
+    This yields deterministic full-document coverage and keeps each heading line
+    inside its fragment (so if a heading is later merged into its parent, the
+    heading line moves with it).
     """
     sorted_cands = sorted(candidates, key=lambda c: (c.start_line, c.end_line, c.id))
     fragments: List[Fragment] = []
@@ -60,13 +67,14 @@ def _build_provisional_fragments(
         return fragments, mapping, spans
 
     for idx, cand in enumerate(sorted_cands):
-        start = cand.end_line + 1
+        start = cand.start_line
         end = (sorted_cands[idx + 1].start_line - 1) if idx + 1 < len(sorted_cands) else (len(lines) - 1)
+
+        # Clamp
         if start < 0:
             start = 0
         if end < start:
-            # Empty fragment (still allowed, but keep as empty to preserve mapping + distribution)
-            frag_lines: List[str] = []
+            frag_lines = []
         else:
             frag_lines = list(lines[start : end + 1])
 
@@ -102,6 +110,8 @@ def _format_fragments_log(
 def build_fragments(
     normalized: Sequence[NormalizedLine] | Sequence[str],
     headings: Sequence[HeadingCandidate],
+    *,
+    micro_merge_max_lines: int = 3,
 ) -> BuildFragmentsResult:
     """
     Fragment builder with ZERO text loss.
@@ -113,6 +123,12 @@ def build_fragments(
       - If some headings are marked is_valid=False, merge their fragment text into the
         nearest valid heading above (or next valid heading below if none above).
       - If no valid headings exist at all, use a synthetic heading 'Document Root'.
+
+    STEP 3 (micro-heading merge):
+      - After validation merge, merge "micro" headings (by span length <= micro_merge_max_lines)
+        into a parent heading (nearest previous kept heading).
+      - The child heading is removed (heading list shrinks) and its full fragment text,
+        including the heading line, is appended to the parent in deterministic document order.
 
     Returns:
       BuildFragmentsResult:
@@ -228,43 +244,129 @@ def build_fragments(
             if h.id not in merged_text_by_valid:
                 merged_text_by_valid[h.id] = frag.text.split("\n") if frag.text != "" else []
 
+    # Micro-heading merge (drops headings by merging their fragment text into the parent).
+    #
+    # Parent selection policy: nearest previous heading that is kept in output.
+    # This is deterministic and works before hierarchy assignment.
+    kept_ids_in_order: List[str] = []
+    for h in sorted_heads:
+        if h.is_valid is True or h.is_valid is None:
+            if h.id not in kept_ids_in_order:
+                kept_ids_in_order.append(h.id)
+
+    # Decide which ids are "micro" based on span length from their provisional fragment range.
+    micro_ids: set[str] = set()
+    if micro_merge_max_lines is not None and micro_merge_max_lines >= 0:
+        for hid in kept_ids_in_order:
+            src = id_to_fragment.get(hid)
+            if src is None:
+                continue
+            span_len = (src.end_line - src.start_line + 1) if src.end_line >= src.start_line else 0
+            if span_len <= micro_merge_max_lines:
+                micro_ids.add(hid)
+
+    # Never drop the first kept heading (it has no previous parent).
+    if kept_ids_in_order:
+        micro_ids.discard(kept_ids_in_order[0])
+
+    # Build buckets for kept headings, and merge micro buckets into parent buckets in document order.
+    merged_lines_by_kept: Dict[str, List[str]] = {}
+
+    def _bucket_for(hid: str) -> List[str]:
+        b = merged_text_by_valid.get(hid, [])
+        if not b:
+            return []
+        return list(b)
+
+    # Initialize buckets for all kept headings.
+    for hid in kept_ids_in_order:
+        merged_lines_by_kept[hid] = _bucket_for(hid)
+
+    # Merge micro headings into nearest previous kept heading.
+    parent_for: Dict[str, str] = {}
+    last_parent: Optional[str] = None
+    for hid in kept_ids_in_order:
+        if hid in micro_ids:
+            if last_parent is None:
+                # should not happen because first kept is not micro
+                continue
+            parent_for[hid] = last_parent
+        else:
+            last_parent = hid
+
+    # Track range expansion so overlay/range-coverage reflects merged text.
+    expanded_ranges: Dict[str, Tuple[int, int]] = {}
+    for hid in kept_ids_in_order:
+        src = id_to_fragment.get(hid)
+        if src is None:
+            continue
+        expanded_ranges[hid] = (src.start_line, src.end_line)
+
+    for child_id, parent_id in parent_for.items():
+        child_lines = merged_lines_by_kept.get(child_id, [])
+        if child_lines:
+            merged_lines_by_kept[parent_id].extend(child_lines)
+
+        # Expand the parent range to include the child's span as well.
+        cfrag = id_to_fragment.get(child_id)
+        pfrag = id_to_fragment.get(parent_id)
+        if cfrag is not None and pfrag is not None:
+            p0, p1 = expanded_ranges.get(parent_id, (pfrag.start_line, pfrag.end_line))
+            c0, c1 = expanded_ranges.get(child_id, (cfrag.start_line, cfrag.end_line))
+            expanded_ranges[parent_id] = (min(p0, c0), max(p1, c1))
+
+    # Final output headings are the kept headings excluding micro headings.
+    output_heading_ids: List[str] = [hid for hid in kept_ids_in_order if hid not in micro_ids]
+
+    # Ensure range coverage for overlays:
+    # Any "gaps" happen because we drop headings (micro) but do not necessarily expand a parent
+    # to cover every region between headings. For visualization purposes, make the remaining
+    # headings form a contiguous partition by setting each kept heading's end_line to the line
+    # right before the next kept heading's start_line, and the last to EOF.
+    #
+    # This does NOT change fragment.text (which already contains merged text); it only aligns
+    # the debug ranges with the conceptual "owner" heading after micro-merge.
+    for i, hid in enumerate(output_heading_ids):
+        src = id_to_fragment.get(hid)
+        if src is None:
+            continue
+        start = expanded_ranges.get(hid, (src.start_line, src.end_line))[0]
+        if i == 0:
+            # Cover any pre-first-heading lines (front matter) so overlay has no initial gap.
+            start = 0
+        if i + 1 < len(output_heading_ids):
+            nxt = id_to_fragment.get(output_heading_ids[i + 1])
+            if nxt is not None:
+                expanded_ranges[hid] = (start, nxt.start_line - 1)
+        else:
+            expanded_ranges[hid] = (start, len(lines) - 1)
+
     # Build final fragments list + mapping.
     final_fragments: List[Fragment] = []
     heading_to_fragment_id: Dict[str, str] = {}
 
-    # Preserve heading order in output fragments: valid headings + unknown headings in original order.
-    output_heading_ids: List[str] = []
-    for h in sorted_heads:
-        if h.is_valid is True or h.is_valid is None:
-            if h.id not in output_heading_ids:
-                output_heading_ids.append(h.id)
-
     for out_idx, hid in enumerate(output_heading_ids):
-        bucket = merged_text_by_valid.get(hid, [])
-        # Determine range as best-effort from provisional fragment; no trimming.
+        bucket = merged_lines_by_kept.get(hid, [])
+
+        # Determine range:
+        # - Use expanded micro-merge ranges so overlays cover merged child regions too.
+        # - Fall back to provisional fragment range otherwise.
         src_frag: Optional[Fragment] = id_to_fragment.get(hid)
         if src_frag is None:
             start_line = 0
             end_line = max(0, len(lines) - 1)
         else:
-            start_line = src_frag.start_line
-            end_line = src_frag.end_line
+            start_line, end_line = expanded_ranges.get(hid, (src_frag.start_line, src_frag.end_line))
 
         fid = f"F_M{out_idx}"
 
         # Safety: integration tests require no empty fragment text.
-        # Keep ZERO text-loss policy by falling back to the exact line-span slice
-        # when the merge bucket is empty (this can happen when consecutive headings
-        # have no body lines between them).
         text = _join_lines(bucket)
         if text == "" and len(lines) > 0:
             if start_line <= end_line:
                 text = _join_lines(lines[start_line : end_line + 1])
             else:
-                # No body lines for this heading. Keep fragment non-empty by using the heading
-                # line itself (last resort). This preserves determinism and avoids empty output.
-                # Note: this is NOT introducing new text; it reuses existing PDF-extracted text.
-                heading_line_index = max(0, min(len(lines) - 1, start_line - 1))
+                heading_line_index = max(0, min(len(lines) - 1, start_line))
                 text = lines[heading_line_index]
 
         final_fragments.append(
@@ -278,7 +380,11 @@ def build_fragments(
         )
         heading_to_fragment_id[hid] = fid
 
-    post_log = _format_fragments_log("POST_MERGE (after invalid merge)", final_fragments, heading_to_fragment_id)
+    post_log = _format_fragments_log(
+        f"POST_MERGE (after invalid merge + micro-merge<= {micro_merge_max_lines} lines)",
+        final_fragments,
+        heading_to_fragment_id,
+    )
 
     return BuildFragmentsResult(
         fragments=final_fragments,

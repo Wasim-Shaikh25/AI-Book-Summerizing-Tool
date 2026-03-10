@@ -50,9 +50,13 @@ class PipelineLogger:
         return self.run_dir / filename
 
     def write_json(self, filename: str, payload: Any) -> None:
+        # Safety: ensure run_dir exists (debug runners may create PipelineLogger then crash before folders exist)
+        self.run_dir.mkdir(parents=True, exist_ok=True)
         self.path(filename).write_text(_json_dumps(payload), encoding="utf-8")
 
     def append_json_list(self, filename: str, item: Any) -> None:
+        # Safety: ensure run_dir exists
+        self.run_dir.mkdir(parents=True, exist_ok=True)
         path = self.path(filename)
         existing = _read_json_if_exists(path)
         if existing is None:
