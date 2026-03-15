@@ -67,7 +67,13 @@ class PipelineLogger:
     }
 
     @staticmethod
-    def create(*, pdf_file: str = "", base_dir: str = "logs") -> "PipelineLogger":
+    def create(*, pdf_file: str = "", base_dir: str = "logs", enabled: bool = True) -> "PipelineLogger":
+        """
+        If enabled is False, returns a NoOpPipelineLogger that performs no filesystem writes.
+        """
+        if not enabled:
+            return NoOpPipelineLogger(run_dir=Path(base_dir), run_id="", pdf_file=pdf_file)
+
         base = Path(base_dir)
         base.mkdir(parents=True, exist_ok=True)
         run_id = _utc_timestamp_for_path()
@@ -165,3 +171,32 @@ class PipelineLogger:
         self._assert_allowed(filename)
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.path(filename).write_text(_json_dumps(payload), encoding="utf-8")
+
+
+@dataclass(frozen=True, slots=True)
+class NoOpPipelineLogger(PipelineLogger):
+    """
+    Drop-in replacement for PipelineLogger that writes nothing.
+    Used for production runs when logging is disabled.
+    """
+
+    def _assert_allowed(self, filename: str) -> None:
+        return
+
+    def path(self, filename: str) -> Path:
+        return Path("")
+
+    def write_stage(self, stage_name: str, items: List[Any]) -> None:
+        return
+
+    def record_decision(
+        self,
+        entity_id: str,
+        stage: str,
+        decision: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        return
+
+    def write_json(self, filename: str, payload: Any) -> None:
+        return

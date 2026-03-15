@@ -22,19 +22,37 @@ from .noise_filter import mark_noise
 from .toc_classifier import classify_toc
 from .toc_section_resolver import resolve_toc_sections
 from pathlib import Path
+from typing import Any, Optional
 
 
-def run_pipeline(pdf_path: str):
+def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:
+    if not isinstance(hid, str):
+        return None
+    if not hid.startswith("L"):
+        return None
+    try:
+        return int(hid[1:].split(":", 1)[0])
+    except Exception:
+        return None
+
+
+def run_pipeline(pdf_path: str, *, enable_logs: bool = False) -> tuple[Any, Optional[PipelineLogger]]:
     """
     Orchestrates the clean core pipeline.
+
+    Logging:
+      - enable_logs=False (default): no log folder/files are created
+      - enable_logs=True: writes exactly the 10 whitelisted stage logs under logs/run_<timestamp>/
     """
-    logger = PipelineLogger.create(pdf_file=Path(pdf_path).name)
+    logger = PipelineLogger.create(pdf_file=Path(pdf_path).name, enabled=enable_logs)
 
     pdf_doc = extract_pdf(pdf_path)
     lines = normalize_text(pdf_doc)
 
     # Stage 01: layout extraction
-    logger.write_stage("layout_lines", lines_to_log(lines))
+    layout_payload = lines_to_log(lines)
+    logger.write_stage("layout_lines", layout_payload)
+    layout_by_line_id = {it["line_id"]: it for it in layout_payload if isinstance(it, dict) and isinstance(it.get("line_id"), int)}
 
     # Stage 02: noise detection (never deletes lines)
     lines, noise_log = mark_noise(lines)
@@ -55,27 +73,89 @@ def run_pipeline(pdf_path: str):
     fragments_result, fragments_log = build_fragments(lines, headings)
     logger.write_stage("fragments", fragments_log)
 
-    # Stage 08 / 09 are not yet fully wired in Phase-1 pipeline.
-    # Logging should not change any logic/decisions, but we can still log what we have.
-    logger.write_stage("hierarchy", [])
+    # Stage 08: hierarchy assignment (Gemini)
+    # Only use headings that survived validation + TOC filtering.
+    from .models import FinalHeading
 
-    # Stage 09: final headings (best available at this phase = post-TOC-cleaned headings list)
+    fragment_map = getattr(fragments_result, "heading_to_fragment_id", {}) or {}
+    final_heads = [
+        FinalHeading(
+            id=getattr(h, "id", None) or getattr(h, "heading_id", None),
+            text=getattr(h, "text", ""),
+            level=1,
+            fragment_id=fragment_map.get(getattr(h, "id", None) or getattr(h, "heading_id", None)),
+        )
+        for h in headings
+        if getattr(h, "is_valid", None) is True and getattr(h, "is_toc", None) is False
+    ]
+
+    hierarchy = assign_hierarchy(final_heads, logger=logger)
+
+    # Backfill line_id/page_number from heading_id using stage-01 layout map
+    heading_id_to_line_id: dict[str, int] = {}
+    for fh in final_heads:
+        hid = getattr(fh, "id", None)
+        lid = _parse_line_id_from_heading_id(hid)
+        if isinstance(hid, str) and isinstance(lid, int):
+            heading_id_to_line_id[hid] = lid
+
+    hierarchy_log_items = []
+    for h in hierarchy:
+        hid = getattr(h, "id", None)
+        lid = _parse_line_id_from_heading_id(hid) if isinstance(hid, str) else None
+        if isinstance(hid, str) and isinstance(lid, int):
+            lid = heading_id_to_line_id.get(hid, lid)
+
+        page_number = None
+        if isinstance(lid, int):
+            layout = layout_by_line_id.get(lid)
+            if isinstance(layout, dict):
+                page_number = layout.get("page_number")
+
+        hierarchy_log_items.append(
+            {
+                "heading_id": hid,
+                "text": getattr(h, "text", ""),
+                "line_id": lid,
+                "page_number": page_number,
+                "assigned_level": getattr(h, "level", None),
+                "parent_heading": getattr(h, "parent_heading", None),
+                "reason": getattr(h, "reason", None),
+                "signals_used": getattr(h, "signals_used", None),
+                "model": None,
+                "latency_ms": None,
+            }
+        )
+    logger.write_stage("hierarchy", hierarchy_log_items)
+
+    # Stage 09: final headings (post-clean)
+    toc_out = clean_toc(hierarchy, fragments=fragments_result.fragments)
     final_headings_items = []
-    for h in headings:
+    for h in toc_out:
+        hid = getattr(h, "id", None)
+
+        lid = _parse_line_id_from_heading_id(hid) if isinstance(hid, str) else None
+        if isinstance(hid, str) and isinstance(lid, int):
+            lid = heading_id_to_line_id.get(hid, lid)
+
+        page_number = None
+        if isinstance(lid, int):
+            layout = layout_by_line_id.get(lid)
+            if isinstance(layout, dict):
+                page_number = layout.get("page_number")
+
         final_headings_items.append(
             {
-                "heading_id": getattr(h, "heading_id", None) or getattr(h, "id", None),
+                "heading_id": hid,
                 "text": getattr(h, "text", ""),
                 "level": getattr(h, "level", None),
                 "parent_heading": getattr(h, "parent_heading", None),
-                "fragment_id": getattr(fragments_result, "heading_to_fragment_id", {}).get(
-                    getattr(h, "heading_id", None) or getattr(h, "id", None)
-                ),
-                "page_number": getattr(h, "page_number", None),
-                "line_id": getattr(h, "line_id", None),
+                "fragment_id": getattr(h, "fragment_id", None),
+                "page_number": page_number,
+                "line_id": lid,
                 "confidence": getattr(h, "confidence", None),
             }
         )
     logger.write_stage("final_headings", final_headings_items)
 
-    return fragments_result
+    return fragments_result, (logger if enable_logs else None)

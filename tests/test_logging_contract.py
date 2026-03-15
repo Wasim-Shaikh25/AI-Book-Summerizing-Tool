@@ -69,7 +69,7 @@ def _run_in_tmp_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 def test_logging_contract_generates_only_expected_files():
     pdf = str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
-    run_pipeline(pdf)
+    run_pipeline(pdf, enable_logs=True)
 
     logs_dir = Path("logs")
     run_dir = _latest_run_dir(logs_dir)
@@ -81,7 +81,7 @@ def test_logging_contract_generates_only_expected_files():
 
 def test_each_stage_log_has_envelope_schema():
     pdf = str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
-    run_pipeline(pdf)
+    run_pipeline(pdf, enable_logs=True)
 
     run_dir = _latest_run_dir(Path("logs"))
 
@@ -94,7 +94,7 @@ def test_each_stage_log_has_envelope_schema():
 
 def test_stage_item_shapes_spot_check():
     pdf = str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
-    run_pipeline(pdf)
+    run_pipeline(pdf, enable_logs=True)
 
     run_dir = _latest_run_dir(Path("logs"))
 
