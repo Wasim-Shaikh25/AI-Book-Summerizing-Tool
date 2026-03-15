@@ -11,6 +11,38 @@ from .models import HeadingCandidate
 
 # Prompt logic for Gemini validity is owned by src/core/gemini_validity.py
 
+import re
+
+
+_ENUM_LIST_ITEM_RE = re.compile(r"^\s*\d+\.\s+\S+")
+_SECTION_NUMBER_RE = re.compile(r"^\s*\d+\.\d+\s+\S+")
+
+
+def _should_force_invalid_enumerated_list_item(text: str) -> bool:
+    """
+    Heuristic stability fix:
+    - Treat single-level enumerated items like "3. Deterrence: ..." as body-list items, not TOC headings.
+    - Do NOT block true section headings like "1.2 Something ..." (dot-digit).
+    """
+    t = (text or "").strip()
+    if not t:
+        return False
+
+    # Allow true section numbers like 1.2, 3.1, 10.4 etc.
+    if _SECTION_NUMBER_RE.match(t):
+        return False
+
+    # Block single-level enumerations like "3. ..." (common in-paragraph lists)
+    if _ENUM_LIST_ITEM_RE.match(t):
+        # Long descriptive lines are almost certainly body text list items.
+        if len(t) >= 55:
+            return True
+        # If it has a colon and is not short, also likely a body list item.
+        if ":" in t and len(t) >= 35:
+            return True
+
+    return False
+
 
 def _ensure_logs_dir() -> Path:
     # Legacy: keep for older callers (writes flat logs under ./logs)
@@ -120,6 +152,11 @@ def validate_headings(
         if not isinstance(is_valid, bool):
             validated.append(c)
             continue
+
+        # Deterministic override for enumerated body-list items that Gemini sometimes upgrades to headings.
+        if is_valid is True and _should_force_invalid_enumerated_list_item(c.text):
+            is_valid = False
+            reason = "forced_invalid: enumerated_list_item"
 
         updated = HeadingCandidate(
             id=c.id,
