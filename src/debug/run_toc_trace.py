@@ -27,6 +27,7 @@ import fitz  # PyMuPDF
 
 from src.core.pdf_extractor import extract_pdf
 from src.core.text_normalizer import normalize_text
+from src.core.layout_enrichment import lines_to_log
 from src.core.heading_candidate_collector import collect_heading_candidates
 from src.core.heading_validator import validate_headings
 from src.core.logging.pipeline_logger import PipelineLogger
@@ -150,11 +151,29 @@ def visualize_pdf_structure(pdf_path: str, run_folder: Path) -> None:
     if headings is None:
         headings = _read_json(run_folder / "02_heading_candidates_valid.preview.json")
 
+    toc = _read_json(run_folder / "05_gemini_toc_classification.json")
+    if toc is None:
+        toc = _read_json(run_folder / "05_gemini_toc_classification.preview.json")
+
     fragments = _read_json(run_folder / "07_fragments.json")
     if fragments is None:
         fragments = _read_json(run_folder / "03_fragments.json")
     if fragments is None:
         fragments = _read_json(run_folder / "03_fragments.preview.json")
+
+    # PipelineLogger stage logs are dicts: {"items": [...]}.
+    if isinstance(layout, dict) and isinstance(layout.get("items"), list):
+        layout = layout["items"]
+    if isinstance(noise, dict) and isinstance(noise.get("items"), list):
+        noise = noise["items"]
+    if isinstance(candidates, dict) and isinstance(candidates.get("items"), list):
+        candidates = candidates["items"]
+    if isinstance(headings, dict) and isinstance(headings.get("items"), list):
+        headings = headings["items"]
+    if isinstance(fragments, dict) and isinstance(fragments.get("items"), list):
+        fragments = fragments["items"]
+    if isinstance(toc, dict) and isinstance(toc.get("items"), list):
+        toc = toc["items"]
 
     if not isinstance(layout, list) or len(layout) == 0:
         print("[!] visualize: missing/empty 01_layout_lines.json; skipping overlay (no coordinates).")
@@ -243,36 +262,57 @@ def visualize_pdf_structure(pdf_path: str, run_folder: Path) -> None:
                     page_idx, rect = box
                     draw_tag(page_idx, rect, "CANDIDATE", (1, 0, 0))
 
-        # HEADINGS / TOC
-        if (do_headings or do_toc) and isinstance(headings, list):
+        def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:
+            # Examples:
+            #  - "L60:Nature of Torts"
+            #  - "L16:A. INTRODUCTION:"
+            if not isinstance(hid, str):
+                return None
+            if not hid.startswith("L"):
+                return None
+            # split "L60:..." -> "60"
+            try:
+                num = hid[1:].split(":", 1)[0]
+                return int(num)
+            except Exception:
+                return None
+
+        # HEADINGS (green) from stage-09
+        if do_headings and isinstance(headings, list):
             for it in headings:
                 if not isinstance(it, dict):
                     continue
-                is_toc = it.get("is_toc") is True
-                if is_toc and not do_toc:
-                    continue
-                if (not is_toc) and not do_headings:
-                    continue
-
-                label = "TOC" if is_toc else "HEADING"
-                color = (1, 0, 1) if is_toc else (0, 1, 0)
 
                 line_id = it.get("line_id") or it.get("source_line_id")
-                if isinstance(line_id, int):
-                    box = line_boxes.get(line_id)
-                    if not box:
-                        continue
-                    page_idx, rect = box
-                    draw_tag(page_idx, rect, label, color)
+                if not isinstance(line_id, int):
+                    line_id = _parse_line_id_from_heading_id(it.get("heading_id"))
+
+                if not isinstance(line_id, int):
                     continue
 
-                start_line = it.get("start_line")
-                if isinstance(start_line, int):
-                    box = line_boxes.get(start_line)
-                    if not box:
-                        continue
-                    page_idx, rect = box
-                    draw_tag(page_idx, rect, label, color)
+                box = line_boxes.get(line_id)
+                if not box:
+                    continue
+                page_idx, rect = box
+                draw_tag(page_idx, rect, "HEADING", (0, 1, 0))
+
+        # TOC (magenta) from stage-05
+        if do_toc and isinstance(toc, list):
+            for it in toc:
+                if not isinstance(it, dict):
+                    continue
+                if it.get("is_toc") is not True:
+                    continue
+
+                line_id = _parse_line_id_from_heading_id(it.get("heading_id"))
+                if not isinstance(line_id, int):
+                    continue
+
+                box = line_boxes.get(line_id)
+                if not box:
+                    continue
+                page_idx, rect = box
+                draw_tag(page_idx, rect, "TOC", (1, 0, 1))
 
         # FRAGMENTS (blue)
         # Draw line-level boxes (not per-page union rectangles) so that exclusion is visually obvious:
@@ -316,15 +356,18 @@ def visualize_pdf_structure(pdf_path: str, run_folder: Path) -> None:
                 draw_line_boxes(line_ids=line_ids, label=f"FRAGMENT {fid}", rgb=(0, 0, 1))
 
     # Create per-layer PDFs
+    # User-facing requested overlays (exactly 5 PDFs):
+    # 1) noise marking
+    # 2) qualified headings
+    # 3) fragments
+    # 4) toc
+    # 5) overall
     outputs = [
-        ("debug_overlay_noise.pdf", dict(do_noise=True, do_candidates=False, do_headings=False, do_toc=False, do_fragments=False)),
-        ("debug_overlay_candidates.pdf", dict(do_noise=False, do_candidates=True, do_headings=False, do_toc=False, do_fragments=False)),
-        ("debug_overlay_headings.pdf", dict(do_noise=False, do_candidates=False, do_headings=True, do_toc=False, do_fragments=False)),
-        ("debug_overlay_toc.pdf", dict(do_noise=False, do_candidates=False, do_headings=False, do_toc=True, do_fragments=False)),
-        ("debug_overlay_fragments.pdf", dict(do_noise=False, do_candidates=False, do_headings=False, do_toc=False, do_fragments=True)),
-        # Validated structure view: noise + TOC + valid headings + residual fragments (no candidates)
-        ("debug_overlay_validated_structure.pdf", dict(do_noise=True, do_candidates=False, do_headings=True, do_toc=True, do_fragments=True)),
-        ("debug_overlay_all.pdf", dict(do_noise=True, do_candidates=True, do_headings=True, do_toc=True, do_fragments=True)),
+        ("01_noise_marking.pdf", dict(do_noise=True, do_candidates=False, do_headings=False, do_toc=False, do_fragments=False)),
+        ("02_qualified_headings.pdf", dict(do_noise=False, do_candidates=False, do_headings=True, do_toc=False, do_fragments=False)),
+        ("03_fragments.pdf", dict(do_noise=False, do_candidates=False, do_headings=False, do_toc=False, do_fragments=True)),
+        ("04_toc.pdf", dict(do_noise=False, do_candidates=False, do_headings=False, do_toc=True, do_fragments=False)),
+        ("05_overall.pdf", dict(do_noise=True, do_candidates=False, do_headings=True, do_toc=True, do_fragments=True)),
     ]
 
     for filename, flags in outputs:
@@ -339,74 +382,186 @@ def visualize_pdf_structure(pdf_path: str, run_folder: Path) -> None:
 
 
 def run(pdf_path: str) -> Path:
-    # Write ALL debug artifacts into the same deterministic pipeline run folder
-    run_logger = PipelineLogger.create()
+    # Use the same centralized PipelineLogger contract as production:
+    # only the 10 whitelisted JSON files under logs/run_<timestamp>/
+    run_logger = PipelineLogger.create(pdf_file=Path(pdf_path).name)
     out_dir = run_logger.run_dir
 
     pdf_doc = extract_pdf(pdf_path)
     normalized = normalize_text(pdf_doc)
 
-    # Debug-only layout for visualization
-    layout_payload = _build_line_boxes_from_normalized(pdf_path, normalized)
-    _write_json(out_dir / "01_layout_lines.json", layout_payload)
+    # Stage 01: layout extraction (use production-enriched NormalizedLine fields)
+    # NOTE: normalize_text() already yields enriched NormalizedLine objects (font_size, is_bold, centered, large_gap, etc).
+    # `lines_to_log` converts them into the required 01_layout_lines.json schema.
+    layout_payload = lines_to_log(normalized)
+    run_logger.write_stage("layout_lines", layout_payload)
 
-    # Stage 02 equivalent: noise detection (never deletes lines)
+    # Stage 02: noise detection (never deletes lines)
     normalized, noise_log = mark_noise(normalized)
-    _write_json(out_dir / "02_noise_filter.json", noise_log)
+    run_logger.write_stage("noise_filter", noise_log)
 
+    # Stage 03: candidate scoring (debug runner uses raw collector; enrich using stage-01 layout payload)
     candidates = collect_heading_candidates(normalized)
-    # Write full list (so visualizer can annotate the entire PDF), plus a small preview for quick inspection.
-    _write_json(out_dir / "01_heading_candidates_raw.json", candidates)
-    _write_json(out_dir / "01_heading_candidates_raw.preview.json", _preview_lines(candidates, 25))
 
-    # Use the same PipelineLogger so heading validation writes:
-    #  - 05_gemini_request.json
-    #  - 05_gemini_raw_response.json
-    #  - 05_gemini_heading_validation.json
+    # Build quick lookup from stage-01 layout payload for overlays/log enrichment
+    layout_by_line_id = {it["line_id"]: it for it in layout_payload if isinstance(it, dict) and isinstance(it.get("line_id"), int)}
+
+    candidate_log_items = []
+    for c in candidates:
+        lid = getattr(c, "start_line", None)
+        layout = layout_by_line_id.get(lid) if isinstance(lid, int) else None
+
+        # These are best-effort because debug collector may not compute scoring signals.
+        # Debug runner uses HeadingCandidateCollector output which does not compute a numeric score.
+        # For logging usefulness, compute a simple deterministic score_breakdown from layout signals.
+        bold = bool(layout.get("is_bold")) if isinstance(layout, dict) else bool(getattr(c, "bold", False))
+        centered = bool(layout.get("centered")) if isinstance(layout, dict) else bool(getattr(c, "centered", False))
+        large_gap = bool(layout.get("large_gap")) if isinstance(layout, dict) else bool(getattr(c, "large_gap", False))
+        large_font = bool(layout.get("large_font")) if isinstance(layout, dict) else False
+
+        # Map to the stage-03 naming expected by your spec.
+        signals: list[str] = []
+        score_breakdown: dict[str, int] = {}
+
+        if bold:
+            signals.append("bold")
+            score_breakdown["bold"] = 2
+        if centered:
+            signals.append("centered")
+            score_breakdown["centered"] = 2
+        if large_gap:
+            signals.append("large_gap")
+            score_breakdown["gap"] = 2
+        if large_font:
+            signals.append("large_font")
+            score_breakdown["font"] = 1
+
+        score = int(sum(score_breakdown.values()))
+
+        # context preview is provided by HeadingCandidate.full_context_preview
+        context_preview = getattr(c, "full_context_preview", None) or getattr(c, "context_preview", None)
+
+        candidate_log_items.append(
+            {
+                "line_id": lid,
+                "text": getattr(c, "text", ""),
+                "page_number": (layout.get("page_number") if isinstance(layout, dict) else getattr(c, "page_number", None)),
+                "score": score,
+                "signals": signals,
+                "selected": True,
+                "score_breakdown": score_breakdown,
+                "context_preview": context_preview,
+                "bbox": (layout.get("bbox") if isinstance(layout, dict) else getattr(c, "bbox", None)),
+                "font_size": (layout.get("font_size") if isinstance(layout, dict) else getattr(c, "font_size", None)),
+                "bold": bold,
+                "centered": centered,
+                "large_gap": large_gap,
+            }
+        )
+    run_logger.write_stage("candidate_scoring", candidate_log_items)
+
+    # Stage 04: gemini heading validation (writes 04_gemini_heading_validation.json)
     validated = validate_headings(list(candidates), logger=run_logger)
 
-    # Stage 06 equivalent: Gemini TOC classification (writes 06_gemini_toc_* files via PipelineLogger)
+    # Stage 05: gemini toc classification (writes 05_gemini_toc_classification.json)
     validated = classify_toc(validated, logger=run_logger)
-
-    valid_only = [h for h in validated if getattr(h, "is_valid", None) is True]
-    # Write full list + preview.
-    _write_json(out_dir / "02_heading_candidates_valid.json", valid_only)
-    _write_json(out_dir / "02_heading_candidates_valid.preview.json", _preview_lines(valid_only, 25))
 
     # Apply the same TOC resolver stage as the production pipeline.
     validated = resolve_toc_sections(validated, lines=normalized, logger=run_logger)
 
-    frag_result = build_fragments(normalized, validated)
-    # Write full list + preview.
-    _write_json(out_dir / "03_fragments.json", frag_result.fragments)
-    _write_json(out_dir / "03_fragments.preview.json", _preview_lines(frag_result.fragments, 25))
+    fragments_result, fragments_log_items = build_fragments(normalized, validated)
+    run_logger.write_stage("fragments", fragments_log_items)
 
     # assign_hierarchy expects List[FinalHeading]
     final_heads = [
         FinalHeading(
-            id=f.assigned_heading_id or f"UNASSIGNED:{f.fragment_id}",
-            text=(f.assigned_heading_id or ""),
+            id=h.id,
+            text=h.text,
             level=1,
-            fragment_id=f.fragment_id,
+            fragment_id=getattr(fragments_result, "heading_to_fragment_id", {}).get(h.id),
         )
-        for f in frag_result.fragments
+        for h in validated
+        if getattr(h, "is_valid", None) is True and getattr(h, "is_toc", None) is False
     ]
     hierarchy = assign_hierarchy(final_heads, logger=run_logger)
-    _write_json(out_dir / "04_hierarchy.preview.json", _preview_lines(hierarchy, 40))
 
-    toc_in = hierarchy
-    toc_out = clean_toc(hierarchy, fragments=frag_result.fragments)
+    def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:
+        if not isinstance(hid, str):
+            return None
+        if not hid.startswith("L"):
+            return None
+        try:
+            return int(hid[1:].split(":", 1)[0])
+        except Exception:
+            return None
 
-    removed_ids = sorted({h.id for h in toc_in} - {h.id for h in toc_out})
-    _write_json(
-        out_dir / "05_toc_removals.json",
-        {
-            "removed_count": len(removed_ids),
-            "removed_ids": removed_ids,
-            "kept_count": len(toc_out),
-        },
-    )
-    _write_json(out_dir / "05_toc_cleaned.json", toc_out)
+    # Backfill missing line_id/page_number from heading_id using stage-01 layout map
+    # (debug runner uses simplified FinalHeading objects, so assign_hierarchy may not carry these fields)
+    heading_id_to_line_id: dict[str, int] = {}
+    for fh in final_heads:
+        hid = getattr(fh, "id", None)
+        lid = _parse_line_id_from_heading_id(hid)
+        if isinstance(hid, str) and isinstance(lid, int):
+            heading_id_to_line_id[hid] = lid
+
+    hierarchy_log_items = []
+    for h in hierarchy:
+        hid = getattr(h, "id", None) or getattr(h, "heading_id", None)
+        lid = getattr(h, "line_id", None)
+        if not isinstance(lid, int) and isinstance(hid, str):
+            lid = heading_id_to_line_id.get(hid) or _parse_line_id_from_heading_id(hid)
+
+        page_number = getattr(h, "page_number", None)
+        if not isinstance(page_number, int) and isinstance(lid, int):
+            layout = layout_by_line_id.get(lid)
+            if isinstance(layout, dict):
+                page_number = layout.get("page_number")
+
+        hierarchy_log_items.append(
+            {
+                "heading_id": hid,
+                "text": getattr(h, "text", ""),
+                "line_id": lid,
+                "page_number": page_number,
+                "assigned_level": getattr(h, "level", None),
+                "parent_heading": getattr(h, "parent_heading", None),
+                "reason": getattr(h, "reason", None),
+                "signals_used": getattr(h, "signals_used", None),
+                "model": getattr(h, "model", None),
+                "latency_ms": getattr(h, "latency_ms", None),
+            }
+        )
+    run_logger.write_stage("hierarchy", hierarchy_log_items)
+
+    # Stage 09: final headings (post-clean)
+    toc_out = clean_toc(hierarchy, fragments=fragments_result.fragments)
+    final_items = []
+    for h in toc_out:
+        hid = getattr(h, "id", None) or getattr(h, "heading_id", None)
+
+        lid = getattr(h, "line_id", None)
+        if not isinstance(lid, int) and isinstance(hid, str):
+            lid = heading_id_to_line_id.get(hid) or _parse_line_id_from_heading_id(hid)
+
+        page_number = getattr(h, "page_number", None)
+        if not isinstance(page_number, int) and isinstance(lid, int):
+            layout = layout_by_line_id.get(lid)
+            if isinstance(layout, dict):
+                page_number = layout.get("page_number")
+
+        final_items.append(
+            {
+                "heading_id": hid,
+                "text": getattr(h, "text", ""),
+                "level": getattr(h, "level", None),
+                "parent_heading": getattr(h, "parent_heading", None),
+                "fragment_id": getattr(h, "fragment_id", None),
+                "page_number": page_number,
+                "line_id": lid,
+                "confidence": getattr(h, "confidence", None),
+            }
+        )
+    run_logger.write_stage("final_headings", final_items)
 
     print(f"[+] Debug run folder: {run_logger.run_dir}")
     return out_dir

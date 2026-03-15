@@ -81,11 +81,18 @@ def collect_candidates_scored(
         scoring_log.append(
             {
                 "line_id": ln.line_id,
-                "page_number": ln.page_number,
                 "text": ln.text,
+                "page_number": ln.page_number,
                 "score": score,
-                "signals": reasons.get("signals", []),
-                "decision": decision,
+                "signals": [str(s).replace("+", "").strip() for s in (reasons.get("signals", []) or [])],
+                "selected": decision == "candidate",
+                "score_breakdown": {},
+                "context_preview": build_context_preview(lines, i),
+                "bbox": [0.0, 0.0, 0.0, 0.0],
+                "font_size": ln.font_size,
+                "bold": ln.is_bold,
+                "centered": ln.centered,
+                "large_gap": ln.large_gap,
             }
         )
 

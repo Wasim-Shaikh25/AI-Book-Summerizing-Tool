@@ -49,22 +49,14 @@ def assign_hierarchy(headings: Sequence[FinalHeading], *, logger: PipelineLogger
 
     Updates FinalHeading.level.
 
-    Logs:
-      - logs/hierarchy_request.json
-      - logs/hierarchy_response.json
+    Logging contract:
+      - Do NOT write any request/response JSON files.
+      - Any hierarchy debugging must be captured via the centralized PipelineLogger stage logs.
     """
-    logs_dir = logger.run_dir if logger is not None else _ensure_logs_dir()
-
-    request_list = [
-        {"id": h.id, "text": h.text, "fragment_id": h.fragment_id} for h in headings
-    ]
-    _write_json(logs_dir / "08_hierarchy_request.json", request_list)
+    request_list = [{"id": h.id, "text": h.text, "fragment_id": h.fragment_id} for h in headings]
 
     user_prompt = json.dumps(request_list, indent=2, ensure_ascii=False)
     resp = gemini_generate(SYSTEM_INSTRUCTION, user_prompt)
-
-    response_payload = {"raw_text": resp.raw_text, "parsed_json": resp.parsed_json}
-    _write_json(logs_dir / "08_hierarchy_response.json", response_payload)
 
     id_to_level: Dict[str, int] = {}
     if isinstance(resp.parsed_json, list):

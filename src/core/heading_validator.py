@@ -104,11 +104,7 @@ def validate_headings(
         for hid, v in parsed_by_id.items():
             parsed_results_by_id[hid] = v
 
-    # Requirement: append per batch (do not overwrite). Each file is a JSON list of batches.
-    for entry in request_batches_payload:
-        logger.append_json_list("05_gemini_request.json", entry)
-    for entry in raw_batches_payload:
-        logger.append_json_list("05_gemini_raw_response.json", entry)
+    # Refactor: do not write separate request/raw files. Their info is merged into the stage log.
 
     validated: List[HeadingCandidate] = []
     parsed_log: List[Dict[str, Any]] = []
@@ -147,13 +143,13 @@ def validate_headings(
             }
         )
 
-        logger.append_decision(
+        logger.record_decision(
             updated.id,
             stage="gemini_heading_validation",
-            decision="is_valid_true" if updated.is_valid else "is_valid_false",
-            meta={"reason": updated.valid_reason},
+            decision="valid_heading" if updated.is_valid else "invalid_heading",
+            metadata={"reason": updated.valid_reason or ""},
         )
 
-    logger.write_json("05_gemini_heading_validation.json", parsed_log)
+    logger.write_stage("gemini_heading_validation", parsed_log)
 
     return validated
