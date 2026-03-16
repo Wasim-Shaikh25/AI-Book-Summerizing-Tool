@@ -196,38 +196,22 @@ def mark_noise(lines: Sequence[NormalizedLine]) -> tuple[List[NormalizedLine], L
                     noise_type=noise_type,
                 )
             )
+            bucket = _margin_bucket(ln)
             logs.append(
                 {
                     "line_id": ln.line_id,
                     "text": ln.text,
                     "page_number": ln.page_number,
-                    "bucket": _margin_bucket(ln),
                     "decision": "noise",
                     "noise_type": noise_type,
                     "reason": reason,
+                    "margin_position": bucket,
+                    "confidence": 1.0,
                 }
             )
         else:
             out.append(ln)
 
     # Prepend a small deterministic summary block for quick debugging
-    summary = {
-        "summary": {
-            "total_pages": total_pages,
-            "threshold_pages_repeat_rule": threshold_pages,
-            "sampled_lines": len(sampled_line_ids),
-            "noise_lines": len(logs),
-            "page_num_occurrence_keys": [
-                {"key": k[0], "bucket": k[1], "pages": sorted(list(pset))}
-                for k, pset in page_num_occurrences.items()
-            ],
-            "text_occurrence_keys_eligible_for_noise": [
-                {"key": k[0], "bucket": k[1], "pages": sorted(list(text_occurrences.get(k, set())))}
-                for k in sorted(
-                    frequent_text_keys,
-                    key=lambda kk: (kk[1], kk[0]),
-                )
-            ],
-        }
-    }
-    return out, [summary] + logs
+    # Stage log should contain only per-line records per spec.
+    return out, logs

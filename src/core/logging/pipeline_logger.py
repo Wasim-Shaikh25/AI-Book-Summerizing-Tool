@@ -9,7 +9,8 @@ from typing import Any, Dict, List, Optional
 
 def _utc_timestamp_for_path() -> str:
     # Deterministic-ish per run, readable, filesystem-safe.
-    return datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
+    # Spec expects: 2026-03-20_15-41-22
+    return datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
 
 
 def _json_dumps(payload: Any) -> str:
@@ -31,66 +32,105 @@ class PipelineLogger:
     Per-run logger that writes deterministic JSON artifacts under:
       logs/run_<timestamp>/
 
-    Supports:
-      - write_json(name, payload): overwrite deterministic file
-      - append_json_list(name, item): keep file as JSON list and append deterministically
+    Contract:
+      - Each stage log is a single JSON file with a common envelope.
+      - Only allow writing the 10 whitelisted files for a run.
     """
 
     run_dir: Path
+    run_id: str
+    pdf_file: str
+
+    _ALLOWED_FILES = {
+        "01_layout_lines.json",
+        "02_noise_filter.json",
+        "03_candidate_scoring.json",
+        "04_gemini_heading_validation.json",
+        "05_gemini_toc_classification.json",
+        "06_toc_section_eval.json",
+        "07_fragments.json",
+        "08_hierarchy.json",
+        "09_final_headings.json",
+        "decision_trace.json",
+    }
+
+    _STAGE_TO_FILE = {
+        "layout_lines": "01_layout_lines.json",
+        "noise_filter": "02_noise_filter.json",
+        "candidate_scoring": "03_candidate_scoring.json",
+        "gemini_heading_validation": "04_gemini_heading_validation.json",
+        "gemini_toc_classification": "05_gemini_toc_classification.json",
+        "toc_section_eval": "06_toc_section_eval.json",
+        "fragments": "07_fragments.json",
+        "hierarchy": "08_hierarchy.json",
+        "final_headings": "09_final_headings.json",
+    }
 
     @staticmethod
-    def create(*, base_dir: str = "logs") -> "PipelineLogger":
+    def create(*, pdf_file: str = "", base_dir: str = "logs", enabled: bool = True) -> "PipelineLogger":
+        """
+        If enabled is False, returns a NoOpPipelineLogger that performs no filesystem writes.
+        """
+        if not enabled:
+            return NoOpPipelineLogger(run_dir=Path(base_dir), run_id="", pdf_file=pdf_file)
+
         base = Path(base_dir)
         base.mkdir(parents=True, exist_ok=True)
-        run_dir = base / f"run_{_utc_timestamp_for_path()}"
+        run_id = _utc_timestamp_for_path()
+        run_dir = base / f"run_{run_id}"
         run_dir.mkdir(parents=True, exist_ok=True)
-        return PipelineLogger(run_dir=run_dir)
+        return PipelineLogger(run_dir=run_dir, run_id=run_id, pdf_file=pdf_file)
 
     def path(self, filename: str) -> Path:
         return self.run_dir / filename
 
-    def write_json(self, filename: str, payload: Any) -> None:
-        # Safety: ensure run_dir exists (debug runners may create PipelineLogger then crash before folders exist)
+    def _assert_allowed(self, filename: str) -> None:
+        if filename not in self._ALLOWED_FILES:
+            raise ValueError(f"Refusing to write non-whitelisted log file: {filename}")
+
+    def _envelope(self, stage_name: str, items: List[Any]) -> Dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "stage": stage_name,
+            "pdf_file": self.pdf_file,
+            "timestamp": datetime.utcnow().isoformat(),
+            "total_items": len(items),
+            "items": items,
+        }
+
+    def write_stage(self, stage_name: str, items: List[Any]) -> None:
+        filename = self._STAGE_TO_FILE.get(stage_name)
+        if not filename:
+            raise ValueError(f"Unknown stage_name: {stage_name}")
+        self._assert_allowed(filename)
         self.run_dir.mkdir(parents=True, exist_ok=True)
+        payload = self._envelope(stage_name, items)
         self.path(filename).write_text(_json_dumps(payload), encoding="utf-8")
 
-    def append_json_list(self, filename: str, item: Any) -> None:
-        # Safety: ensure run_dir exists
-        self.run_dir.mkdir(parents=True, exist_ok=True)
-        path = self.path(filename)
-        existing = _read_json_if_exists(path)
-        if existing is None:
-            arr: List[Any] = []
-        elif isinstance(existing, list):
-            arr = existing
-        else:
-            # If an old non-list file exists, preserve it by wrapping.
-            arr = [existing]
-        arr.append(item)
-        path.write_text(_json_dumps(arr), encoding="utf-8")
-
-    def append_decision(
+    def record_decision(
         self,
-        heading_id: str,
-        *,
+        entity_id: str,
         stage: str,
         decision: str,
-        meta: Optional[Dict[str, Any]] = None,
-        filename: str = "decision_trace.json",
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Appends a decision event to decision_trace.json.
 
-        Format:
+        Output shape:
         [
           {
-            "heading_id": "L57",
+            "heading_id": "L245",
+            "text": "...",   # optional if known by caller
             "history": [
-              {"stage": "...", "decision": "...", "meta": {...}}
+              {"stage": "...", "decision": "...", ...metadata }
             ]
           }
         ]
         """
+        filename = "decision_trace.json"
+        self._assert_allowed(filename)
+
         path = self.path(filename)
         existing = _read_json_if_exists(path)
         if existing is None:
@@ -100,14 +140,13 @@ class PipelineLogger:
         else:
             data = []
 
-        # Find or create entry
         entry: Optional[Dict[str, Any]] = None
         for item in data:
-            if isinstance(item, dict) and item.get("heading_id") == heading_id:
+            if isinstance(item, dict) and item.get("heading_id") == entity_id:
                 entry = item
                 break
         if entry is None:
-            entry = {"heading_id": heading_id, "history": []}
+            entry = {"heading_id": entity_id, "history": []}
             data.append(entry)
 
         hist = entry.get("history")
@@ -116,8 +155,48 @@ class PipelineLogger:
             entry["history"] = hist
 
         event: Dict[str, Any] = {"stage": stage, "decision": decision}
-        if meta:
-            event["meta"] = meta
+        if metadata:
+            # Merge metadata keys at top-level per required example shape.
+            for k, v in metadata.items():
+                if k in ("stage", "decision"):
+                    continue
+                event[k] = v
         hist.append(event)
 
+        self.run_dir.mkdir(parents=True, exist_ok=True)
         path.write_text(_json_dumps(data), encoding="utf-8")
+
+    # Backwards compatible helpers (internal use only). These MUST only write allowed files.
+    def write_json(self, filename: str, payload: Any) -> None:
+        self._assert_allowed(filename)
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        self.path(filename).write_text(_json_dumps(payload), encoding="utf-8")
+
+
+@dataclass(frozen=True, slots=True)
+class NoOpPipelineLogger(PipelineLogger):
+    """
+    Drop-in replacement for PipelineLogger that writes nothing.
+    Used for production runs when logging is disabled.
+    """
+
+    def _assert_allowed(self, filename: str) -> None:
+        return
+
+    def path(self, filename: str) -> Path:
+        return Path("")
+
+    def write_stage(self, stage_name: str, items: List[Any]) -> None:
+        return
+
+    def record_decision(
+        self,
+        entity_id: str,
+        stage: str,
+        decision: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        return
+
+    def write_json(self, filename: str, payload: Any) -> None:
+        return

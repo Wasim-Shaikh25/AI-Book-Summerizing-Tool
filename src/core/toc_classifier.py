@@ -15,10 +15,9 @@ def classify_toc(
     """
     Gemini TOC stage (batched).
 
-    Writes per-run files:
-      - 06_gemini_toc_request.json (list of batches)
-      - 06_gemini_toc_raw_response.json (list of batches)
-      - 06_gemini_toc_results.json (parsed per heading)
+    Refactor:
+      - Writes exactly one per-run file: 05_gemini_toc_classification.json
+      - No separate request/raw/results JSON logs
     """
     batches = gemini_toc(headings, batch_size=20)
 
@@ -34,8 +33,7 @@ def classify_toc(
         for hid, v in parsed_by_id.items():
             parsed_results_by_id[hid] = v
 
-    logger.write_json("06_gemini_toc_request.json", req_batches)
-    logger.write_json("06_gemini_toc_raw_response.json", raw_batches)
+    # Refactor: do not write separate request/raw files. Their info is merged into the stage log.
 
     out: List[HeadingCandidate] = []
     parsed_log: List[Dict[str, Any]] = []
@@ -75,13 +73,13 @@ def classify_toc(
             }
         )
 
-        logger.append_decision(
+        logger.record_decision(
             updated.id,
             stage="gemini_toc",
             decision="is_toc_true" if updated.is_toc else "is_toc_false",
-            meta={"reason": updated.toc_reason},
+            metadata={"reason": updated.toc_reason or ""},
         )
 
-    logger.write_json("06_gemini_toc_results.json", parsed_log)
+    logger.write_stage("gemini_toc_classification", parsed_log)
 
     return out

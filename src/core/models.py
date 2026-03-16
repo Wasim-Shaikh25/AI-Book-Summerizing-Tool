@@ -65,3 +65,9 @@ class FinalHeading:
     text: str
     level: Optional[int]
     fragment_id: Optional[str]
+
+    # Hierarchy metadata (optional; may be filled by AI or heuristics)
+    parent_heading: Optional[str] = None
+    reason: Optional[str] = None
+    signals_used: Optional[List[str]] = None
+    confidence: Optional[float] = None

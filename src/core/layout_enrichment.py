@@ -7,6 +7,13 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from .models import NormalizedLine
 
 
+def _safe_float(x: Any) -> float:
+    try:
+        return float(x)
+    except Exception:
+        return 0.0
+
+
 def _safe_median(values: List[float], default: float = 0.0) -> float:
     vals = [v for v in values if v is not None]
     if not vals:
@@ -126,6 +133,13 @@ def _extract_lines_from_page_dict(
                     "page_width": page_w,
                     "page_height": page_h,
                     "is_link": _line_has_link(ln),
+                    "bbox": [x0, y0, x1, y1],
+                    "x0": x0,
+                    "y0": y0,
+                    "x1": x1,
+                    "y1": y1,
+                    "font_name": str(spans[0].get("font") or ""),
+                    "is_italic": bool(int(spans[0].get("flags") or 0) & 2),
                 }
             )
 
@@ -205,4 +219,43 @@ def enrich_layout_from_pymupdf_pages(
 
 
 def lines_to_log(lines: Iterable[NormalizedLine]) -> List[Dict[str, Any]]:
-    return [asdict(ln) for ln in lines]
+    out: List[Dict[str, Any]] = []
+    for raw_idx, ln in enumerate(lines):
+        # Provide the exact schema required by 01_layout_lines.json.
+        bbox = getattr(ln, "bbox", None)
+        if not (isinstance(bbox, (list, tuple)) and len(bbox) == 4):
+            # Derive a best-effort bbox from x_center and y_pos if not present.
+            bbox = [0.0, _safe_float(getattr(ln, "y_pos", 0.0)), 0.0, _safe_float(getattr(ln, "y_pos", 0.0))]
+
+        x0 = _safe_float(getattr(ln, "x0", bbox[0] if bbox else 0.0))
+        y0 = _safe_float(getattr(ln, "y0", bbox[1] if bbox else 0.0))
+        x1 = _safe_float(getattr(ln, "x1", bbox[2] if bbox else 0.0))
+        y1 = _safe_float(getattr(ln, "y1", bbox[3] if bbox else 0.0))
+
+        out.append(
+            {
+                "line_id": ln.line_id,
+                "text": ln.text,
+                "page_number": ln.page_number,
+                "bbox": [x0, y0, x1, y1],
+                "x0": x0,
+                "y0": y0,
+                "x1": x1,
+                "y1": y1,
+                "page_width": ln.page_width,
+                "page_height": ln.page_height,
+                "font_size": ln.font_size,
+                "font_name": str(getattr(ln, "font_name", "")),
+                "is_bold": ln.is_bold,
+                "is_italic": bool(getattr(ln, "is_italic", False)),
+                "x_center": ln.x_center,
+                "centered": ln.centered,
+                "vertical_gap_above": ln.vertical_gap_above,
+                "large_gap": ln.large_gap,
+                "large_font": ln.large_font,
+                "is_link": ln.is_link,
+                "is_table": False,
+                "raw_line_index": raw_idx,
+            }
+        )
+    return out

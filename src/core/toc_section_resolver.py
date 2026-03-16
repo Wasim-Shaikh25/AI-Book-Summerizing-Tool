@@ -41,14 +41,28 @@ def resolve_toc_sections(
       - Conservative: never remove the first heading
     """
     if len(headings) == 0:
-        logger.write_json("07_toc_section_eval.json", {"removed": [], "kept": [], "note": "no headings"})
+        logger.write_stage("toc_section_eval", [{"decision": "no_headings", "reason": "no headings"}])
         return []
 
     valid_count = sum(1 for h in headings if h.is_valid is True)
     if valid_count < 2:
-        logger.write_json(
-            "07_toc_section_eval.json",
-            {"removed": [], "kept": [h.id for h in headings], "note": "valid_headings<2 safeguard"},
+        logger.write_stage(
+            "toc_section_eval",
+            [
+                {
+                    "toc_block_id": "toc_000",
+                    "start_heading_id": headings[0].id if headings else None,
+                    "end_heading_id": headings[-1].id if headings else None,
+                    "heading_ids": [h.id for h in headings],
+                    "combined_preview": "",
+                    "decision": "keep_all",
+                    "reason": "valid_headings<2 safeguard",
+                    "removed_headings": [],
+                    "kept_headings": [h.id for h in headings],
+                    "model": None,
+                    "latency_ms": None,
+                }
+            ],
         )
         return list(headings)
 
@@ -99,11 +113,11 @@ def resolve_toc_sections(
                         "is_toc": b.is_toc,
                     }
                 )
-                logger.append_decision(
+                logger.record_decision(
                     b.id,
                     stage="toc_section_resolver",
                     decision="removed",
-                    meta={"reason": "toc_block_3plus"},
+                    metadata={"reason": "toc_block_3plus"},
                 )
 
         # IMPORTANT: always advance past the scanned block; otherwise we rescan the same TOC streak.
@@ -131,20 +145,30 @@ def resolve_toc_sections(
                     toc_reason="safeguard:followed_by_large_paragraph",
                 )
                 kept.append(updated)
-                logger.append_decision(
+                logger.record_decision(
                     h.id,
                     stage="toc_safeguard",
                     decision="override_is_toc_false",
-                    meta={"reason": "followed_by_large_paragraph", "chars": len(preview)},
+                    metadata={"reason": "followed_by_large_paragraph", "chars": len(preview)},
                 )
                 continue
         kept.append(h)
-    logger.write_json(
-        "07_toc_section_eval.json",
-        {
-            "removed": removed_entries,
-            "removed_count": len(removed_entries),
-            "kept_count": len(kept),
-        },
+    logger.write_stage(
+        "toc_section_eval",
+        [
+            {
+                "toc_block_id": "toc_001",
+                "start_heading_id": headings[0].id if headings else None,
+                "end_heading_id": headings[-1].id if headings else None,
+                "heading_ids": [h.id for h in headings],
+                "combined_preview": "",
+                "decision": "remove_block" if removed_entries else "keep",
+                "reason": "toc_block_3plus" if removed_entries else "no_toc_block_removed",
+                "removed_headings": [e.get("removed_id") for e in removed_entries],
+                "kept_headings": [h.id for h in kept],
+                "model": None,
+                "latency_ms": None,
+            }
+        ],
     )
     return kept

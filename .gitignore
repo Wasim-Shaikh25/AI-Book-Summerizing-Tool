@@ -1,25 +1,24 @@
-# Python
+# Python bytecode
 __pycache__/
 *.py[cod]
-.venv/
-venv/
+*$py.class
 
-# OS / editor
-.DS_Store
-Thumbs.db
+# Virtual environments
+venv/
+.venv/
+
+# Test / tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# VSCode
 .vscode/
 
-# Env
+# Local env files
 .env
 
-# Logs / debug artifacts (never commit)
-logs/run_*/
-logs/toc_trace/
-logs/*.json
-
-# Local model binaries
-models/*.gguf
-*.gguf
-
-# Local scratch
+# Run artifacts (optional but recommended for this project)
+logs/
+output/
 tmp/

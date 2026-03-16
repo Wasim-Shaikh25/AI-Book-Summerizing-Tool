@@ -13,8 +13,15 @@ SYSTEM_INSTRUCTION = (
     "You are assigning hierarchy levels to structural headings in academic PDFs. "
     "You will be given a JSON array of headings with fields: id, text, fragment_id. "
     "Return ONLY a JSON array of objects with fields: "
-    "[{ \"id\": \"...\", \"level\": 1 }]. "
-    "No explanations, no extra keys, no markdown."
+    "[{"
+    "  \"id\": \"...\","
+    "  \"level\": 1,"
+    "  \"parent_heading\": \"...\" or null,"
+    "  \"reason\": \"...\","
+    "  \"signals_used\": [\"numbering\", \"font_size\", \"indent\"],"
+    "  \"confidence\": 0.0"
+    "}]. "
+    "No markdown. No prose outside JSON. No extra keys."
 )
 
 
@@ -49,24 +56,21 @@ def assign_hierarchy(headings: Sequence[FinalHeading], *, logger: PipelineLogger
 
     Updates FinalHeading.level.
 
-    Logs:
-      - logs/hierarchy_request.json
-      - logs/hierarchy_response.json
+    Logging contract:
+      - Do NOT write any request/response JSON files.
+      - Any hierarchy debugging must be captured via the centralized PipelineLogger stage logs.
     """
-    logs_dir = logger.run_dir if logger is not None else _ensure_logs_dir()
-
-    request_list = [
-        {"id": h.id, "text": h.text, "fragment_id": h.fragment_id} for h in headings
-    ]
-    _write_json(logs_dir / "08_hierarchy_request.json", request_list)
+    request_list = [{"id": h.id, "text": h.text, "fragment_id": h.fragment_id} for h in headings]
 
     user_prompt = json.dumps(request_list, indent=2, ensure_ascii=False)
     resp = gemini_generate(SYSTEM_INSTRUCTION, user_prompt)
 
-    response_payload = {"raw_text": resp.raw_text, "parsed_json": resp.parsed_json}
-    _write_json(logs_dir / "08_hierarchy_response.json", response_payload)
-
     id_to_level: Dict[str, int] = {}
+    id_to_parent: Dict[str, str | None] = {}
+    id_to_reason: Dict[str, str | None] = {}
+    id_to_signals: Dict[str, list[str] | None] = {}
+    id_to_conf: Dict[str, float | None] = {}
+
     if isinstance(resp.parsed_json, list):
         for item in resp.parsed_json:
             if not isinstance(item, dict):
@@ -76,15 +80,39 @@ def assign_hierarchy(headings: Sequence[FinalHeading], *, logger: PipelineLogger
             if isinstance(hid, str) and isinstance(lvl, int):
                 id_to_level[hid] = lvl
 
+                parent = item.get("parent_heading")
+                if parent is None or isinstance(parent, str):
+                    id_to_parent[hid] = parent
+
+                reason = item.get("reason")
+                if reason is None or isinstance(reason, str):
+                    id_to_reason[hid] = reason
+
+                signals = item.get("signals_used")
+                if signals is None or isinstance(signals, list):
+                    # Filter to strings only, keep order
+                    if isinstance(signals, list):
+                        signals = [s for s in signals if isinstance(s, str)]
+                    id_to_signals[hid] = signals
+
+                conf = item.get("confidence")
+                if conf is None or isinstance(conf, (int, float)):
+                    id_to_conf[hid] = float(conf) if isinstance(conf, (int, float)) else None
+
     updated: List[FinalHeading] = []
     for h in headings:
-        level = id_to_level.get(h.id, h.level)
+        hid = h.id
+        level = id_to_level.get(hid, h.level)
         updated.append(
             FinalHeading(
                 id=h.id,
                 text=h.text,
                 level=level,
                 fragment_id=h.fragment_id,
+                parent_heading=id_to_parent.get(hid),
+                reason=id_to_reason.get(hid),
+                signals_used=id_to_signals.get(hid),
+                confidence=id_to_conf.get(hid),
             )
         )
 
