@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,3 +71,19 @@ class FinalHeading:
     reason: Optional[str] = None
     signals_used: Optional[List[str]] = None
     confidence: Optional[float] = None
+
+
+@dataclass(frozen=True, slots=True)
+class PipelineResult:
+    """
+    Output of the deterministic core pipeline.
+
+    Notes:
+    - This is the in-memory, production-ready representation.
+    - Persistence/export layers should read/write from/to this structure.
+    - Stage JSON traces remain optional (enable_logs).
+    """
+
+    final_headings: List[FinalHeading]
+    fragments: List[Fragment]
+    heading_to_fragment_id: Dict[str, Optional[str]]

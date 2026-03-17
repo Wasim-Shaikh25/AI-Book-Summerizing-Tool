@@ -55,9 +55,55 @@ class KnowledgeStore:
             )
         ''')
 
-        # Index for keyword search
+        # Final TOC headings (source of truth for hierarchy)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS final_headings (
+                heading_id TEXT PRIMARY KEY,
+                book_id TEXT NOT NULL,
+                text TEXT NOT NULL,
+                level INTEGER,
+                parent_heading_id TEXT,
+                line_id INTEGER,
+                page_number INTEGER,
+                confidence REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (book_id) REFERENCES books (book_id),
+                FOREIGN KEY (parent_heading_id) REFERENCES final_headings (heading_id)
+            )
+        ''')
+
+        # Fragments (source of truth for fragment_id -> fragment text)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS fragments (
+                fragment_id TEXT PRIMARY KEY,
+                book_id TEXT NOT NULL,
+                text TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (book_id) REFERENCES books (book_id)
+            )
+        ''')
+
+        # Relationship table (future-proof: 1 heading -> many fragments)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS heading_fragments (
+                heading_id TEXT NOT NULL,
+                fragment_id TEXT NOT NULL,
+                book_id TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (heading_id, fragment_id),
+                FOREIGN KEY (book_id) REFERENCES books (book_id),
+                FOREIGN KEY (heading_id) REFERENCES final_headings (heading_id),
+                FOREIGN KEY (fragment_id) REFERENCES fragments (fragment_id)
+            )
+        ''')
+
+        # Indexes for keyword search / joins
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_topic_name ON topics (topic)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_book_id ON topics (book_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_topics_book_id ON topics (book_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_final_headings_book_id ON final_headings (book_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_fragments_book_id ON fragments (book_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_heading_fragments_book_id ON heading_fragments (book_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_heading_fragments_heading_id ON heading_fragments (heading_id)')
 
         conn.commit()
         conn.close()

@@ -57,45 +57,48 @@ def _print_db_overview(db_path: Path) -> None:
 
 def _extract_headings_like_rows(db_path: Path) -> list[dict[str, Any]]:
     """
-    This repo's SQLite schema stores 'topics', not finalized TOC headings.
-    We attempt to map topics -> a heading-like representation so we can diff.
+    Extract finalized headings from DB (source of truth):
 
-    If you later add a 'headings' table, update this function to read that instead.
+      final_headings + heading_fragments
+
+    Note: DB stores the edge heading->fragment, but the trace stage logs store
+    a single fragment_id field. For diffing, we take the first fragment_id
+    (sorted) if multiple exist.
     """
     con = sqlite3.connect(db_path.as_posix())
     try:
         tables = _db_tables(con)
-        if "topics" not in tables:
+        if "final_headings" not in tables:
             return []
 
         cur = con.cursor()
-        cols = [r[1] for r in cur.execute("PRAGMA table_info(topics)").fetchall()]
-        colset = set(cols)
 
-        # Minimal columns that exist today.
-        q = "SELECT topic_id, topic, subtopic, source_page, metadata FROM topics"
-        rows = cur.execute(q).fetchall()
+        # Load links (book-agnostic; for compare we flatten across all books)
+        links = cur.execute("SELECT heading_id, fragment_id FROM heading_fragments").fetchall()
+        heading_to_fragments: dict[str, list[str]] = {}
+        for hid, fid in links:
+            if isinstance(hid, str) and isinstance(fid, str):
+                heading_to_fragments.setdefault(hid, []).append(fid)
+
+        rows = cur.execute(
+            """
+            SELECT heading_id, text, level, parent_heading_id, page_number, line_id
+            FROM final_headings
+            """
+        ).fetchall()
 
         out: list[dict[str, Any]] = []
-        for topic_id, topic, subtopic, source_page, metadata in rows:
-            md = {}
-            try:
-                md = json.loads(metadata) if metadata else {}
-            except Exception:
-                md = {}
-
+        for heading_id, text, level, parent_heading_id, page_number, line_id in rows:
+            frag_ids = sorted(heading_to_fragments.get(heading_id, []))
             out.append(
                 {
-                    # best-effort mapping
-                    "heading_id": str(topic_id),
-                    "text": str(subtopic or topic or "").strip(),
-                    "level": md.get("level") if isinstance(md, dict) else None,
-                    "parent_heading": md.get("parent_heading") if isinstance(md, dict) else None,
-                    "fragment_id": md.get("fragment_id") if isinstance(md, dict) else None,
-                    "page_number": int(source_page) if source_page is not None else None,
-                    "line_id": md.get("line_id") if isinstance(md, dict) else None,
-                    "_raw_topic": str(topic or ""),
-                    "_raw_subtopic": str(subtopic or ""),
+                    "heading_id": heading_id,
+                    "text": (text or "").strip(),
+                    "level": level,
+                    "parent_heading": parent_heading_id,
+                    "fragment_id": frag_ids[0] if frag_ids else None,
+                    "page_number": page_number,
+                    "line_id": line_id,
                 }
             )
         return out

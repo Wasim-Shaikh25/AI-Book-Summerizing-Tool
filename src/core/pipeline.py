@@ -36,7 +36,7 @@ def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:
         return None
 
 
-def run_pipeline(pdf_path: str, *, enable_logs: bool = False) -> tuple[Any, Optional[PipelineLogger]]:
+def run_pipeline(pdf_path: str, *, enable_logs: bool = False):
     """
     Orchestrates the clean core pipeline.
 
@@ -158,4 +158,13 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False) -> tuple[Any, Opti
         )
     logger.write_stage("final_headings", final_headings_items)
 
-    return fragments_result, (logger if enable_logs else None)
+    # Return production artifacts (DB/export can be built from this)
+    from .models import PipelineResult
+
+    result = PipelineResult(
+        final_headings=toc_out,
+        fragments=getattr(fragments_result, "fragments", []) or [],
+        heading_to_fragment_id=getattr(fragments_result, "heading_to_fragment_id", {}) or {},
+    )
+
+    return result, (logger if enable_logs else None)

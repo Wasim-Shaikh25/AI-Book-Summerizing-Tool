@@ -7,6 +7,9 @@ from src.core.content_generation_engine import ContentGenerationEngine
 from src.export.word_exporter import WordExporter
 from src.storage.topic_repository import TopicRepository
 from src.storage.knowledge_store import KnowledgeStore
+from src.storage.book_repository import BookRepository
+from src.storage.schema import BookMetadata
+from src.storage.toc_repository import TocRepository
 from src.config import OUTPUT_FOLDER
 
 logger = logging.getLogger(__name__)
@@ -19,13 +22,17 @@ class CommandLoop:
     def __init__(self):
         self.parser = CommandParser()
         self.store = KnowledgeStore()
+
+        self.book_repo = BookRepository(self.store)
         self.topic_repo = TopicRepository(self.store)
+        self.toc_repo = TocRepository(self.store)
+
         self.retrieval_engine = RetrievalEngine(self.topic_repo)
         self.gen_engine = ContentGenerationEngine()
         self.word_exporter = WordExporter(output_folder=OUTPUT_FOLDER)
         self.rewriter: Optional[Any] = None
         self.current_file_path: Optional[str] = None
-        
+
         self.last_generated_response: Optional[str] = None
         self.running = True
 
@@ -137,27 +144,53 @@ class CommandLoop:
     def _handle_ingestion(self, file_path: str):
         """
         Handles the ingestion of a new PDF file.
+
+        Production behavior:
+        - Run the clean deterministic core pipeline
+        - Persist final headings + fragments (+ relationship) to DB
+        - Stage JSON traces remain optional and are not generated unless enabled elsewhere
         """
         import os
 
         print(f"[*] Ingesting file: {file_path}")
-        
-        # Determine directory and filename
-        pdf_dir = os.path.dirname(file_path)
-        
-        # Initialize rewriter with the specific directory
-        # We'll use a subfolder 'output' in the same directory as the PDF for results
-        output_dir = os.path.join(pdf_dir, "output")
-        
+
         try:
-            # Temporary: ingestion pipeline not wired to the new clean `src/core/pipeline.py` yet.
-            # Keep CLI stable by acknowledging the file and deferring ingestion.
+            from src.core.pdf_extractor import extract_pdf
+            from src.core.pipeline import run_pipeline
+
+            # Extract lightweight PDF metadata for the books table
+            pdf_doc = extract_pdf(file_path)
+            total_pages = int(getattr(pdf_doc, "page_count", 0) or 0)
+            title = os.path.splitext(os.path.basename(file_path))[0]
+
+            book = BookMetadata(
+                title=title,
+                source_file_name=os.path.basename(file_path),
+                total_pages=total_pages,
+            )
+            self.book_repo.save_book(book)
+
+            # Run pipeline (no stage logs in production ingestion)
+            result, _logger = run_pipeline(file_path, enable_logs=False)
+
+            # Persist finalized TOC snapshot (DB is the source of truth)
+            self.toc_repo.save_full_toc(
+                book_id=book.book_id,
+                final_headings=result.final_headings,
+                fragments=result.fragments,
+                heading_to_fragment_id=result.heading_to_fragment_id,
+                clear_existing=True,
+            )
+
             self.rewriter = None
             self.current_file_path = file_path
-            print("[!] Ingestion is currently disabled in this build (pipeline integration pending).")
-            print(f"[*] Stored file path for later: {self.current_file_path}")
+
+            print("[+] Ingestion complete.")
+            print(f"    book_id: {book.book_id}")
+            print(f"    final_headings: {len(result.final_headings)}")
+            print(f"    fragments: {len(result.fragments)}")
         except Exception as e:
-            logger.error(f"Ingestion failed: {e}")
+            logger.error(f"Ingestion failed: {e}", exc_info=True)
             print(f"[!] Ingestion failed: {e}")
 
     def _show_help(self):
