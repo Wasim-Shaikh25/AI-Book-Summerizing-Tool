@@ -1,0 +1,4 @@
+Return JSON only in the schema described.
+
+Input JSON:
+{validated_headings_json}

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Sequence, Tuple
 
-from src.ai.gemini_adapter import gemini_generate
+from src.LLMAdaptor.client import LLMClient
 from .models import HeadingCandidate
 
 
@@ -52,10 +52,10 @@ def build_validity_request_items(batch: Sequence[HeadingCandidate]) -> List[Dict
     ]
 
 
-def gemini_validate_batch(
+def llm_validate_batch(
     batch: Sequence[HeadingCandidate],
     *,
-    model_label: str = "gemini",
+    model_label: str = "llm",
 ) -> Tuple[Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]:
     """
     Returns:
@@ -70,11 +70,33 @@ def gemini_validate_batch(
         ensure_ascii=False,
     )
 
-    resp = gemini_generate(SYSTEM_INSTRUCTION_VALID, user_prompt)
+    client = LLMClient.from_config()
+    result = client.generate(
+        "heading_validity",
+        variables={"candidates_json": user_prompt},
+        temperature=0.2,
+        response_mime_type="application/json",
+    )
 
+    raw_text = result.text
     parsed: Dict[str, Dict[str, Any]] = {}
-    if isinstance(resp.parsed_json, list):
-        for item in resp.parsed_json:
+
+    # Accept either:
+    #  1) [{"id":..., "is_valid":..., "reason":...}, ...]
+    #  2) {"results":[{"id":...}, ...]}
+    try:
+        obj = json.loads(raw_text)
+    except Exception:
+        obj = None
+
+    items = None
+    if isinstance(obj, list):
+        items = obj
+    elif isinstance(obj, dict) and isinstance(obj.get("results"), list):
+        items = obj["results"]
+
+    if isinstance(items, list):
+        for item in items:
             if not isinstance(item, dict):
                 continue
             hid = item.get("id") or item.get("heading_id")
@@ -82,10 +104,11 @@ def gemini_validate_batch(
             reason = item.get("reason")
             if isinstance(hid, str) and isinstance(is_valid, bool):
                 parsed[hid] = {"is_valid": is_valid, "reason": reason if isinstance(reason, str) else ""}
-    return parsed, resp.raw_text, request_items
+
+    return parsed, raw_text, request_items
 
 
-def gemini_validate(
+def llm_validate(
     candidates: Sequence[HeadingCandidate],
     *,
     batch_size: int = 20,
@@ -97,6 +120,6 @@ def gemini_validate(
     batches = _chunks(candidates, batch_size)
     out: List[Tuple[int, Sequence[HeadingCandidate], Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]] = []
     for i, b in enumerate(batches, start=1):
-        parsed, raw_text, request_items = gemini_validate_batch(b)
+        parsed, raw_text, request_items = llm_validate_batch(b)
         out.append((i, b, parsed, raw_text, request_items))
     return out

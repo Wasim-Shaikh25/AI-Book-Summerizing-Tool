@@ -1,0 +1,6 @@
+Validate the following heading candidates.
+
+Return JSON only in the exact schema described.
+
+Input JSON:
+{candidates_json}

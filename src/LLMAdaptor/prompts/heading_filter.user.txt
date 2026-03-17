@@ -1,0 +1,4 @@
+Return JSON only in the schema described.
+
+Input JSON:
+{heading_filter_batch_json}

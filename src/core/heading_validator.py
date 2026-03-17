@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from .gemini_validity import gemini_validate
+from .gemini_validity import llm_validate
 from .logging.pipeline_logger import PipelineLogger
 from .models import HeadingCandidate
 
@@ -112,7 +112,7 @@ def validate_headings(
         return candidates
 
     # Batched Gemini call
-    batches = gemini_validate(candidates, batch_size=20)
+    batches = llm_validate(candidates, batch_size=20)
 
     # Accumulate parsed results across batches
     parsed_results_by_id: Dict[str, Dict[str, Any]] = {}

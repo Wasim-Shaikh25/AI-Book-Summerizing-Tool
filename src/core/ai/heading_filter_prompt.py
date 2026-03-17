@@ -1,70 +1,10 @@
 import json
 from typing import List, Tuple
 
+from src.LLMAdaptor.client import LLMClient
 from src.structure.context_builder import build_structural_context
 from src.structure.raw_span_builder import RawSpan
 from src.utils.debug_logger import debug_log
-
-
-_HEADING_FILTER_SYSTEM_PROMPT = """You are a document structure analyzer.
-
-Your task is to determine whether a candidate line is a TRUE SECTION HEADING
-or part of a paragraph.
-
-You must balance structural patterns with contextual continuity.
-
--------------------------------------
-STRONG HEADING SIGNALS
--------------------------------------
-
-The candidate is likely VALID if:
-
-- It starts with numbering (1., 1.1, I., II., A., etc.)
-- It is ALL CAPS and resembles a title
-- It ends with ":" and behaves like a section marker
-- It is a short noun phrase (not a full explanatory sentence)
-
--------------------------------------
-STRONG INVALID SIGNALS
--------------------------------------
-
-The candidate is INVALID if:
-
-1) next_line_starts_lowercase == true AND blank_line_after == false
-   → indicates paragraph continuation
-
-2) The candidate clearly reads as a complete explanatory sentence
-   and continues naturally into the next line
-
-3) The context before and after forms continuous prose
-
--------------------------------------
-IMPORTANT
--------------------------------------
-
-Numbered academic headings (e.g., 1.1, 1.2) are VALID
-unless they are clearly embedded inside a paragraph.
-
-Do not reject numbered headings solely because they end with a period.
-
-Do not rely only on length.
-
-If structural signals and context conflict:
-- Paragraph continuation overrides numbering.
-- Otherwise, prefer structural interpretation.
-
-Return JSON only:
-
-{
-  "results": [
-    {
-      "span_id": integer,
-      "is_valid": true or false,
-      "reason": "brief structural explanation"
-    }
-  ]
-}
-"""
 
 
 def build_heading_filter_prompt(
@@ -72,7 +12,8 @@ def build_heading_filter_prompt(
     batch_spans: List[RawSpan],
     model_results: dict | None = None,
 ) -> Tuple[str, str]:
-    system_prompt = _HEADING_FILTER_SYSTEM_PROMPT
+    # Centralized prompt
+    system_prompt = LLMClient.from_config().prompts.get("heading_filter").system
 
     # Map: span_id -> {"is_valid": bool, "reason": str}
     decisions = {}
