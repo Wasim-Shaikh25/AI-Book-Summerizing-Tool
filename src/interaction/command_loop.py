@@ -173,6 +173,16 @@ class CommandLoop:
             # Run pipeline (no stage logs in production ingestion)
             result, _logger = run_pipeline(file_path, enable_logs=False)
 
+            # Optional cleanup: we only keep book metadata + finalized TOC structure in DB.
+            # Topics are legacy/derived and are not used once the final TOC snapshot exists.
+            conn = self.store.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute("DELETE FROM topics WHERE book_id = ?", (book.book_id,))
+                conn.commit()
+            finally:
+                conn.close()
+
             # Persist finalized TOC snapshot (DB is the source of truth)
             self.toc_repo.save_full_toc(
                 book_id=book.book_id,
