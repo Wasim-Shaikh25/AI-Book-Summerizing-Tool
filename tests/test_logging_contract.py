@@ -67,6 +67,7 @@ def _run_in_tmp_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     yield
 
 
+@pytest.mark.integration
 def test_logging_contract_generates_only_expected_files():
     pdf = str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
     run_pipeline(pdf, enable_logs=True)
@@ -79,7 +80,16 @@ def test_logging_contract_generates_only_expected_files():
     assert files == ALLOWED_FILES, f"Unexpected log files: {sorted(files - ALLOWED_FILES)} / missing: {sorted(ALLOWED_FILES - files)}"
 
 
+import pytest
+
+
+@pytest.mark.integration
 def test_each_stage_log_has_envelope_schema():
+    """
+    This test exercises the full pipeline with enable_logs=True.
+    It may call external LLM services (Gemini) depending on configuration,
+    so keep it as an integration test to avoid flaky CI/unit runs.
+    """
     pdf = str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
     run_pipeline(pdf, enable_logs=True)
 
@@ -92,6 +102,7 @@ def test_each_stage_log_has_envelope_schema():
         _assert_stage_envelope(payload)
 
 
+@pytest.mark.integration
 def test_stage_item_shapes_spot_check():
     pdf = str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
     run_pipeline(pdf, enable_logs=True)

@@ -16,6 +16,13 @@ This is intentionally a debug-only entrypoint. It does NOT try to "fix" logic.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Allow running as a script: `python src/debug/run_toc_trace.py`
+# by ensuring project root is on sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import json
 import os
 from dataclasses import asdict, is_dataclass
