@@ -4,16 +4,10 @@ import json
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
-from src.ai.gemini_adapter import gemini_generate
+from src.LLMAdaptor.client import LLMClient
 from .models import FinalHeading, Fragment
 
 
-_TOC_SYSTEM_INSTRUCTION = (
-    "You are detecting whether a heading is coming from a PDF Table of Contents (TOC) "
-    "or is a real section heading in the main body.\n"
-    "Return ONLY a JSON object: {\"is_toc\": true/false}.\n"
-    "No explanations, no markdown, no extra keys."
-)
 
 
 def _ensure_toc_trace_dir() -> Path:
@@ -127,9 +121,20 @@ def _gemini_is_toc(heading_text: str, content_preview: str) -> bool:
         },
         ensure_ascii=False,
     )
-    resp = gemini_generate(_TOC_SYSTEM_INSTRUCTION, user_prompt)
-    if isinstance(resp.parsed_json, dict) and isinstance(resp.parsed_json.get("is_toc"), bool):
-        return bool(resp.parsed_json["is_toc"])
+    prompt = LLMClient.from_config().prompts.get("toc_cleaner")
+    resp = LLMClient.from_config().generate(
+        system=prompt.system,
+        user=user_prompt,
+        temperature=0.2,
+        response_mime_type="application/json",
+    )
+    try:
+        parsed = json.loads(resp.text)
+    except Exception:
+        parsed = None
+
+    if isinstance(parsed, dict) and isinstance(parsed.get("is_toc"), bool):
+        return bool(parsed["is_toc"])
     return False  # safe default
 
 

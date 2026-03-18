@@ -9,7 +9,7 @@ from src.config import ACTIVE_MODEL, BASE_DIR
 from .prompt_store import PromptStore
 from .providers.base import BaseLLMProvider, LLMResult
 from .providers.gemini_provider import GeminiProvider
-from .providers.qwen_provider import QwenProvider
+from .providers.ollama_provider import OllamaProvider
 
 
 def _default_prompts_dir() -> Path:
@@ -47,10 +47,10 @@ class LLMClient:
         provider: BaseLLMProvider
         if model == "GEMINI":
             provider = GeminiProvider()
-        elif model in ("QWEN", "LOCAL_QWEN"):
-            provider = QwenProvider()
+        elif model == "OLLAMA":
+            provider = OllamaProvider()
         else:
-            raise ValueError(f"Unsupported ACTIVE_MODEL={ACTIVE_MODEL!r}. Supported: GEMINI, QWEN")
+            raise ValueError(f"Unsupported ACTIVE_MODEL={ACTIVE_MODEL!r}. Supported: GEMINI, OLLAMA")
 
         store = PromptStore(prompts_dir or _default_prompts_dir())
         return cls(provider=provider, prompts=store)

@@ -15,8 +15,8 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 CHUNK_SIZE_WORDS = 1500
 CHUNK_OVERLAP_WORDS = 150
 
-# Active model for summarization (e.g., "gemini")
-ACTIVE_MODEL = "GEMINI"
+# Active model for LLM calls (TOC / validation / rewrite). Supported: "GEMINI", "OLLAMA"
+ACTIVE_MODEL = "OLLAMA"
 
 # Global debug flag for structural pipeline tracing
 DEBUG_STRUCTURE = True

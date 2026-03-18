@@ -10,9 +10,11 @@ from src.config import BASE_DIR
 from .base import LLMResult
 
 
-class QwenProvider:
+class OllamaProvider:
     """
-    Local Qwen provider via Ollama.
+    Local Ollama provider.
+
+    This provider can run any Ollama model (Qwen, Gemma, etc.).
 
     Requires:
       - Ollama running at http://localhost:11434
@@ -21,14 +23,14 @@ class QwenProvider:
     Uses Ollama's /api/chat endpoint.
     """
 
-    name = "QWEN"
+    name = "OLLAMA"
 
     def __init__(
         self,
         *,
         base_url: str = "http://localhost:11434",
-        model: str = "qwen2.5:7b",
-        timeout_s: float = 180.0,
+        model: str = "gemma3:270m",
+        timeout_s: float = 600.0,
     ):
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -43,14 +45,18 @@ class QwenProvider:
         max_tokens: Optional[int] = None,
         response_mime_type: Optional[str] = None,
     ) -> LLMResult:
-        url = f"{self.base_url}/api/chat"
+        """
+        Ollama 0.18.0 doesn't expose /api/chat; use /api/generate instead.
+
+        We still accept (system, user) and combine them into a single prompt.
+        """
+        url = f"{self.base_url}/api/generate"
+        prompt = f"{system}\n\n{user}"
+
         payload = {
             "model": self.model,
+            "prompt": prompt,
             "stream": False,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
             "options": {
                 "temperature": float(temperature),
             },
@@ -64,11 +70,13 @@ class QwenProvider:
         if response_mime_type and "json" in response_mime_type.lower():
             payload["format"] = "json"
 
-        r = requests.post(url, json=payload, timeout=self.timeout_s)
+        # Requests timeout expects seconds or (connect, read). Use (connect, read) so
+        # we don't fail on long generations.
+        r = requests.post(url, json=payload, timeout=(10.0, self.timeout_s))
         r.raise_for_status()
 
         data = r.json()
-        msg = (data.get("message") or {}).get("content")
+        msg = data.get("response")
         if not isinstance(msg, str):
             msg = ""
 

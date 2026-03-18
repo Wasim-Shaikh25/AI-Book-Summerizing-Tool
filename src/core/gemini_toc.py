@@ -3,22 +3,10 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Sequence, Tuple
 
-from src.ai.gemini_adapter import gemini_generate
+from src.LLMAdaptor.client import LLMClient
 from .models import HeadingCandidate
 
 
-SYSTEM_INSTRUCTION_TOC = (
-    "You are classifying headings as either coming from a PDF Table of Contents (TOC) or as real section headings in the main body.\n"
-    "You will be given a list of headings with context previews.\n"
-    "A TOC heading is one that appears in the table of contents, often summarizing sections, chapters, or topics, and is not part of the main content flow.\n"
-    "A real section heading is part of the main body content and marks the start of a new section, topic, or chapter within the document.\n"
-    "Carefully examine the context preview to distinguish between TOC headings and real section headings.\n"
-    "Return ONLY a JSON array of objects:\n"
-    "[{ \"id\": \"...\", \"is_toc\": true/false, \"reason\": \"...\" }]\n"
-    "No markdown. No extra keys. No explanations outside JSON.\n"
-    "Do not mark real section headings as TOC. Only mark headings as TOC if they clearly belong to the table of contents.\n"
-    "Do not mark section headings as TOC unless there is a clear signal such as appearing in a syllabus, explicit TOC, or summary list. Section headings in the main body should not be marked as TOC."
-)
 
 
 def _chunks(seq: Sequence[HeadingCandidate], n: int) -> List[List[HeadingCandidate]]:
@@ -50,11 +38,23 @@ def gemini_toc_batch(
 ) -> Tuple[Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]:
     request_items = build_toc_request_items(batch)
     user_prompt = json.dumps(request_items, ensure_ascii=False)
-    resp = gemini_generate(SYSTEM_INSTRUCTION_TOC, user_prompt)
+    prompt = LLMClient.from_config().prompts.get("toc_classifier")
+    resp = LLMClient.from_config().generate(
+        system=prompt.system,
+        user=user_prompt,
+        temperature=0.2,
+        response_mime_type="application/json",
+    )
 
     parsed: Dict[str, Dict[str, Any]] = {}
-    if isinstance(resp.parsed_json, list):
-        for item in resp.parsed_json:
+    parsed_json = None
+    try:
+        parsed_json = json.loads(resp.text)
+    except Exception:
+        parsed_json = None
+
+    if isinstance(parsed_json, list):
+        for item in parsed_json:
             if not isinstance(item, dict):
                 continue
             hid = item.get("id") or item.get("heading_id")
@@ -62,7 +62,7 @@ def gemini_toc_batch(
             reason = item.get("reason")
             if isinstance(hid, str) and isinstance(is_toc, bool):
                 parsed[hid] = {"is_toc": is_toc, "reason": reason if isinstance(reason, str) else ""}
-    return parsed, resp.raw_text, request_items
+    return parsed, resp.text, request_items
 
 
 def gemini_toc(

@@ -4,25 +4,11 @@ import json
 from pathlib import Path
 from typing import Dict, List, Sequence
 
-from src.ai.gemini_adapter import gemini_generate
+from src.LLMAdaptor.client import LLMClient
 from src.core.logging.pipeline_logger import PipelineLogger
 from .models import FinalHeading
 
 
-SYSTEM_INSTRUCTION = (
-    "You are assigning hierarchy levels to structural headings in academic PDFs. "
-    "You will be given a JSON array of headings with fields: id, text, fragment_id. "
-    "Return ONLY a JSON array of objects with fields: "
-    "[{"
-    "  \"id\": \"...\","
-    "  \"level\": 1,"
-    "  \"parent_heading\": \"...\" or null,"
-    "  \"reason\": \"...\","
-    "  \"signals_used\": [\"numbering\", \"font_size\", \"indent\"],"
-    "  \"confidence\": 0.0"
-    "}]. "
-    "No markdown. No prose outside JSON. No extra keys."
-)
 
 
 def _ensure_logs_dir() -> Path:
@@ -63,7 +49,13 @@ def assign_hierarchy(headings: Sequence[FinalHeading], *, logger: PipelineLogger
     request_list = [{"id": h.id, "text": h.text, "fragment_id": h.fragment_id} for h in headings]
 
     user_prompt = json.dumps(request_list, indent=2, ensure_ascii=False)
-    resp = gemini_generate(SYSTEM_INSTRUCTION, user_prompt)
+    prompt = LLMClient.from_config().prompts.get("hierarchy")
+    resp = LLMClient.from_config().generate(
+        system=prompt.system,
+        user=user_prompt,
+        temperature=0.2,
+        response_mime_type="application/json",
+    )
 
     id_to_level: Dict[str, int] = {}
     id_to_parent: Dict[str, str | None] = {}
@@ -71,8 +63,14 @@ def assign_hierarchy(headings: Sequence[FinalHeading], *, logger: PipelineLogger
     id_to_signals: Dict[str, list[str] | None] = {}
     id_to_conf: Dict[str, float | None] = {}
 
-    if isinstance(resp.parsed_json, list):
-        for item in resp.parsed_json:
+    parsed_json = None
+    try:
+        parsed_json = json.loads(resp.text)
+    except Exception:
+        parsed_json = None
+
+    if isinstance(parsed_json, list):
+        for item in parsed_json:
             if not isinstance(item, dict):
                 continue
             hid = item.get("id")
