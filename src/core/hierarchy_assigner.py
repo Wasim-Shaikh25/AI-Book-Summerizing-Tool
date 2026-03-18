@@ -51,8 +51,8 @@ def assign_hierarchy(headings: Sequence[FinalHeading], *, logger: PipelineLogger
     user_prompt = json.dumps(request_list, indent=2, ensure_ascii=False)
     prompt = LLMClient.from_config().prompts.get("hierarchy")
     resp = LLMClient.from_config().generate(
-        system=prompt.system,
-        user=user_prompt,
+        "hierarchy",
+        variables={"items_json": user_prompt},
         temperature=0.2,
         response_mime_type="application/json",
     )
