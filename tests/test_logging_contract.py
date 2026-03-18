@@ -7,6 +7,9 @@ from typing import Any, Dict, List
 
 import pytest
 
+if os.getenv("RUN_INTEGRATION") != "1":
+    pytest.skip("Skipping integration tests (set RUN_INTEGRATION=1 to enable).", allow_module_level=True)
+
 from src.core.pipeline import run_pipeline
 
 

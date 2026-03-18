@@ -10,6 +10,7 @@ from .prompt_store import PromptStore
 from .providers.base import BaseLLMProvider, LLMResult
 from .providers.gemini_provider import GeminiProvider
 from .providers.ollama_provider import OllamaProvider
+from .providers.openai_provider import OpenAIProvider
 
 
 def _default_prompts_dir() -> Path:
@@ -49,8 +50,10 @@ class LLMClient:
             provider = GeminiProvider()
         elif model == "OLLAMA":
             provider = OllamaProvider()
+        elif model == "OPENAI":
+            provider = OpenAIProvider()
         else:
-            raise ValueError(f"Unsupported ACTIVE_MODEL={ACTIVE_MODEL!r}. Supported: GEMINI, OLLAMA")
+            raise ValueError(f"Unsupported ACTIVE_MODEL={ACTIVE_MODEL!r}. Supported: GEMINI, OLLAMA, OPENAI")
 
         store = PromptStore(prompts_dir or _default_prompts_dir())
         return cls(provider=provider, prompts=store)

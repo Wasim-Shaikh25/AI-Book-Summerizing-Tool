@@ -15,10 +15,14 @@ Notes:
 - The test uses the bundled PDF `src/debug/pdf_files/law_of_tort.pdf` to stay deterministic.
 """
 
+import os
 import sqlite3
 from pathlib import Path
 
 import pytest
+
+if os.getenv("RUN_INTEGRATION") != "1":
+    pytest.skip("Skipping integration tests (set RUN_INTEGRATION=1 to enable).", allow_module_level=True)
 
 from src.core.models import FinalHeading
 from src.core.pdf_extractor import extract_pdf

@@ -163,8 +163,9 @@ def main() -> None:
         for k in only_db[:25]:
             print(" -", k)
 
-    # Note: this comparison is best-effort because current DB schema stores topics, not headings.
-    # If you add a dedicated headings table, update _extract_headings_like_rows accordingly.
+    # Note: comparison is best-effort because trace logs include a single fragment_id,
+    # while DB supports 1-heading -> many-fragments via heading_fragments.
+    # For diffing we pick the first fragment_id (sorted) when multiple exist.
 
 
 if __name__ == "__main__":
