@@ -33,15 +33,14 @@ def build_toc_request_items(batch: Sequence[HeadingCandidate]) -> List[Dict[str,
     ]
 
 
-def gemini_toc_batch(
+def llm_toc_batch(
     batch: Sequence[HeadingCandidate],
 ) -> Tuple[Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]:
     request_items = build_toc_request_items(batch)
     user_prompt = json.dumps(request_items, ensure_ascii=False)
-    prompt = LLMClient.from_config().prompts.get("toc_classifier")
     resp = LLMClient.from_config().generate(
-        system=prompt.system,
-        user=user_prompt,
+        "toc_classifier",
+        variables={"items_json": user_prompt},
         temperature=0.2,
         response_mime_type="application/json",
     )
@@ -65,7 +64,7 @@ def gemini_toc_batch(
     return parsed, resp.text, request_items
 
 
-def gemini_toc(
+def llm_toc(
     candidates: Sequence[HeadingCandidate],
     *,
     batch_size: int = 20,
@@ -73,6 +72,6 @@ def gemini_toc(
     batches = _chunks(candidates, batch_size)
     out: List[Tuple[int, Sequence[HeadingCandidate], Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]] = []
     for i, b in enumerate(batches, start=1):
-        parsed, raw_text, request_items = gemini_toc_batch(b)
+        parsed, raw_text, request_items = llm_toc_batch(b)
         out.append((i, b, parsed, raw_text, request_items))
     return out

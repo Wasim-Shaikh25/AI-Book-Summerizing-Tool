@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from .gemini_toc import gemini_toc
+from .llm_toc import llm_toc
 from .logging.pipeline_logger import PipelineLogger
 from .models import HeadingCandidate
 
@@ -19,7 +19,7 @@ def classify_toc(
       - Writes exactly one per-run file: 05_gemini_toc_classification.json
       - No separate request/raw/results JSON logs
     """
-    batches = gemini_toc(headings, batch_size=20)
+    batches = llm_toc(headings, batch_size=20)
 
     parsed_results_by_id: Dict[str, Dict[str, Any]] = {}
     req_batches: List[Dict[str, Any]] = []

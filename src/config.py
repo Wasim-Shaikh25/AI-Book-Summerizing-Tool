@@ -16,7 +16,7 @@ CHUNK_SIZE_WORDS = 1500
 CHUNK_OVERLAP_WORDS = 150
 
 # Active model for LLM calls (TOC / validation / rewrite). Supported: "GEMINI", "OLLAMA"
-ACTIVE_MODEL = "OLLAMA"
+ACTIVE_MODEL = "GEMINI"
 
 # Global debug flag for structural pipeline tracing
 DEBUG_STRUCTURE = True
