@@ -66,11 +66,30 @@ class KnowledgeStore:
                 line_id INTEGER,
                 page_number INTEGER,
                 confidence REAL,
+
+                -- Hierarchy metadata (optional, but persisted for traceability)
+                reason TEXT,
+                signals_used TEXT, -- JSON array of strings
+                hierarchy_model TEXT,
+                hierarchy_latency_ms INTEGER,
+
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (book_id) REFERENCES books (book_id),
                 FOREIGN KEY (parent_heading_id) REFERENCES final_headings (heading_id)
             )
         ''')
+
+        # Lightweight migration: add new traceability columns if DB was created before schema extension.
+        # (SQLite has no IF NOT EXISTS for ADD COLUMN across all versions, so we check pragma first.)
+        existing_cols = {row[1] for row in cursor.execute("PRAGMA table_info(final_headings)").fetchall()}
+        if "reason" not in existing_cols:
+            cursor.execute("ALTER TABLE final_headings ADD COLUMN reason TEXT")
+        if "signals_used" not in existing_cols:
+            cursor.execute("ALTER TABLE final_headings ADD COLUMN signals_used TEXT")
+        if "hierarchy_model" not in existing_cols:
+            cursor.execute("ALTER TABLE final_headings ADD COLUMN hierarchy_model TEXT")
+        if "hierarchy_latency_ms" not in existing_cols:
+            cursor.execute("ALTER TABLE final_headings ADD COLUMN hierarchy_latency_ms INTEGER")
 
         # Fragments (source of truth for fragment_id -> fragment text)
         cursor.execute('''

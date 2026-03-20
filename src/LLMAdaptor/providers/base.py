@@ -9,6 +9,8 @@ class LLMResult:
     text: str
     raw: Any | None = None
     usage: dict[str, Any] | None = None
+    model: str | None = None
+    latency_ms: int | None = None
 
 
 class BaseLLMProvider(Protocol):

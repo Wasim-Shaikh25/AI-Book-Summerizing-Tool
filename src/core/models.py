@@ -72,6 +72,10 @@ class FinalHeading:
     signals_used: Optional[List[str]] = None
     confidence: Optional[float] = None
 
+    # LLM traceability (populated by hierarchy_assigner)
+    hierarchy_model: Optional[str] = None
+    hierarchy_latency_ms: Optional[int] = None
+
 
 @dataclass(frozen=True, slots=True)
 class PipelineResult:

@@ -36,7 +36,7 @@ def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:
         return None
 
 
-def run_pipeline(pdf_path: str, *, enable_logs: bool = False):
+def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: bool = False):
     """
     Orchestrates the clean core pipeline.
 
@@ -122,8 +122,8 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False):
                 "parent_heading": getattr(h, "parent_heading", None),
                 "reason": getattr(h, "reason", None),
                 "signals_used": getattr(h, "signals_used", None),
-                "model": None,
-                "latency_ms": None,
+                "model": getattr(h, "hierarchy_model", None),
+                "latency_ms": getattr(h, "hierarchy_latency_ms", None),
             }
         )
     logger.write_stage("hierarchy", hierarchy_log_items)
@@ -154,6 +154,10 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False):
                 "page_number": page_number,
                 "line_id": lid,
                 "confidence": getattr(h, "confidence", None),
+                "reason": getattr(h, "reason", None),
+                "signals_used": getattr(h, "signals_used", None),
+                "model": getattr(h, "hierarchy_model", None),
+                "latency_ms": getattr(h, "hierarchy_latency_ms", None),
             }
         )
     logger.write_stage("final_headings", final_headings_items)
@@ -166,5 +170,26 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False):
         fragments=getattr(fragments_result, "fragments", []) or [],
         heading_to_fragment_id=getattr(fragments_result, "heading_to_fragment_id", {}) or {},
     )
+
+    # Production persistence (DB becomes source-of-truth)
+    if persist_to_db:
+        from src.storage.knowledge_store import KnowledgeStore
+        from src.storage.toc_repository import TocRepository
+
+        # Current system uses output/knowledge_base.db as default.
+        store = KnowledgeStore()
+        repo = TocRepository(store)
+
+        # For now, use pdf filename as book_id if caller didn't create a books row yet.
+        # Prefer: real book_id from books table once ingestion flow is wired.
+        book_id = Path(pdf_path).name
+
+        repo.save_full_toc(
+            book_id=book_id,
+            final_headings=result.final_headings,
+            fragments=result.fragments,
+            heading_to_fragment_id=result.heading_to_fragment_id,
+            clear_existing=True,
+        )
 
     return result, (logger if enable_logs else None)

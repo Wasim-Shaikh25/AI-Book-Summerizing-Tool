@@ -1,6 +1,7 @@
+import json
 import logging
 import sqlite3
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence
 
 from src.storage.knowledge_store import KnowledgeStore
 
@@ -73,14 +74,18 @@ class TocRepository:
           - has .level
           - has .parent_heading (string id or None)
           - optional: .confidence
-          - line/page are passed in if available (pipeline logs compute these; persistence
-            can include them once pipeline returns them)
+          - optional hierarchy metadata:
+              - .reason
+              - .signals_used (list[str])
+              - .hierarchy_model
+              - .hierarchy_latency_ms
         """
         rows: list[tuple] = []
         for h in final_headings or []:
             hid = getattr(h, "id", None) or getattr(h, "heading_id", None)
             if not isinstance(hid, str) or not hid:
                 continue
+
             text = str(getattr(h, "text", "") or "")
             level = getattr(h, "level", None)
             parent_id = getattr(h, "parent_heading", None) or getattr(h, "parent_heading_id", None)
@@ -89,7 +94,27 @@ class TocRepository:
             page_number = getattr(h, "page_number", None)
             confidence = getattr(h, "confidence", None)
 
-            rows.append((hid, book_id, text, level, parent_id, line_id, page_number, confidence))
+            reason = getattr(h, "reason", None)
+            signals_used = getattr(h, "signals_used", None)
+            hierarchy_model = getattr(h, "hierarchy_model", None)
+            hierarchy_latency_ms = getattr(h, "hierarchy_latency_ms", None)
+
+            rows.append(
+                (
+                    hid,
+                    book_id,
+                    text,
+                    level,
+                    parent_id,
+                    line_id,
+                    page_number,
+                    confidence,
+                    reason,
+                    None if signals_used is None else json.dumps(signals_used, ensure_ascii=False),
+                    hierarchy_model,
+                    hierarchy_latency_ms,
+                )
+            )
 
         conn = self.store.get_connection()
         try:
@@ -97,8 +122,9 @@ class TocRepository:
             cur.executemany(
                 """
                 INSERT OR REPLACE INTO final_headings
-                  (heading_id, book_id, text, level, parent_heading_id, line_id, page_number, confidence)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  (heading_id, book_id, text, level, parent_heading_id, line_id, page_number, confidence,
+                   reason, signals_used, hierarchy_model, hierarchy_latency_ms)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 rows,
             )
@@ -152,7 +178,8 @@ class TocRepository:
 
             headings_rows = cur.execute(
                 """
-                SELECT heading_id, text, level, parent_heading_id, line_id, page_number, confidence
+                SELECT heading_id, text, level, parent_heading_id, line_id, page_number, confidence,
+                       reason, signals_used, hierarchy_model, hierarchy_latency_ms
                 FROM final_headings
                 WHERE book_id = ?
                 """,
@@ -184,7 +211,19 @@ class TocRepository:
                 heading_fragments.setdefault(hid, []).append(fid)
 
             headings: list[dict[str, Any]] = []
-            for heading_id, text, level, parent_heading_id, line_id, page_number, confidence in headings_rows:
+            for (
+                heading_id,
+                text,
+                level,
+                parent_heading_id,
+                line_id,
+                page_number,
+                confidence,
+                reason,
+                signals_used,
+                hierarchy_model,
+                hierarchy_latency_ms,
+            ) in headings_rows:
                 headings.append(
                     {
                         "heading_id": heading_id,
@@ -194,6 +233,10 @@ class TocRepository:
                         "line_id": line_id,
                         "page_number": page_number,
                         "confidence": confidence,
+                        "reason": reason,
+                        "signals_used": None if signals_used is None else json.loads(signals_used),
+                        "hierarchy_model": hierarchy_model,
+                        "hierarchy_latency_ms": hierarchy_latency_ms,
                         "fragment_ids": heading_fragments.get(heading_id, []),
                     }
                 )
@@ -261,13 +304,35 @@ class TocRepository:
                 line_id = getattr(h, "line_id", None)
                 page_number = getattr(h, "page_number", None)
                 confidence = getattr(h, "confidence", None)
-                head_rows.append((hid, book_id, text, level, parent_id, line_id, page_number, confidence))
+
+                reason = getattr(h, "reason", None)
+                signals_used = getattr(h, "signals_used", None)
+                hierarchy_model = getattr(h, "hierarchy_model", None)
+                hierarchy_latency_ms = getattr(h, "hierarchy_latency_ms", None)
+
+                head_rows.append(
+                    (
+                        hid,
+                        book_id,
+                        text,
+                        level,
+                        parent_id,
+                        line_id,
+                        page_number,
+                        confidence,
+                        reason,
+                        None if signals_used is None else json.dumps(signals_used, ensure_ascii=False),
+                        hierarchy_model,
+                        hierarchy_latency_ms,
+                    )
+                )
             if head_rows:
                 cur.executemany(
                     """
                     INSERT OR REPLACE INTO final_headings
-                      (heading_id, book_id, text, level, parent_heading_id, line_id, page_number, confidence)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                      (heading_id, book_id, text, level, parent_heading_id, line_id, page_number, confidence,
+                       reason, signals_used, hierarchy_model, hierarchy_latency_ms)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     head_rows,
                 )

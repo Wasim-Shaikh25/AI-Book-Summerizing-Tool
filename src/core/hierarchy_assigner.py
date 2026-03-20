@@ -57,6 +57,9 @@ def assign_hierarchy(headings: Sequence[FinalHeading], *, logger: PipelineLogger
         response_mime_type="application/json",
     )
 
+    resp_model = getattr(resp, "model", None)
+    resp_latency_ms = getattr(resp, "latency_ms", None)
+
     id_to_level: Dict[str, int] = {}
     id_to_parent: Dict[str, str | None] = {}
     id_to_reason: Dict[str, str | None] = {}
@@ -111,6 +114,9 @@ def assign_hierarchy(headings: Sequence[FinalHeading], *, logger: PipelineLogger
                 reason=id_to_reason.get(hid),
                 signals_used=id_to_signals.get(hid),
                 confidence=id_to_conf.get(hid),
+                # Persisted/logged meta (not necessarily model output)
+                hierarchy_model=resp_model,
+                hierarchy_latency_ms=resp_latency_ms,
             )
         )
 
