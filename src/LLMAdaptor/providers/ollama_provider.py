@@ -29,7 +29,7 @@ class OllamaProvider:
         self,
         *,
         base_url: str = "http://localhost:11434",
-        model: str = "gemma3:270m",
+        model: str = "qwen2.5-coder:3b",
         timeout_s: float = 600.0,
     ):
         self.base_url = base_url.rstrip("/")

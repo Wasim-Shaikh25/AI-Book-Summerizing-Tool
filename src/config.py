@@ -26,7 +26,6 @@ def _load_dotenv_value(key: str) -> str:
         return ""
     return ""
 
-
 # Define paths for PDF and output folders
 PDF_FOLDER = os.path.join(BASE_DIR, "pdfs")
 OUTPUT_FOLDER = os.path.join(BASE_DIR, "output")

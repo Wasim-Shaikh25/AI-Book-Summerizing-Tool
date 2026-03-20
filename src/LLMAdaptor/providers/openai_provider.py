@@ -75,9 +75,10 @@ class OpenAIProvider:
         if max_tokens is not None:
             payload["max_tokens"] = int(max_tokens)
 
-        # Best-effort JSON mode (supported by compatible models)
-        if response_mime_type and "json" in response_mime_type.lower():
-            payload["response_format"] = {"type": "json_object"}
+        # NOTE:
+        # Do NOT force OpenAI JSON mode here. OpenAI's json_object mode requires a top-level object,
+        # but many of our prompts (e.g. toc_classifier) require a top-level JSON array.
+        # We rely on prompt instructions + downstream tolerant parsing instead.
 
         r = requests.post(url, headers=headers, json=payload, timeout=(10.0, self.timeout_s))
         r.raise_for_status()

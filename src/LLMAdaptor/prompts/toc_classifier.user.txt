@@ -1,4 +1,4 @@
 Return JSON only as an array in the schema described.
 
 Input JSON:
-{toc_candidates_json}
+{items_json}
