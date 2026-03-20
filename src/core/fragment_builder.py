@@ -57,15 +57,18 @@ def build_fragments(
     log: List[Dict[str, Any]] = []
 
     for idx, h in enumerate(kept_sorted):
-        start = h.end_line + 1
-        end = (kept_sorted[idx + 1].start_line - 1) if idx + 1 < len(kept_sorted) else (len(lines) - 1)
-        if start < 0:
-            start = 0
+        # Fragment policy: content starts AFTER the heading line.
+        start = max(0, h.end_line + 1)
+        end_candidate = (kept_sorted[idx + 1].start_line - 1) if idx + 1 < len(kept_sorted) else (len(lines) - 1)
+
+        # If headings are adjacent (or overlapping), end_candidate can be < start.
+        # Normalize so we never emit inverted ranges (start_line > end_line).
+        end = end_candidate if end_candidate >= start else start
 
         frag_lines: List[str] = []
-        if end >= start:
+        if end_candidate >= start:
             for ln in normalized:
-                if ln.line_id < start or ln.line_id > end:
+                if ln.line_id < start or ln.line_id > end_candidate:
                     continue
                 if getattr(ln, "is_noise", False):
                     continue
