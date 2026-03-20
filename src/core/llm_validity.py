@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Sequence, Tuple
 
+import os
+
 from src.LLMAdaptor.client import LLMClient
 from .models import HeadingCandidate
 
@@ -98,6 +100,16 @@ def llm_validate(
     Returns a list of batches:
       (batch_id, batch_candidates, parsed_by_id, raw_model_text, request_items)
     """
+    # Allow runtime override for tuning CPU-only Ollama:
+    #   LLM_VALIDITY_BATCH_SIZE=10
+    # This is intentionally generic (applies to any provider) but is most useful for local models.
+    env_bs = os.getenv("LLM_VALIDITY_BATCH_SIZE")
+    if env_bs:
+        try:
+            batch_size = max(1, int(env_bs))
+        except Exception:
+            pass
+
     batches = _chunks(candidates, batch_size)
     out: List[Tuple[int, Sequence[HeadingCandidate], Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]] = []
     for i, b in enumerate(batches, start=1):

@@ -45,7 +45,7 @@ class OllamaProvider:
         self,
         *,
         base_url: str = "http://localhost:11434",
-        model: str = "qwen2.5:1.5b",
+        model: str = "llama3.2:3b",
         timeout_s: float = 600.0,
     ):
         # Some configs accidentally include a leading "a" (e.g. http://localhost:11434/a).
