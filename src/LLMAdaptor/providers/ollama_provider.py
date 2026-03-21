@@ -6,7 +6,6 @@ from typing import Optional
 
 import requests
 
-from src.config import BASE_DIR
 
 from .base import LLMResult
 

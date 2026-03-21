@@ -1,7 +1,6 @@
 import logging
-import json
-from typing import Tuple, Optional, List, Union
-from pydantic import BaseModel, Field, model_validator
+from typing import Optional, Union
+from pydantic import BaseModel, Field
 # Structural reset: Gemini removed.
 # from src.core.gemini.client import GeminiClient
 # Structural reset: Gemini removed.

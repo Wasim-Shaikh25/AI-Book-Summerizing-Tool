@@ -10,7 +10,6 @@ IMPORTANT:
 
 from .pdf_extractor import extract_pdf
 from .text_normalizer import normalize_text
-from .heading_candidate_collector import collect_heading_candidates
 from .candidate_scorer import collect_candidates_scored
 from .heading_validator import validate_headings
 from .fragment_builder import build_fragments

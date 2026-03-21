@@ -6,11 +6,6 @@ from src.storage.topic_repository import TopicRepository
 # Structural reset: Gemini removed.
 # from src.core.gemini.client import GeminiClient
 from src.interaction.command_parser import IntentResult
-from src.core.retrieval_engine import RetrievalEngine
-from src.core.content_generation_engine import ContentGenerationEngine
-from src.export.output_manager import OutputManager
-from src.config import OUTPUT_FOLDER
-from src.utils.pdf_reader import PDFReader
 
 logger = logging.getLogger(__name__)
 

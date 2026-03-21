@@ -37,8 +37,6 @@ def build_validity_request_items(batch: Sequence[HeadingCandidate]) -> List[Dict
 
 def llm_validate_batch(
     batch: Sequence[HeadingCandidate],
-    *,
-    model_label: str = "llm",
 ) -> Tuple[Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]:
     """
     Returns:

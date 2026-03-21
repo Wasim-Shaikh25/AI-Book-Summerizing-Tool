@@ -1,12 +1,6 @@
 from docx import Document
-from docx.shared import Inches, Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.section import WD_SECTION_START
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
 import os
 import logging
-import re
 import subprocess # Import subprocess for running Pandoc
 import tempfile # Import tempfile for creating temporary files
 

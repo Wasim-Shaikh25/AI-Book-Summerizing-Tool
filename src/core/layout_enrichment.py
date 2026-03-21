@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from statistics import median
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 

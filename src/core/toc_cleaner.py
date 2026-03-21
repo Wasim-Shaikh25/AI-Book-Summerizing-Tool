@@ -143,9 +143,9 @@ def clean_toc(
     fragments: Sequence[Fragment] | None = None,
     *,
     fragment_text_by_id: Dict[str, str] | None = None,
-    min_fragment_chars: int = 20,
-    min_lines_after_heading: int = 3,
-    enable_gemini_toc_check: bool = True,
+    _min_fragment_chars: int = 20,
+    _min_lines_after_heading: int = 3,
+    _enable_gemini_toc_check: bool = True,
 ) -> List[FinalHeading]:
     """
     NOTE (disabled):

@@ -26,25 +26,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import json
 import os
 from dataclasses import asdict, is_dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
 import fitz  # PyMuPDF
 
-from src.core.pdf_extractor import extract_pdf
-from src.core.text_normalizer import normalize_text
-from src.core.layout_enrichment import lines_to_log
-from src.core.heading_candidate_collector import collect_heading_candidates
-from src.core.heading_validator import validate_headings
-from src.core.logging.pipeline_logger import PipelineLogger
-from src.core.fragment_builder import build_fragments
-from src.core.hierarchy_assigner import assign_hierarchy
-from src.core.models import FinalHeading
-from src.core.noise_filter import mark_noise
-from src.core.toc_classifier import classify_toc
-from src.core.toc_section_resolver import resolve_toc_sections
-from src.core.toc_cleaner import clean_toc
 
 
 def _to_jsonable(x: Any) -> Any:

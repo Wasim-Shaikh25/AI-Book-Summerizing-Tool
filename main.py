@@ -1,11 +1,9 @@
 import logging
-import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-from src.config import PDF_FOLDER, OUTPUT_FOLDER
 from src.interaction.command_loop import CommandLoop
 
 # Configure logging

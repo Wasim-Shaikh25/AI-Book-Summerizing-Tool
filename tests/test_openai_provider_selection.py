@@ -1,5 +1,4 @@
 import importlib
-import os
 
 
 def test_llmclient_selects_openai_provider(monkeypatch):

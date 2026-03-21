@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from dataclasses import asdict
 from typing import Any, Dict, List, Sequence, Tuple
 
 from .context_preview_builder import build_context_preview

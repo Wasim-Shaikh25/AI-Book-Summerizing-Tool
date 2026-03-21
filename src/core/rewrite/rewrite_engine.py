@@ -48,7 +48,7 @@ class RewriteEngine:
     - Returns rewritten content
     """
 
-    def __init__(self, gemini_client: Optional[Any] = None) -> None:
+    def __init__(self, _gemini_client: Optional[Any] = None) -> None:
         raise NotImplementedError("Rewrite engine not yet implemented.")
 
     def build_request(self, *, book_id: str, topic_id: str, title: str, level: int, raw_text: str) -> Dict[str, Any]:
