@@ -54,7 +54,7 @@ class OllamaProvider:
         if bu.endswith("/a"):
             bu = bu[:-2]
         self.base_url = bu
-        self.model = model
+        self.model = os.getenv("OLLAMA_MODEL") or model
         self.timeout_s = timeout_s
 
     def generate(
@@ -83,7 +83,7 @@ class OllamaProvider:
             "stream": False,
             "options": {
                 "temperature": float(temperature),
-                "num_predict": 512,
+                "num_predict": int(os.getenv("OLLAMA_NUM_PREDICT", "96") or "96"),
             },
         }
 
@@ -104,12 +104,10 @@ class OllamaProvider:
         if max_tokens is not None:
             payload["options"]["num_predict"] = int(max_tokens)
 
-        # Do NOT set payload["format"]="json" here.
-        # Ollama's JSON mode enforces a top-level JSON object, but our prompts often require
-        # a top-level JSON array (e.g. toc_classifier). With format=json many models return
-        # `{}` to satisfy "object" constraints, which then parses to empty results.
-        #
-        # We rely on prompt instructions + tolerant parsing instead.
+        # Prefer JSON mode when the caller expects JSON (our pipeline parsers do).
+        # Ollama's JSON mode enforces a top-level JSON *object*, so prompts that expect a top-level
+        # array would be incompatible. Our prompts (validity/hierarchy/etc.) are object-shaped.
+        payload["format"] = "json"
 
         # Requests timeout expects seconds or (connect, read). Use (connect, read) so
         # we don't fail on long generations.
@@ -134,7 +132,10 @@ class OllamaProvider:
             msg = ""
 
         if debug:
+            # Drop huge token context arrays to keep terminal readable.
             safe_response = dict(data) if isinstance(data, dict) else {"response": data}
+            if isinstance(safe_response, dict) and "context" in safe_response:
+                safe_response.pop("context", None)
             if isinstance(safe_response, dict) and "response" in safe_response and isinstance(
                 safe_response["response"], str
             ):

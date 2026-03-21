@@ -39,7 +39,14 @@ CHUNK_SIZE_WORDS = 1500
 CHUNK_OVERLAP_WORDS = 150
 
 # Active model for LLM calls (TOC / validation / rewrite). Supported: "GEMINI", "OLLAMA", "OPENAI"
-ACTIVE_MODEL = os.getenv("ACTIVE_MODEL") or _load_dotenv_value("ACTIVE_MODEL") or "OLLAMA"
+# Back-compat: also accept LLM_PROVIDER (preferred for local runs).
+ACTIVE_MODEL = (
+    os.getenv("LLM_PROVIDER")
+    or _load_dotenv_value("LLM_PROVIDER")
+    or os.getenv("ACTIVE_MODEL")
+    or _load_dotenv_value("ACTIVE_MODEL")
+    or "OLLAMA"
+)
 
 # Global debug flag for structural pipeline tracing
 DEBUG_STRUCTURE = True
