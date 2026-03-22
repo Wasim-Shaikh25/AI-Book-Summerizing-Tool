@@ -42,9 +42,9 @@ class OllamaProvider:
     ):
         from src import config as cfg
 
-        base_url = (base_url or getattr(cfg, "OLLAMA_BASE_URL", "") or "http://localhost:11434").strip()
-        model = (model or getattr(cfg, "OLLAMA_MODEL", "") or "llama3.2:3b").strip()
-        timeout_s = float(timeout_s if timeout_s is not None else getattr(cfg, "OLLAMA_TIMEOUT_S", 600.0))
+        base_url = (base_url or getattr(cfg, "OLLAMA_BASE_URL", "") or getattr(cfg, "LLM_BASE_URL", "") or "http://localhost:11434").strip()
+        model = (model or getattr(cfg, "OLLAMA_MODEL", "") or getattr(cfg, "LLM_MODEL", "") or "llama3.2:3b").strip()
+        timeout_s = float(timeout_s if timeout_s is not None else getattr(cfg, "OLLAMA_TIMEOUT_S", None) or getattr(cfg, "LLM_TIMEOUT_S", 600.0))
 
         # Some configs accidentally include a trailing "/a" (e.g. http://localhost:11434/a).
         # Normalize that so we don't hit /aapi/*.
@@ -87,8 +87,8 @@ class OllamaProvider:
             },
         }
 
-        debug = bool(getattr(cfg, "OLLAMA_HTTP_DEBUG", False))
-        max_chars = int(getattr(cfg, "OLLAMA_HTTP_DEBUG_MAX_CHARS", 4000))
+        debug = bool(getattr(cfg, "OLLAMA_HTTP_DEBUG", None) if getattr(cfg, "OLLAMA_HTTP_DEBUG", None) is not None else getattr(cfg, "LLM_HTTP_DEBUG", False))
+        max_chars = int(getattr(cfg, "OLLAMA_HTTP_DEBUG_MAX_CHARS", None) or getattr(cfg, "LLM_HTTP_DEBUG_MAX_CHARS", 4000))
         if debug:
             safe_payload = dict(payload)
             safe_payload["prompt"] = _truncate(prompt, max_chars)

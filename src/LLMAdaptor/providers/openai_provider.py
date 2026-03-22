@@ -36,13 +36,22 @@ class OpenAIProvider:
         from src import config as cfg
 
         self.api_key = (api_key or getattr(cfg, "OPENAI_API_KEY", "") or "").strip()
-        self.base_url = (base_url or getattr(cfg, "OPENAI_BASE_URL", "") or "https://api.openai.com").rstrip("/")
-        self.model = (model or getattr(cfg, "OPENAI_MODEL", "") or "gpt-4o-mini").strip()
-        self.timeout_s = float(timeout_s)
+        self.base_url = (
+            base_url
+            or getattr(cfg, "OPENAI_BASE_URL", "")
+            or getattr(cfg, "LLM_BASE_URL", "")
+            or "https://api.openai.com"
+        ).rstrip("/")
+        self.model = (model or getattr(cfg, "OPENAI_MODEL", "") or getattr(cfg, "LLM_MODEL", "") or "gpt-4o-mini").strip()
+        self.timeout_s = float(
+            timeout_s
+            if timeout_s is not None
+            else getattr(cfg, "OPENAI_TIMEOUT_S", None) or getattr(cfg, "LLM_TIMEOUT_S", 600.0)
+        )
 
         if not self.api_key:
             raise ValueError(
-                "OPENAI_API_KEY is not set. Set env var OPENAI_API_KEY (or add it to .env) to use ACTIVE_MODEL=OPENAI."
+                "OPENAI_API_KEY is not set. Set env var OPENAI_API_KEY (or add it to .env) to use LLM_PROVIDER=OPENAI."
             )
 
     def generate(

@@ -44,25 +44,47 @@ CHUNK_OVERLAP_WORDS = 150
 # Env vars (preferred):
 #   - LLM_PROVIDER=OLLAMA|GEMINI|OPENAI
 #
-# Back-compat:
-#   - ACTIVE_MODEL (older name)
 LLM_PROVIDER = (
     os.getenv("LLM_PROVIDER")
     or _load_dotenv_value("LLM_PROVIDER")
-    or os.getenv("ACTIVE_MODEL")
-    or _load_dotenv_value("ACTIVE_MODEL")
     or "OLLAMA"
 ).strip().upper()
-
-# Backwards compatible alias (do not use in new code)
-ACTIVE_MODEL = LLM_PROVIDER
 
 # Global debug flag for structural pipeline tracing
 DEBUG_STRUCTURE = True
 
 # Provider configuration (centralized; providers should not call os.getenv directly)
+#
+# Generic LLM_* keys (apply to all providers)
+# - Providers may also support provider-specific override keys; those take precedence.
+# - If provider-specific key is not set, the provider falls back to LLM_*.
+#
+# Supported generic keys:
+#   - LLM_PROVIDER=OLLAMA|GEMINI|OPENAI
+#   - LLM_MODEL=...
+#   - LLM_BASE_URL=...
+#   - LLM_TIMEOUT_S=...
+#   - LLM_HTTP_DEBUG=0/1 (debug request/response logging)
+#   - LLM_HTTP_DEBUG_MAX_CHARS=...
+#
+# Batch sizing keys (apply to all providers):
+#   - LLM_VALIDITY_BATCH_SIZE
+#   - LLM_TOC_BATCH_SIZE
 
-# Gemini
+# Generic LLM_* defaults (can be used by all providers)
+LLM_MODEL = os.getenv("LLM_MODEL") or _load_dotenv_value("LLM_MODEL") or ""
+LLM_BASE_URL = os.getenv("LLM_BASE_URL") or _load_dotenv_value("LLM_BASE_URL") or ""
+LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S") or _load_dotenv_value("LLM_TIMEOUT_S") or "600")
+LLM_HTTP_DEBUG = (os.getenv("LLM_HTTP_DEBUG") or _load_dotenv_value("LLM_HTTP_DEBUG") or "0").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "y",
+    "on",
+}
+LLM_HTTP_DEBUG_MAX_CHARS = int(os.getenv("LLM_HTTP_DEBUG_MAX_CHARS") or _load_dotenv_value("LLM_HTTP_DEBUG_MAX_CHARS") or "4000")
+
+# Gemini (provider-specific overrides)
 GEMINI_API_KEY = (
     os.getenv("GEMINI_API_KEY")
     or os.getenv("GOOGLE_API_KEY")
@@ -70,20 +92,21 @@ GEMINI_API_KEY = (
     or _load_dotenv_value("GOOGLE_API_KEY")
     or ""
 )
-GEMINI_MODEL = os.getenv("GEMINI_MODEL") or _load_dotenv_value("GEMINI_MODEL") or "models/gemini-3.1-flash-lite-preview"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL") or _load_dotenv_value("GEMINI_MODEL") or LLM_MODEL or "models/gemini-3.1-flash-lite-preview"
 
-# OpenAI
+# OpenAI (provider-specific overrides)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or _load_dotenv_value("OPENAI_API_KEY") or ""
-OPENAI_MODEL = os.getenv("OPENAI_MODEL") or _load_dotenv_value("OPENAI_MODEL") or "gpt-4o-mini"
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL") or _load_dotenv_value("OPENAI_BASE_URL") or "https://api.openai.com"
+OPENAI_MODEL = os.getenv("OPENAI_MODEL") or _load_dotenv_value("OPENAI_MODEL") or LLM_MODEL or "gpt-4o-mini"
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL") or _load_dotenv_value("OPENAI_BASE_URL") or LLM_BASE_URL or "https://api.openai.com"
+OPENAI_TIMEOUT_S = float(os.getenv("OPENAI_TIMEOUT_S") or _load_dotenv_value("OPENAI_TIMEOUT_S") or str(LLM_TIMEOUT_S) or "600")
 
-# Ollama
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL") or _load_dotenv_value("OLLAMA_BASE_URL") or "http://localhost:11434"
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL") or _load_dotenv_value("OLLAMA_MODEL") or "llama3.2:3b"
-OLLAMA_TIMEOUT_S = float(os.getenv("OLLAMA_TIMEOUT_S") or _load_dotenv_value("OLLAMA_TIMEOUT_S") or "600")
+# Ollama (provider-specific overrides)
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL") or _load_dotenv_value("OLLAMA_BASE_URL") or LLM_BASE_URL or "http://localhost:11434"
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL") or _load_dotenv_value("OLLAMA_MODEL") or LLM_MODEL or "llama3.2:3b"
+OLLAMA_TIMEOUT_S = float(os.getenv("OLLAMA_TIMEOUT_S") or _load_dotenv_value("OLLAMA_TIMEOUT_S") or str(LLM_TIMEOUT_S) or "600")
+
+# Ollama-only tuning knobs (true provider-specific features)
 OLLAMA_NUM_PREDICT = int(os.getenv("OLLAMA_NUM_PREDICT") or _load_dotenv_value("OLLAMA_NUM_PREDICT") or "96")
-OLLAMA_HTTP_DEBUG = (os.getenv("OLLAMA_HTTP_DEBUG") or _load_dotenv_value("OLLAMA_HTTP_DEBUG") or "0").strip().lower() in {"1", "true", "yes", "y", "on"}
-OLLAMA_HTTP_DEBUG_MAX_CHARS = int(os.getenv("OLLAMA_HTTP_DEBUG_MAX_CHARS") or _load_dotenv_value("OLLAMA_HTTP_DEBUG_MAX_CHARS") or "4000")
 
 # Pipeline batch sizing (applies to all providers)
 LLM_VALIDITY_BATCH_SIZE = int(os.getenv("LLM_VALIDITY_BATCH_SIZE") or _load_dotenv_value("LLM_VALIDITY_BATCH_SIZE") or "20")

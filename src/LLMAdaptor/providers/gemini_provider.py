@@ -24,6 +24,7 @@ def _gemini_generate(
     *,
     model: str = "gemini-1.5-flash",
     temperature: float = 0.0,
+    timeout_s: Optional[float] = None,
 ) -> _GeminiResponse:
     from src import config as cfg
 
@@ -31,11 +32,30 @@ def _gemini_generate(
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY (or GOOGLE_API_KEY) is not set (env or .env).")
 
-    model = (getattr(cfg, "GEMINI_MODEL", "") or model).strip()
+    model = (getattr(cfg, "GEMINI_MODEL", "") or getattr(cfg, "LLM_MODEL", "") or model).strip()
     if model.startswith("models/"):
         model = model[len("models/") :]
 
-    client = genai.Client(api_key=api_key)
+    # google.genai supports request_options={"timeout": ...} on some versions.
+    # If unsupported, the SDK will raise TypeError; we fall back to default behavior.
+    timeout_s = float(
+        timeout_s
+        if timeout_s is not None
+        else getattr(cfg, "LLM_TIMEOUT_S", 600.0)
+    )
+
+    try:
+        client = genai.Client(api_key=api_key, request_options={"timeout": timeout_s})
+    except TypeError:
+        client = genai.Client(api_key=api_key)
+
+    debug = bool(getattr(cfg, "LLM_HTTP_DEBUG", False))
+    max_chars = int(getattr(cfg, "LLM_HTTP_DEBUG_MAX_CHARS", 4000))
+    if debug:
+        print("\n[GEMINI] Request")
+        print(f"[GEMINI] model={model}")
+        print(f"[GEMINI] system_instruction={system_instruction[:max_chars]}")
+        print(f"[GEMINI] user_prompt={user_prompt[:max_chars]}")
 
     resp = client.models.generate_content(
         model=model,
@@ -47,6 +67,9 @@ def _gemini_generate(
     )
 
     raw = (getattr(resp, "text", "") or "").strip()
+
+    if debug:
+        print(f"[GEMINI] raw_text={raw[:max_chars]}")
 
     parsed: Optional[Any] = None
     try:
