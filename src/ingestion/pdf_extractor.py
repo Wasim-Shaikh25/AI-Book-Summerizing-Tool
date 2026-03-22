@@ -7,7 +7,7 @@ import fitz  # PyMuPDF
 from src.utils.pdf_reader import PDFReader
 
 from .layout_enrichment import enrich_layout_from_pymupdf_pages
-from .models import NormalizedLine
+from src.domain.document import NormalizedLine
 
 
 def _pymupdf_extract_pages_dict(pdf_path: str) -> List[Dict[str, Any]]:

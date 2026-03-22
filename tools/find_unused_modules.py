@@ -134,7 +134,14 @@ def build_report(entrypoints: set[str]) -> Report:
 
 
 def main() -> None:
-    entrypoints = {"main"}
+    # Allow passing extra entrypoints as module names, e.g.:
+    #   python tools/find_unused_modules.py main src.debug.run_toc_trace src.interaction.command_loop
+    # Defaults to {"main"} for backward compatibility.
+    import sys
+
+    argv_eps = [a for a in sys.argv[1:] if a and not a.startswith("-")]
+    entrypoints = set(argv_eps) if argv_eps else {"main"}
+
     report = build_report(entrypoints)
 
     all_files = sorted(set(iter_py_files("main.py", "src", "tools", "tests")))

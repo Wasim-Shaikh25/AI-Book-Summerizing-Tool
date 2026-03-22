@@ -3,7 +3,7 @@ from __future__ import annotations
 from statistics import median
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from .models import NormalizedLine
+from src.domain.document import NormalizedLine
 
 
 def _safe_float(x: Any) -> float:

@@ -25,8 +25,8 @@ import pytest
 if os.getenv("RUN_INTEGRATION") != "1":
     pytest.skip("Skipping integration tests (set RUN_INTEGRATION=1 to enable).", allow_module_level=True)
 
-from src.core.models import FinalHeading
-from src.core.pdf_extractor import extract_pdf
+from src.domain.document import FinalHeading
+from src.ingestion.pdf_extractor import extract_pdf
 from src.core.pipeline import run_pipeline
 
 PDF_PATH = "src/debug/pdf_files/law_of_tort.pdf"

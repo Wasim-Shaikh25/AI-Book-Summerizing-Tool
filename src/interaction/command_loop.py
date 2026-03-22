@@ -157,7 +157,7 @@ class CommandLoop:
         print(f"[*] Ingesting file: {file_path}")
 
         try:
-            from src.core.pdf_extractor import extract_pdf
+            from src.ingestion.pdf_extractor import extract_pdf
             from src.core.pipeline import run_pipeline
 
             # Extract lightweight PDF metadata for the books table
