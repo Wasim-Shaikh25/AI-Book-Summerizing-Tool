@@ -19,7 +19,9 @@ def classify_toc(
       - Writes exactly one per-run file: 05_llm_toc_classification.json
       - No separate request/raw/results JSON logs
     """
-    batches = llm_toc(headings, batch_size=20)
+    from src import config as cfg
+
+    batches = llm_toc(headings, batch_size=int(getattr(cfg, "LLM_TOC_BATCH_SIZE", 20)))
 
     parsed_results_by_id: Dict[str, Dict[str, Any]] = {}
     req_batches: List[Dict[str, Any]] = []

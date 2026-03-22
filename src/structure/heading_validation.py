@@ -108,8 +108,10 @@ def validate_headings(
         # (The new pipeline always passes logger.)
         return candidates
 
+    from src import config as cfg
+
     # Batched LLM call
-    batches = llm_validate(candidates, batch_size=20)
+    batches = llm_validate(candidates, batch_size=int(getattr(cfg, "LLM_VALIDITY_BATCH_SIZE", 20)))
 
     # Accumulate parsed results across batches
     parsed_results_by_id: Dict[str, Dict[str, Any]] = {}

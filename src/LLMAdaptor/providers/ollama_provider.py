@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import Optional
 
 import requests
@@ -9,11 +8,6 @@ import requests
 from .base import LLMResult
 
 
-def _bool_env(name: str, default: bool = False) -> bool:
-    v = os.getenv(name)
-    if v is None:
-        return default
-    return v.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _truncate(s: str, limit: int) -> str:
@@ -42,17 +36,23 @@ class OllamaProvider:
     def __init__(
         self,
         *,
-        base_url: str = "http://localhost:11434",
-        model: str = "llama3.2:3b",
-        timeout_s: float = 600.0,
+        base_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout_s: Optional[float] = None,
     ):
-        # Some configs accidentally include a leading "a" (e.g. http://localhost:11434/a).
+        from src import config as cfg
+
+        base_url = (base_url or getattr(cfg, "OLLAMA_BASE_URL", "") or "http://localhost:11434").strip()
+        model = (model or getattr(cfg, "OLLAMA_MODEL", "") or "llama3.2:3b").strip()
+        timeout_s = float(timeout_s if timeout_s is not None else getattr(cfg, "OLLAMA_TIMEOUT_S", 600.0))
+
+        # Some configs accidentally include a trailing "/a" (e.g. http://localhost:11434/a).
         # Normalize that so we don't hit /aapi/*.
         bu = (base_url or "").rstrip("/")
         if bu.endswith("/a"):
             bu = bu[:-2]
         self.base_url = bu
-        self.model = os.getenv("OLLAMA_MODEL") or model
+        self.model = model
         self.timeout_s = timeout_s
 
     def generate(
@@ -75,22 +75,20 @@ class OllamaProvider:
 
         # Keep generations short for pipeline classification tasks; the smaller model can
         # otherwise take a long time and even hit read timeouts.
+        from src import config as cfg
+
         payload = {
             "model": self.model,
             "prompt": prompt,
             "stream": False,
             "options": {
                 "temperature": float(temperature),
-                "num_predict": int(os.getenv("OLLAMA_NUM_PREDICT", "96") or "96"),
+                "num_predict": int(getattr(cfg, "OLLAMA_NUM_PREDICT", 96)),
             },
         }
 
-        # Terminal debug logging (opt-in):
-        #   set OLLAMA_HTTP_DEBUG=1
-        # Optional:
-        #   OLLAMA_HTTP_DEBUG_MAX_CHARS=4000
-        debug = _bool_env("OLLAMA_HTTP_DEBUG", False)
-        max_chars = int(os.getenv("OLLAMA_HTTP_DEBUG_MAX_CHARS", "4000") or "4000")
+        debug = bool(getattr(cfg, "OLLAMA_HTTP_DEBUG", False))
+        max_chars = int(getattr(cfg, "OLLAMA_HTTP_DEBUG_MAX_CHARS", 4000))
         if debug:
             safe_payload = dict(payload)
             safe_payload["prompt"] = _truncate(prompt, max_chars)

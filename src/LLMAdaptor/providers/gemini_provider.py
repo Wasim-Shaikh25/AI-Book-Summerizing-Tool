@@ -25,19 +25,13 @@ def _gemini_generate(
     model: str = "gemini-1.5-flash",
     temperature: float = 0.0,
 ) -> _GeminiResponse:
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    from src import config as cfg
+
+    api_key = (getattr(cfg, "GEMINI_API_KEY", "") or "").strip()
     if not api_key:
-        raise RuntimeError("GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable is not set")
+        raise RuntimeError("GEMINI_API_KEY (or GOOGLE_API_KEY) is not set (env or .env).")
 
-    # Prefer config default, allow env override
-    try:
-        import src.config as cfg
-
-        model = getattr(cfg, "GEMINI_MODEL", model)
-    except Exception:
-        pass
-
-    model = os.getenv("GEMINI_MODEL", model)
+    model = (getattr(cfg, "GEMINI_MODEL", "") or model).strip()
     if model.startswith("models/"):
         model = model[len("models/") :]
 

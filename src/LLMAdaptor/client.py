@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-from src.config import ACTIVE_MODEL, BASE_DIR
+from src.config import BASE_DIR, LLM_PROVIDER
 
 from .prompt_store import PromptStore
 from .providers.base import BaseLLMProvider, LLMResult
@@ -44,7 +44,7 @@ class LLMClient:
 
     @classmethod
     def from_config(cls, prompts_dir: Optional[Path] = None) -> "LLMClient":
-        model = (ACTIVE_MODEL or "GEMINI").strip().upper()
+        model = (LLM_PROVIDER or "GEMINI").strip().upper()
         provider: BaseLLMProvider
         if model == "GEMINI":
             provider = GeminiProvider()
@@ -53,7 +53,7 @@ class LLMClient:
         elif model == "OPENAI":
             provider = OpenAIProvider()
         else:
-            raise ValueError(f"Unsupported ACTIVE_MODEL={ACTIVE_MODEL!r}. Supported: GEMINI, OLLAMA, OPENAI")
+            raise ValueError(f"Unsupported LLM_PROVIDER={LLM_PROVIDER!r}. Supported: GEMINI, OLLAMA, OPENAI")
 
         store = PromptStore(prompts_dir or _default_prompts_dir())
         return cls(provider=provider, prompts=store)
