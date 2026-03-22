@@ -1,6 +1,7 @@
 import logging
 import sqlite3
 from typing import List, Optional
+
 from src.storage.knowledge_store import KnowledgeStore
 from src.storage.schema import BookMetadata
 

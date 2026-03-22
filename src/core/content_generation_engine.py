@@ -1,5 +1,6 @@
 import logging
-from typing import List, Any
+from typing import Any, List
+
 # Structural reset: Gemini removed.
 # from src.core.gemini.client import GeminiClient
 from src.interaction.command_parser import IntentResult

@@ -1,10 +1,11 @@
-from docx import Document
-import os
 import logging
-import subprocess # Import subprocess for running Pandoc
-import tempfile # Import tempfile for creating temporary files
+import os
+import subprocess  # Import subprocess for running Pandoc
+import tempfile  # Import tempfile for creating temporary files
 
-from src.config import REFERENCE_DOCX_PATH # Import the reference docx path
+from docx import Document
+
+from src.config import REFERENCE_DOCX_PATH  # Import the reference docx path
 
 logger = logging.getLogger(__name__)
 

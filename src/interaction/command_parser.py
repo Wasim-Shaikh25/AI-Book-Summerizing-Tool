@@ -1,6 +1,8 @@
 import logging
 from typing import Optional, Union
+
 from pydantic import BaseModel, Field
+
 # Structural reset: Gemini removed.
 # from src.core.gemini.client import GeminiClient
 # Structural reset: Gemini removed.

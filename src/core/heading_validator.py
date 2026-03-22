@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 import json
+
+# Prompt logic for Gemini validity is owned by src/core/gemini_validity.py
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 from .llm_validity import llm_validate
 from .logging.pipeline_logger import PipelineLogger
 from .models import HeadingCandidate
-
-
-# Prompt logic for Gemini validity is owned by src/core/gemini_validity.py
-
-import re
-
 
 _ENUM_LIST_ITEM_RE = re.compile(r"^\s*\d+\.\s+\S+")
 _SECTION_NUMBER_RE = re.compile(r"^\s*\d+\.\d+\s+\S+")

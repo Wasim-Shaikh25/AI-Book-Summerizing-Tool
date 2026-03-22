@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Regression test: fragment coverage should not "lose" content lines.
 
@@ -92,8 +93,8 @@ def test_no_missing_fragment_mapping_or_empty_fragments(tmp_path: Path) -> None:
 def test_db_snapshot_equals_pipeline_counts() -> None:
     # Run pipeline, then persist using the same repository path as production ingestion.
     # This ensures DB persistence doesn't drop headings/fragments.
-    from src.storage.knowledge_store import KnowledgeStore
     from src.storage.book_repository import BookRepository
+    from src.storage.knowledge_store import KnowledgeStore
     from src.storage.schema import BookMetadata
     from src.storage.toc_repository import TocRepository
 

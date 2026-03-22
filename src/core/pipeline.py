@@ -8,20 +8,21 @@ IMPORTANT:
 - Logic is intentionally minimal/stubbed for now (behavior will be implemented in later phases).
 """
 
-from .pdf_extractor import extract_pdf
-from .text_normalizer import normalize_text
-from .candidate_scorer import collect_candidates_scored
-from .heading_validator import validate_headings
-from .fragment_builder import build_fragments
-from .hierarchy_assigner import assign_hierarchy
-from .toc_cleaner import clean_toc
-from .logging.pipeline_logger import PipelineLogger
-from .layout_enrichment import lines_to_log
-from .noise_filter import mark_noise
-from .toc_classifier import classify_toc
-from .toc_section_resolver import resolve_toc_sections
 from pathlib import Path
 from typing import Any, Optional
+
+from .candidate_scorer import collect_candidates_scored
+from .fragment_builder import build_fragments
+from .heading_validator import validate_headings
+from .hierarchy_assigner import assign_hierarchy
+from .layout_enrichment import lines_to_log
+from .logging.pipeline_logger import PipelineLogger
+from .noise_filter import mark_noise
+from .pdf_extractor import extract_pdf
+from .text_normalizer import normalize_text
+from .toc_classifier import classify_toc
+from .toc_cleaner import clean_toc
+from .toc_section_resolver import resolve_toc_sections
 
 
 def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:

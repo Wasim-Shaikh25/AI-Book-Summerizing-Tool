@@ -1,16 +1,18 @@
 import logging
 import os
-from typing import Optional, Any
-from src.interaction.command_parser import CommandParser, IntentResult
+from typing import Any, Optional
+
 from src.legacy.core.retrieval_engine import RetrievalEngine
+
+from src.config import OUTPUT_FOLDER
 from src.core.content_generation_engine import ContentGenerationEngine
 from src.export.word_exporter import WordExporter
-from src.storage.topic_repository import TopicRepository
-from src.storage.knowledge_store import KnowledgeStore
+from src.interaction.command_parser import CommandParser, IntentResult
 from src.storage.book_repository import BookRepository
+from src.storage.knowledge_store import KnowledgeStore
 from src.storage.schema import BookMetadata
 from src.storage.toc_repository import TocRepository
-from src.config import OUTPUT_FOLDER
+from src.storage.topic_repository import TopicRepository
 
 logger = logging.getLogger(__name__)
 

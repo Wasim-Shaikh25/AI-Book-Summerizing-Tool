@@ -1,5 +1,6 @@
 import logging
 from typing import Any
+
 from src.export.word_exporter import WordExporter
 
 logger = logging.getLogger(__name__)

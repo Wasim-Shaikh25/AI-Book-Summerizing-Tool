@@ -1,10 +1,12 @@
 import logging
-from src.core.pipeline import SmartBookRewriterEnhanced
-from src.interaction.command_parser import IntentResult
+
 from src.core.retrieval_engine import RetrievalEngine
-from src.core.content_generation_engine import ContentGenerationEngine
-from src.export.output_manager import OutputManager
+
 from src.config import OUTPUT_FOLDER
+from src.core.content_generation_engine import ContentGenerationEngine
+from src.core.pipeline import SmartBookRewriterEnhanced
+from src.export.output_manager import OutputManager
+from src.interaction.command_parser import IntentResult
 
 logger = logging.getLogger(__name__)
 

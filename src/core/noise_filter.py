@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Sequence
 
 from .models import NormalizedLine
 
-
 _PAGE_NUM_PATTERNS = [
     re.compile(r"^\s*\d+\s*$", re.IGNORECASE),
     re.compile(r"^\s*page\s*:?\s*\d+\s*$", re.IGNORECASE),

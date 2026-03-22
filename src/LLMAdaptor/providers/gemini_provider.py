@@ -1,12 +1,66 @@
 from __future__ import annotations
 
-from typing import Optional
-
+import json
+import os
 import time
+from dataclasses import dataclass
+from typing import Any, Optional
 
-from src.ai.gemini_adapter import gemini_generate
+from google import genai
 
 from .base import LLMResult
+
+
+@dataclass(frozen=True, slots=True)
+class _GeminiResponse:
+    raw_text: str
+    parsed_json: Optional[Any]
+    model: Optional[str]
+
+
+def _gemini_generate(
+    system_instruction: str,
+    user_prompt: str,
+    *,
+    model: str = "gemini-1.5-flash",
+    temperature: float = 0.0,
+) -> _GeminiResponse:
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable is not set")
+
+    # Prefer config default, allow env override
+    try:
+        import src.config as cfg
+
+        model = getattr(cfg, "GEMINI_MODEL", model)
+    except Exception:
+        pass
+
+    model = os.getenv("GEMINI_MODEL", model)
+    if model.startswith("models/"):
+        model = model[len("models/") :]
+
+    client = genai.Client(api_key=api_key)
+
+    resp = client.models.generate_content(
+        model=model,
+        contents=user_prompt,
+        config={
+            "system_instruction": system_instruction,
+            "temperature": float(temperature),
+        },
+    )
+
+    raw = (getattr(resp, "text", "") or "").strip()
+
+    parsed: Optional[Any] = None
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        parsed = None
+
+    return _GeminiResponse(raw_text=raw, parsed_json=parsed, model=model)
 
 
 class GeminiProvider:
@@ -21,23 +75,17 @@ class GeminiProvider:
         max_tokens: Optional[int] = None,
         response_mime_type: Optional[str] = None,
     ) -> LLMResult:
-        # Current gemini_generate signature supports only (system_instruction, user_prompt, model=...).
-        # Temperature/max_tokens/response_mime_type are ignored here for now to maintain compatibility.
+        # NOTE:
+        # - max_tokens/response_mime_type are currently ignored because google.genai surface differs per model.
+        # - Keep signature aligned with other providers; we can map these later.
         t0 = time.perf_counter()
-        resp = gemini_generate(system, user)
+        resp = _gemini_generate(system, user, temperature=temperature)
         latency_ms = int((time.perf_counter() - t0) * 1000)
-
-        # Best-effort model name capture (depends on adapter response shape)
-        model_name = None
-        try:
-            model_name = getattr(resp, "model", None) or getattr(resp, "model_name", None)
-        except Exception:
-            model_name = None
 
         return LLMResult(
             text=resp.raw_text,
             raw={"parsed_json": resp.parsed_json},
             usage=None,
-            model=model_name or self.name,
+            model=resp.model or self.name,
             latency_ms=latency_ms,
         )

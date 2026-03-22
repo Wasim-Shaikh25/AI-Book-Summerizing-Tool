@@ -4,11 +4,10 @@ import json
 from pathlib import Path
 from typing import Dict, List, Sequence
 
-from src.LLMAdaptor.client import LLMClient
 from src.core.logging.pipeline_logger import PipelineLogger
+from src.LLMAdaptor.client import LLMClient
+
 from .models import FinalHeading
-
-
 
 
 def _ensure_logs_dir() -> Path:

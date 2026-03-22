@@ -5,7 +5,6 @@ from typing import List, Sequence
 
 from .models import HeadingCandidate, NormalizedLine
 
-
 _NUMERIC_RE = re.compile(r"^\s*\d+(?:\.\d+)*\s*[\)\.\-:]?\s+\S.+$")
 _ROMAN_RE = re.compile(
     r"^\s*(?=[MDCLXVI])M{0,4}(CM|CD|D?C{0,3})"

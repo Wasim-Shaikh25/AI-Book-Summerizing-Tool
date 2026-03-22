@@ -1,7 +1,8 @@
+import json
 import logging
 import sqlite3
-import json
 from typing import List
+
 from src.storage.knowledge_store import KnowledgeStore
 from src.storage.schema import TopicKnowledge
 

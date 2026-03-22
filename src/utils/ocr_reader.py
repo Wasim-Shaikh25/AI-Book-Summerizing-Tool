@@ -1,9 +1,10 @@
+import io
 import logging
+from typing import Any, Dict, List
+
 import fitz  # PyMuPDF
 import pytesseract
 from PIL import Image
-import io
-from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
 

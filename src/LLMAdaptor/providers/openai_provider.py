@@ -6,7 +6,6 @@ import requests
 
 # Avoid importing OPENAI_* constants at module import time because tests may
 # monkeypatch env vars and reload src.config.
-
 from .base import LLMResult
 
 

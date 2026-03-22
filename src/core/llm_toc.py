@@ -4,9 +4,8 @@ import json
 from typing import Any, Dict, List, Sequence, Tuple
 
 from src.LLMAdaptor.client import LLMClient
+
 from .models import HeadingCandidate
-
-
 
 
 def _chunks(seq: Sequence[HeadingCandidate], n: int) -> List[List[HeadingCandidate]]:

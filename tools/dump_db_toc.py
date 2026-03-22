@@ -9,8 +9,8 @@ from pathlib import Path
 # by ensuring project root is on sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.storage.knowledge_store import KnowledgeStore
 from src.storage.book_repository import BookRepository
+from src.storage.knowledge_store import KnowledgeStore
 from src.storage.toc_repository import TocRepository
 
 

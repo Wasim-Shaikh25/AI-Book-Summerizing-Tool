@@ -1,11 +1,13 @@
 import logging
 import os
 from typing import List
+
 from src.core.pipeline import SmartBookRewriterEnhanced
-from src.storage.topic_repository import TopicRepository
+
 # Structural reset: Gemini removed.
 # from src.core.gemini.client import GeminiClient
 from src.interaction.command_parser import IntentResult
+from src.storage.topic_repository import TopicRepository
 
 logger = logging.getLogger(__name__)
 

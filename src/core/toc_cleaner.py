@@ -5,9 +5,8 @@ from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
 from src.LLMAdaptor.client import LLMClient
+
 from .models import FinalHeading, Fragment
-
-
 
 
 def _ensure_toc_trace_dir() -> Path:

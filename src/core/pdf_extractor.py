@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple
 import fitz  # PyMuPDF
 
 from src.utils.pdf_reader import PDFReader
+
 from .layout_enrichment import enrich_layout_from_pymupdf_pages
 from .models import NormalizedLine
 

@@ -12,7 +12,6 @@ if os.getenv("RUN_INTEGRATION") != "1":
 
 from src.core.pipeline import run_pipeline
 
-
 ALLOWED_FILES = {
     "01_layout_lines.json",
     "02_noise_filter.json",

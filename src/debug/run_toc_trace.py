@@ -32,7 +32,6 @@ from typing import Any, Iterable, Optional
 import fitz  # PyMuPDF
 
 
-
 def _to_jsonable(x: Any) -> Any:
     if is_dataclass(x):
         return asdict(x)

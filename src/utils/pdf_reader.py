@@ -1,8 +1,10 @@
+import logging
 import os
 import re
-import logging
+from typing import Any, Dict, List, Tuple
+
 import fitz  # PyMuPDF
-from typing import List, Tuple, Dict, Any
+
 from src.utils.ocr_reader import OCRReader
 
 logger = logging.getLogger(__name__)

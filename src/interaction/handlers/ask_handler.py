@@ -1,8 +1,9 @@
 import logging
-from src.storage.topic_repository import TopicRepository
+
 # Structural reset: Gemini removed.
 # from src.core.gemini.client import GeminiClient
 from src.interaction.command_parser import IntentResult
+from src.storage.topic_repository import TopicRepository
 
 logger = logging.getLogger(__name__)
 
