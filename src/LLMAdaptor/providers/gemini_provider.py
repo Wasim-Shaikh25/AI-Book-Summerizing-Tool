@@ -41,7 +41,7 @@ def _gemini_generate(
     timeout_s = float(
         timeout_s
         if timeout_s is not None
-        else getattr(cfg, "LLM_TIMEOUT_S", 600.0)
+        else getattr(cfg, "GEMINI_TIMEOUT_S", None) or getattr(cfg, "LLM_TIMEOUT_S", 600.0)
     )
 
     try:

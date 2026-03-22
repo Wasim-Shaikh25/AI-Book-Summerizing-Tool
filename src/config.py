@@ -93,6 +93,7 @@ GEMINI_API_KEY = (
     or ""
 )
 GEMINI_MODEL = os.getenv("GEMINI_MODEL") or _load_dotenv_value("GEMINI_MODEL") or LLM_MODEL or "models/gemini-3.1-flash-lite-preview"
+GEMINI_TIMEOUT_S = float(os.getenv("GEMINI_TIMEOUT_S") or _load_dotenv_value("GEMINI_TIMEOUT_S") or str(LLM_TIMEOUT_S) or "600")
 
 # OpenAI (provider-specific overrides)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or _load_dotenv_value("OPENAI_API_KEY") or ""
