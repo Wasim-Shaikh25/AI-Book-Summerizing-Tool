@@ -1,4 +1,4 @@
-from src.core.heading_validator import _should_force_invalid_enumerated_list_item
+from src.structure.heading_validation import _should_force_invalid_enumerated_list_item
 
 
 def test_should_not_block_section_number_like_1_2():

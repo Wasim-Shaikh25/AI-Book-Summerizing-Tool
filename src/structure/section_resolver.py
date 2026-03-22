@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Sequence
 
 from .logging.pipeline_logger import PipelineLogger
-from .models import HeadingCandidate, NormalizedLine
+from src.core.models import HeadingCandidate, NormalizedLine
 
 
 def _paragraph_after_heading(lines: Sequence[NormalizedLine], heading_end_line: int, *, max_lines: int = 12) -> str:

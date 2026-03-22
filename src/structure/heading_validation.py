@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from .llm_validity import llm_validate
 from .logging.pipeline_logger import PipelineLogger
-from .models import HeadingCandidate
+from src.core.models import HeadingCandidate
 
 _ENUM_LIST_ITEM_RE = re.compile(r"^\s*\d+\.\s+\S+")
 _SECTION_NUMBER_RE = re.compile(r"^\s*\d+\.\d+\s+\S+")

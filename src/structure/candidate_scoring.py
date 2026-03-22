@@ -4,7 +4,7 @@ import re
 from typing import Any, Dict, List, Sequence, Tuple
 
 from .context_preview_builder import build_context_preview
-from .models import HeadingCandidate, NormalizedLine
+from src.core.models import HeadingCandidate, NormalizedLine
 
 _NUMERIC_RE = re.compile(r"^\s*\d+(?:\.\d+)*\s*[\)\.\-:]?\s+\S.+$")
 _ROMAN_RE = re.compile(

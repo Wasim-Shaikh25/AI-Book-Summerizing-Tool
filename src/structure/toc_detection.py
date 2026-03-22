@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 
 from .llm_toc import llm_toc
 from .logging.pipeline_logger import PipelineLogger
-from .models import HeadingCandidate
+from src.core.models import HeadingCandidate
 
 
 def classify_toc(

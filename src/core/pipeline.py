@@ -11,18 +11,18 @@ IMPORTANT:
 from pathlib import Path
 from typing import Any, Optional
 
-from .candidate_scorer import collect_candidates_scored
-from .fragment_builder import build_fragments
-from .heading_validator import validate_headings
-from .hierarchy_assigner import assign_hierarchy
 from src.ingestion.layout_enrichment import lines_to_log
-from .logging.pipeline_logger import PipelineLogger
-from .noise_filter import mark_noise
 from src.ingestion.pdf_extractor import extract_pdf
 from src.ingestion.text_normalizer import normalize_text
-from .toc_classifier import classify_toc
-from .toc_cleaner import clean_toc
-from .toc_section_resolver import resolve_toc_sections
+from src.structure.candidate_scoring import collect_candidates_scored
+from src.structure.fragments import build_fragments
+from src.structure.heading_validation import validate_headings
+from src.structure.hierarchy import assign_hierarchy
+from src.structure.noise_filter import mark_noise
+from src.structure.toc_cleaning import clean_toc
+from src.structure.toc_detection import classify_toc
+from src.structure.section_resolver import resolve_toc_sections
+from src.structure.logging.pipeline_logger import PipelineLogger
 
 
 def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:

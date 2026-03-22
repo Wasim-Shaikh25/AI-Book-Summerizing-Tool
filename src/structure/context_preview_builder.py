@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Sequence
 
-from .models import NormalizedLine
+from src.core.models import NormalizedLine
 
 
 def build_context_preview(lines: Sequence[NormalizedLine], idx: int) -> str:

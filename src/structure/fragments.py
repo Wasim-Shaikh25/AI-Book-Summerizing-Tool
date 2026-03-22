@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Sequence, Tuple
 
-from .models import Fragment, HeadingCandidate, NormalizedLine
+from src.core.models import Fragment, HeadingCandidate, NormalizedLine
 
 
 @dataclass(frozen=True, slots=True)
