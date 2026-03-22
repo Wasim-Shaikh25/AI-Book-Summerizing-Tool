@@ -89,9 +89,9 @@ def validate_headings(
     Gemini heading validation stage (batched).
 
     If `logger` is provided, writes per-run files (per requirements):
-      - 05_gemini_request.json (list of batches)
-      - 05_gemini_raw_response.json (list of batches)
-      - 05_gemini_heading_validation.json (parsed per heading; no raw text)
+      - 05_llm_request.json (list of batches)
+      - 05_llm_raw_response.json (list of batches)
+      - 05_llm_heading_validation.json (parsed per heading; no raw text)
 
     If `logger` is not provided, preserves the legacy flat log behavior under ./logs.
     """
@@ -120,7 +120,7 @@ def validate_headings(
         request_batches_payload.append(
             {
                 "batch_id": batch_id,
-                "model": "gemini",
+                "model": "llm",
                 "request": request_items,
             }
         )
@@ -179,11 +179,11 @@ def validate_headings(
 
         logger.record_decision(
             updated.id,
-            stage="gemini_heading_validation",
+            stage="llm_heading_validation",
             decision="valid_heading" if updated.is_valid else "invalid_heading",
             metadata={"reason": updated.valid_reason or ""},
         )
 
-    logger.write_stage("gemini_heading_validation", parsed_log)
+    logger.write_stage("llm_heading_validation", parsed_log)
 
     return validated

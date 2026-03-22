@@ -16,7 +16,7 @@ def classify_toc(
     Gemini TOC stage (batched).
 
     Refactor:
-      - Writes exactly one per-run file: 05_gemini_toc_classification.json
+      - Writes exactly one per-run file: 05_llm_toc_classification.json
       - No separate request/raw/results JSON logs
     """
     batches = llm_toc(headings, batch_size=20)
@@ -27,7 +27,7 @@ def classify_toc(
 
     for batch_id, _batch_candidates, parsed_by_id, raw_text, request_items in batches:
         req_batches.append(
-            {"batch_id": batch_id, "model": "gemini", "request": request_items}
+            {"batch_id": batch_id, "model": "llm", "request": request_items}
         )
         raw_batches.append({"batch_id": batch_id, "raw_model_text": raw_text})
         for hid, v in parsed_by_id.items():
@@ -75,11 +75,11 @@ def classify_toc(
 
         logger.record_decision(
             updated.id,
-            stage="gemini_toc",
+            stage="llm_toc",
             decision="is_toc_true" if updated.is_toc else "is_toc_false",
             metadata={"reason": updated.toc_reason or ""},
         )
 
-    logger.write_stage("gemini_toc_classification", parsed_log)
+    logger.write_stage("llm_toc_classification", parsed_log)
 
     return out

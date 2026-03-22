@@ -143,9 +143,9 @@ def visualize_pdf_structure(pdf_path: str, run_folder: Path) -> None:
     if headings is None:
         headings = _read_json(run_folder / "02_heading_candidates_valid.preview.json")
 
-    toc = _read_json(run_folder / "05_gemini_toc_classification.json")
+    toc = _read_json(run_folder / "05_llm_toc_classification.json")
     if toc is None:
-        toc = _read_json(run_folder / "05_gemini_toc_classification.preview.json")
+        toc = _read_json(run_folder / "05_llm_toc_classification.preview.json")
 
     fragments = _read_json(run_folder / "07_fragments.json")
     if fragments is None:
