@@ -62,7 +62,7 @@ def _dedupe_keep_stronger(
 
     IMPORTANT:
       This is phase-1. We only decide which instance to KEEP.
-      The kept heading will be the only one considered in the Gemini TOC phase,
+      The kept heading will be the only one considered in the LLM TOC phase,
       so we don't accidentally evaluate/remove both duplicates.
 
     Returns (kept_headings, removals_log).
@@ -111,7 +111,7 @@ def _dedupe_keep_stronger(
     return kept_ordered, removed, evaluated_by_dedupe
 
 
-def _gemini_is_toc(heading_text: str, content_preview: str) -> bool:
+def _llm_is_toc(heading_text: str, content_preview: str) -> bool:
     user_prompt = json.dumps(
         {
             "heading": heading_text,
@@ -144,13 +144,13 @@ def clean_toc(
     fragment_text_by_id: Dict[str, str] | None = None,
     _min_fragment_chars: int = 20,
     _min_lines_after_heading: int = 3,
-    _enable_gemini_toc_check: bool = True,
+    _enable_llm_toc_check: bool = True,
 ) -> List[FinalHeading]:
     """
     NOTE (disabled):
     This stage previously performed:
       1) duplicate removal by normalized text
-      2) low-content + Gemini TOC removal
+      2) low-content + LLM TOC removal
 
     Per current configuration, toc_cleaner does not remove anything and returns
     the headings unchanged (identity function).

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-# Prompt logic for Gemini validity is owned by src/core/gemini_validity.py
+# Prompt logic for LLM validity is owned by src/structure/llm_validity.py
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
@@ -86,7 +86,7 @@ def validate_headings(
     logger: Optional[PipelineLogger] = None,
 ) -> List[HeadingCandidate]:
     """
-    Gemini heading validation stage (batched).
+    LLM heading validation stage (batched).
 
     If `logger` is provided, writes per-run files (per requirements):
       - 05_llm_request.json (list of batches)
@@ -108,7 +108,7 @@ def validate_headings(
         # (The new pipeline always passes logger.)
         return candidates
 
-    # Batched Gemini call
+    # Batched LLM call
     batches = llm_validate(candidates, batch_size=20)
 
     # Accumulate parsed results across batches
