@@ -50,12 +50,11 @@ def _gemini_generate(
         client = genai.Client(api_key=api_key)
 
     debug = bool(getattr(cfg, "LLM_HTTP_DEBUG", False))
-    max_chars = int(getattr(cfg, "LLM_HTTP_DEBUG_MAX_CHARS", 4000))
     if debug:
         print("\n[GEMINI] Request")
         print(f"[GEMINI] model={model}")
-        print(f"[GEMINI] system_instruction={system_instruction[:max_chars]}")
-        print(f"[GEMINI] user_prompt={user_prompt[:max_chars]}")
+        print(f"[GEMINI] system_instruction={system_instruction[:4000]}")
+        print(f"[GEMINI] user_prompt={user_prompt[:4000]}")
 
     resp = client.models.generate_content(
         model=model,
@@ -69,7 +68,7 @@ def _gemini_generate(
     raw = (getattr(resp, "text", "") or "").strip()
 
     if debug:
-        print(f"[GEMINI] raw_text={raw[:max_chars]}")
+        print(f"[GEMINI] raw_text={raw[:4000]}")
 
     parsed: Optional[Any] = None
     try:

@@ -83,12 +83,11 @@ class OllamaProvider:
             "stream": False,
             "options": {
                 "temperature": float(temperature),
-                "num_predict": int(getattr(cfg, "OLLAMA_NUM_PREDICT", 96)),
             },
         }
 
         debug = bool(getattr(cfg, "OLLAMA_HTTP_DEBUG", None) if getattr(cfg, "OLLAMA_HTTP_DEBUG", None) is not None else getattr(cfg, "LLM_HTTP_DEBUG", False))
-        max_chars = int(getattr(cfg, "OLLAMA_HTTP_DEBUG_MAX_CHARS", None) or getattr(cfg, "LLM_HTTP_DEBUG_MAX_CHARS", 4000))
+        max_chars = int(getattr(cfg, "OLLAMA_HTTP_DEBUG_MAX_CHARS", None) or 4000)
         if debug:
             safe_payload = dict(payload)
             safe_payload["prompt"] = _truncate(prompt, max_chars)

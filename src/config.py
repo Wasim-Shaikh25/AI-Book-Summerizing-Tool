@@ -65,7 +65,6 @@ DEBUG_STRUCTURE = True
 #   - LLM_BASE_URL=...
 #   - LLM_TIMEOUT_S=...
 #   - LLM_HTTP_DEBUG=0/1 (debug request/response logging)
-#   - LLM_HTTP_DEBUG_MAX_CHARS=...
 #
 # Batch sizing keys (apply to all providers):
 #   - LLM_VALIDITY_BATCH_SIZE
@@ -82,7 +81,6 @@ LLM_HTTP_DEBUG = (os.getenv("LLM_HTTP_DEBUG") or _load_dotenv_value("LLM_HTTP_DE
     "y",
     "on",
 }
-LLM_HTTP_DEBUG_MAX_CHARS = int(os.getenv("LLM_HTTP_DEBUG_MAX_CHARS") or _load_dotenv_value("LLM_HTTP_DEBUG_MAX_CHARS") or "4000")
 
 # Gemini (provider-specific overrides)
 GEMINI_API_KEY = (
@@ -106,8 +104,6 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL") or _load_dotenv_value("OLLAMA_BAS
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL") or _load_dotenv_value("OLLAMA_MODEL") or LLM_MODEL or "llama3.2:3b"
 OLLAMA_TIMEOUT_S = float(os.getenv("OLLAMA_TIMEOUT_S") or _load_dotenv_value("OLLAMA_TIMEOUT_S") or str(LLM_TIMEOUT_S) or "600")
 
-# Ollama-only tuning knobs (true provider-specific features)
-OLLAMA_NUM_PREDICT = int(os.getenv("OLLAMA_NUM_PREDICT") or _load_dotenv_value("OLLAMA_NUM_PREDICT") or "96")
 
 # Pipeline batch sizing (applies to all providers)
 LLM_VALIDITY_BATCH_SIZE = int(os.getenv("LLM_VALIDITY_BATCH_SIZE") or _load_dotenv_value("LLM_VALIDITY_BATCH_SIZE") or "20")
