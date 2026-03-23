@@ -137,10 +137,12 @@ def mark_noise(lines: Sequence[NormalizedLine]) -> tuple[List[NormalizedLine], L
     frequent_text_keys = {
         k for k, pset in text_occurrences.items() if threshold_pages and len(pset) >= threshold_pages
     }
-    # Page numbers should be detected even on small PDFs:
-    # for 5 pages, threshold_pages_30pct becomes 1, so we need >= (not >).
+    # Page-number detection should still work on single-page PDFs: if a line looks like a page number
+    # in a margin, mark it as noise even if it appears on only 1 page.
     frequent_page_num_keys = {
-        k for k, pset in page_num_occurrences.items() if threshold_pages and len(pset) >= threshold_pages
+        k
+        for k, pset in page_num_occurrences.items()
+        if (threshold_pages and len(pset) >= threshold_pages) or (total_pages == 1 and len(pset) == 1)
     }
 
     out: List[NormalizedLine] = []
