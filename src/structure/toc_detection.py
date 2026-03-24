@@ -21,7 +21,10 @@ def classify_toc(
     """
     from src import config as cfg
 
-    batches = llm_toc(headings, batch_size=int(getattr(cfg, "LLM_TOC_BATCH_SIZE", 20)))
+    # Only send headings that are not already deterministically classified.
+    to_llm = [h for h in headings if getattr(h, "is_toc", None) is None]
+
+    batches = llm_toc(to_llm, batch_size=int(getattr(cfg, "LLM_TOC_BATCH_SIZE", 20)))
 
     parsed_results_by_id: Dict[str, Dict[str, Any]] = {}
     req_batches: List[Dict[str, Any]] = []
@@ -41,6 +44,10 @@ def classify_toc(
     parsed_log: List[Dict[str, Any]] = []
 
     for h in headings:
+        # Preserve deterministic TOC decisions (pre-filled is_toc).
+        if isinstance(getattr(h, "is_toc", None), bool):
+            out.append(h)
+            continue
         rec = parsed_results_by_id.get(h.id)
         if rec is None:
             out.append(h)

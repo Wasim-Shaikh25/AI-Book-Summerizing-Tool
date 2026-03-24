@@ -63,12 +63,12 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
     candidates, scoring_log = collect_candidates_scored(lines)
     logger.write_stage("candidate_scoring", scoring_log)
 
-    candidates, gate_log = gate_heading_validity_candidates(candidates)
+    candidates, gate_log = gate_heading_validity_candidates(candidates, lines=lines)
     logger.write_stage("pre_llm_heading_gate", gate_log)
 
     headings = validate_headings(candidates, logger=logger)
 
-    headings, toc_gate_log = gate_toc_candidates(headings)
+    headings, toc_gate_log = gate_toc_candidates(headings, lines=lines)
     logger.write_stage("pre_llm_toc_gate", toc_gate_log)
 
     # Stage 05: Gemini TOC classification (no fragment text used)

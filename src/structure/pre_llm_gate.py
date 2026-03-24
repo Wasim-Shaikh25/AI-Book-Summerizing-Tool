@@ -507,35 +507,105 @@ def gate_heading_validity_candidates(
 
 def gate_toc_candidates(
     headings: Sequence[HeadingCandidate],
+    *,
+    lines: Sequence[NormalizedLine] | None = None,
 ) -> Tuple[List[HeadingCandidate], List[Dict[str, Any]]]:
     """
     Pre-LLM gate for TOC classification.
 
     Goal:
-      - Do not spend TOC LLM calls on headings that are already invalid.
-      - Also drop extremely confident junk lines.
+      - Avoid spending TOC LLM calls when we can deterministically classify TOC entries
+        using layout metadata (structured PDFs).
+      - Be conservative: only mark is_toc True/False when confidence is high.
+      - Drop only extreme junk (same as before).
 
-    Policy:
-      - Drop if is_valid == False
-      - Keep if is_valid is None (unknown)
-      - Keep if is_valid == True (valid)
+    Output:
+      - Returns (headings_with_possible_is_toc_set, log_items)
+      - Some headings may have is_toc pre-filled. Remaining headings are left as-is for LLM.
+
+    Deterministic TOC signals used (when `lines` is provided):
+      - Heading located on early pages (configurable window)
+      - Strong TOC-entry pattern: line ends with page number, and line bbox is near right margin
+      - Dense run of such lines on the same page => classify as TOC entries
+      - Explicit TOC title ("contents", "table of contents", "index") helps anchor the page
     """
+    from src import config as cfg
+
     kept: List[HeadingCandidate] = []
     log: List[Dict[str, Any]] = []
 
+    # Build a line lookup for layout signals
+    line_by_id: Dict[int, NormalizedLine] = {}
+    if lines is not None:
+        for ln in lines:
+            try:
+                line_by_id[int(ln.line_id)] = ln
+            except Exception:
+                continue
+
+    # Config knobs (safe defaults)
+    max_toc_pages = int(getattr(cfg, "DETERMINISTIC_TOC_MAX_PAGES", 20))
+    min_toc_entries_on_page = int(getattr(cfg, "DETERMINISTIC_TOC_MIN_ENTRIES_PER_PAGE", 6))
+    right_margin_ratio = float(getattr(cfg, "DETERMINISTIC_TOC_RIGHT_MARGIN_RATIO", 0.82))  # >=82% of page width
+    require_title_anchor = bool(getattr(cfg, "DETERMINISTIC_TOC_REQUIRE_TITLE_ANCHOR", False))
+
+    # Text patterns
+    toc_title_re = re.compile(r"\b(table\s+of\s+contents|contents|index)\b", re.IGNORECASE)
+    trailing_page_num_re = re.compile(r"(?:\.{2,}\s*)?(\d{1,4})\s*$")
+
+    # First pass: score per-page TOC-likeness from candidate headings
+    page_stats: Dict[int, Dict[str, Any]] = {}
+    for h in headings:
+        lid = None
+        try:
+            lid = int(h.start_line)
+        except Exception:
+            pass
+
+        ln = line_by_id.get(lid) if (lid is not None and line_by_id) else None
+        pn = int(getattr(ln, "page_number", 0) or 0) if ln is not None else 0
+        if pn <= 0 or pn > max_toc_pages:
+            continue
+
+        st = page_stats.setdefault(pn, {"entries": 0, "has_title": False})
+
+        t = (h.text or "").strip()
+        if toc_title_re.search(t):
+            st["has_title"] = True
+
+        # Candidate TOC entry detection: trailing page number + right-aligned line bbox
+        if trailing_page_num_re.search(t) and ln is not None:
+            bbox = getattr(ln, "bbox", None)
+            # NormalizedLine currently doesn't expose bbox; layout enrichment stores it in logs only.
+            # So we approximate using x_center + page_width: treat lines centered near the right as "page-number aligned".
+            page_width = float(getattr(ln, "page_width", 0.0) or 0.0)
+            x_center = float(getattr(ln, "x_center", 0.0) or 0.0)
+            if page_width > 0 and (x_center / page_width) >= right_margin_ratio:
+                st["entries"] += 1
+            else:
+                # Secondary: allow if text contains dot leaders and ends with a number (common TOC)
+                if (".." in t) or ("\u2026" in t):
+                    st["entries"] += 1
+
+    toc_pages: set[int] = set()
+    for pn, st in page_stats.items():
+        if st.get("entries", 0) >= min_toc_entries_on_page:
+            if require_title_anchor and not st.get("has_title", False):
+                continue
+            toc_pages.add(pn)
+
+    # Second pass: apply gating decisions
     for h in headings:
         text = h.text or ""
         reasons: List[str] = []
 
+        # Drop obvious junk (existing behavior)
         if h.is_valid is False:
             reasons.append("is_valid_false")
-
         if _is_too_empty(text):
             reasons.append("empty_text")
-
         if _is_obvious_noise_heading(text):
             reasons.append("obvious_noise")
-
         if _is_paragraph_like(text):
             reasons.append("paragraph_like")
 
@@ -548,6 +618,70 @@ def gate_toc_candidates(
                     "reason": _normalize_reason(", ".join(reasons)),
                     "is_valid": h.is_valid,
                     "is_toc": h.is_toc,
+                }
+            )
+            continue
+
+        # Deterministic TOC page classification
+        lid = None
+        try:
+            lid = int(h.start_line)
+        except Exception:
+            pass
+        ln = line_by_id.get(lid) if (lid is not None and line_by_id) else None
+        pn = int(getattr(ln, "page_number", 0) or 0) if ln is not None else 0
+
+        if pn in toc_pages and h.is_toc is None:
+            updated = HeadingCandidate(
+                id=h.id,
+                text=h.text,
+                start_line=h.start_line,
+                end_line=h.end_line,
+                before_context=list(h.before_context),
+                after_context=list(h.after_context),
+                full_context_preview=h.full_context_preview,
+                is_valid=h.is_valid,
+                valid_reason=h.valid_reason,
+                is_toc=True,
+                toc_reason="deterministic_toc_page(entries>=threshold)",
+            )
+            kept.append(updated)
+            log.append(
+                {
+                    "heading_id": updated.id,
+                    "text": updated.text,
+                    "action": "mark_is_toc_true_before_llm",
+                    "reason": updated.toc_reason,
+                    "page_number": pn,
+                }
+            )
+            continue
+
+        # Deterministic "definitely NOT TOC" signals (very conservative):
+        # - If it is far beyond the early pages window, it's extremely unlikely to be a TOC entry.
+        # This allows us to skip LLM calls for the main-body headings in structured PDFs.
+        if h.is_toc is None and pn > max_toc_pages and pn > 0:
+            updated = HeadingCandidate(
+                id=h.id,
+                text=h.text,
+                start_line=h.start_line,
+                end_line=h.end_line,
+                before_context=list(h.before_context),
+                after_context=list(h.after_context),
+                full_context_preview=h.full_context_preview,
+                is_valid=h.is_valid,
+                valid_reason=h.valid_reason,
+                is_toc=False,
+                toc_reason=f"deterministic_not_toc(page_number>{max_toc_pages})",
+            )
+            kept.append(updated)
+            log.append(
+                {
+                    "heading_id": updated.id,
+                    "text": updated.text,
+                    "action": "mark_is_toc_false_before_llm",
+                    "reason": updated.toc_reason,
+                    "page_number": pn,
                 }
             )
             continue
