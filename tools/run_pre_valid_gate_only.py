@@ -28,6 +28,11 @@ def main() -> int:
         default="src/debug/pdf_files/law_of_tort.pdf",
         help="Path to PDF (default: src/debug/pdf_files/law_of_tort.pdf)",
     )
+    ap.add_argument(
+        "--run-id",
+        default=None,
+        help="Optional run id for logs/ (e.g. 2026-03-24_01-52-38). If omitted, logs are not written.",
+    )
     args = ap.parse_args()
 
     pdf_path = str(args.pdf)
@@ -57,6 +62,9 @@ def main() -> int:
     print(f"dropped: {len(gate_log)}")
     print(f"kept_for_llm_validity: {len(kept)}")
 
+    embed_hits = [d for d in gate_log if "embedding_fake(" in (d.get("reason") or "")]
+    print(f"embedding_fake_hits: {len(embed_hits)}")
+
     print("\n-- drop reason histogram (top 20) --")
     for reason, count in reasons.most_common(20):
         print(f"{count:>4}  {reason}")
@@ -67,6 +75,24 @@ def main() -> int:
         txt = (it.get("text") or "").strip().replace("\n", " ")
         rsn = it.get("reason")
         print(f"- {hid}: {txt[:120]}  [{rsn}]")
+
+    # Optional log output (to avoid confusion with stale logs from older runs)
+    if args.run_id:
+        out_dir = Path("logs") / f"run_{args.run_id}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / "03b_pre_llm_heading_gate.json"
+        payload = {
+            "run_id": args.run_id,
+            "stage": "pre_llm_heading_gate",
+            "pdf_file": Path(pdf_path).name,
+            "total_items": len(gate_log),
+            "items": gate_log,
+        }
+        out_path.write_text(
+            __import__("json").dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print(f"\nWROTE_LOG: {out_path.as_posix()}")
 
     return 0
 

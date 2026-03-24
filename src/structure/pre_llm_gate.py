@@ -168,6 +168,35 @@ def _starts_with_lowercase_letter(text: str) -> bool:
     return bool(re.match(r"^[a-z]", t))
 
 
+def _starts_with_capital_letter(text: str) -> bool:
+    t = (text or "").lstrip()
+    if not t:
+        return False
+    return bool(re.match(r"^[A-Z]", t))
+
+
+def _is_non_bold_lowercase_fake_heading(*, c: HeadingCandidate, first_ln: NormalizedLine | None) -> bool:
+    """
+    Deterministic filter requested:
+      - Drop if NOT bold AND starts with lowercase
+      - Keep exceptions:
+        - decimal section headings like "1.2 Something" (common in TOCs)
+        - if we have no layout line info
+    """
+    if first_ln is None:
+        return False
+
+    # Keep true section numbering headings even if not bold.
+    if _DECIMAL_SECTION_RE.match((c.text or "").strip()):
+        return False
+
+    # Only apply when clearly not bold.
+    if getattr(first_ln, "is_bold", False):
+        return False
+
+    return _starts_with_lowercase_letter(c.text or "")
+
+
 def _normalize_reason(reason: str) -> str:
     return _WS_RE.sub(" ", (reason or "").strip())
 
@@ -202,13 +231,16 @@ def _embedding_gate_is_fake_heading(
     *,
     text: str,
     neighbors: List[str],
+    threshold: float = 0.88,
+    use_centroid: bool = True,
 ) -> Tuple[bool, str]:
     """
-    Embedding-based conservative filter:
-      - If candidate is extremely similar to its immediate neighbor lines,
-        it's likely just a body line mistakenly selected as a heading.
+    Embedding-based filter:
+      - Compare candidate to its nearby CONTEXT lines (before/after).
+      - If use_centroid=True, also compare to the centroid of the context window.
+        This acts like a “paragraph continuity” check.
 
-    We only drop when similarity is VERY high to avoid false negatives.
+    We only drop when similarity is high to avoid false negatives.
     """
     model = _get_minilm()
     if model is None or _np is None:
@@ -219,9 +251,6 @@ def _embedding_gate_is_fake_heading(
     if not t or not neigh:
         return False, ""
 
-    # Keep this small for speed/cost.
-    neigh = neigh[:3]
-
     # Encode candidate + neighbors in one call
     items = [t] + neigh
     try:
@@ -229,22 +258,91 @@ def _embedding_gate_is_fake_heading(
     except Exception:
         return False, ""
 
-    # emb is (k, d); cosine between candidate and each neighbor
     cand = emb[0]
-    sims = [float(cand @ emb[i]) for i in range(1, len(items))]
-
-    # Stricter threshold: still designed to be safe, but will drop more near-duplicate lines.
-    max_sim = max(sims) if sims else 0.0
 
     # IMPORTANT SAFETY: avoid dropping very short Q/A style headings just because they're similar.
-    # Example: "Who can sue?" vs "Who cannot sue?" are both legitimate headings in many books.
     wc = _word_count(t)
     if wc <= 4:
         return False, ""
 
-    if max_sim >= 0.88:
-        return True, f"embedding_neighbor_similarity={max_sim:.3f} (>=0.88)"
+    # Similarity to individual neighbor lines
+    sims = [float(cand @ emb[i]) for i in range(1, len(items))]
+    max_line_sim = max(sims) if sims else 0.0
+
+    # Similarity to centroid (paragraph-ish)
+    centroid_sim = 0.0
+    if use_centroid and len(items) >= 3 and _np is not None:
+        ctx = emb[1:]
+        centroid = _np.mean(ctx, axis=0)
+        # normalize
+        denom = float(_np.linalg.norm(centroid) + 1e-12)
+        centroid = centroid / denom
+        centroid_sim = float(cand @ centroid)
+
+    score = max(max_line_sim, centroid_sim)
+
+    if score >= float(threshold):
+        return True, (
+            f"embedding_context_similarity={score:.3f} "
+            f"(line_max={max_line_sim:.3f}, centroid={centroid_sim:.3f}, >= {float(threshold):.2f})"
+        )
     return False, ""
+
+
+def _page_body_centroids(
+    *,
+    lines: Sequence[NormalizedLine],
+    exclude_line_ids: set[int],
+    min_len: int = 20,
+    max_lines_per_page: int = 80,
+) -> Dict[int, Any]:
+    """
+    Build per-page centroid embeddings of likely BODY text lines.
+
+    - Uses only non-noise lines with enough characters.
+    - Excludes lines that are candidate headings (by line_id) to avoid contaminating the body centroid.
+    - Caps lines per page for speed.
+    """
+    model = _get_minilm()
+    if model is None or _np is None:
+        return {}
+
+    # Collect body text by page
+    by_page: Dict[int, List[str]] = {}
+    for ln in lines:
+        try:
+            lid = int(getattr(ln, "line_id"))
+        except Exception:
+            continue
+        if lid in exclude_line_ids:
+            continue
+        if getattr(ln, "is_noise", False):
+            continue
+        txt = (getattr(ln, "text", "") or "").strip()
+        if len(txt) < min_len:
+            continue
+
+        pn = int(getattr(ln, "page_number", 0) or 0)
+        if pn <= 0:
+            pn = 0
+        by_page.setdefault(pn, [])
+        if len(by_page[pn]) < max_lines_per_page:
+            by_page[pn].append(txt)
+
+    centroids: Dict[int, Any] = {}
+    for pn, texts in by_page.items():
+        if len(texts) < 6:
+            continue
+        try:
+            emb = model.encode(texts, normalize_embeddings=True)
+        except Exception:
+            continue
+        centroid = _np.mean(emb, axis=0)
+        denom = float(_np.linalg.norm(centroid) + 1e-12)
+        centroid = centroid / denom
+        centroids[pn] = centroid
+
+    return centroids
 
 
 def gate_heading_validity_candidates(
@@ -267,27 +365,51 @@ def gate_heading_validity_candidates(
     kept: List[HeadingCandidate] = []
     log: List[Dict[str, Any]] = []
 
-    # Build neighbor lookup once (order in candidates is already meaningful: derived from line order).
-    candidate_texts = [(c.text or "").strip() for c in candidates]
-
     # Optional layout lookup (for "bold+Capital never drop" safeguard)
     line_by_id: Dict[int, NormalizedLine] = {}
     if lines is not None:
         line_by_id = {int(ln.line_id): ln for ln in lines if hasattr(ln, "line_id")}
 
+    # Optional MiniLM per-page body centroid embeddings (used only for non-bold candidates).
+    page_centroids: Dict[int, Any] = {}
+    if lines is not None and SentenceTransformer is not None and _np is not None:
+        exclude_ids: set[int] = set()
+        for c in candidates:
+            try:
+                exclude_ids.add(int(c.start_line))
+            except Exception:
+                pass
+        page_centroids = _page_body_centroids(lines=lines, exclude_line_ids=exclude_ids)
+
     for idx, c in enumerate(candidates):
         text = c.text or ""
         reasons: List[str] = []
 
-        # HARD RULE: if first line of the candidate is bold AND heading starts with a capital letter,
-        # do not drop it in this stage (regardless of other heuristics).
+        # HARD RULE: if the candidate has strong layout heading signals, never drop it in this stage.
+        #
+        # Rationale: PyMuPDF-derived layout features are higher precision than semantic similarity
+        # (real headings are often semantically similar to adjacent body paragraphs).
+        #
+        # Protected if ANY of:
+        # - bold
+        # - large font (relative to page median)
+        # - large vertical gap above (relative to page median)
+        # - centered on the page
         if line_by_id:
             first_ln = line_by_id.get(int(c.start_line))
             t_strip = (text or "").lstrip()
             starts_cap = bool(t_strip) and bool(re.match(r"^[A-Z]", t_strip))
-            if first_ln is not None and getattr(first_ln, "is_bold", False) and starts_cap:
-                kept.append(c)
-                continue
+            if first_ln is not None:
+                strong_layout = bool(
+                    getattr(first_ln, "is_bold", False)
+                    or getattr(first_ln, "large_font", False)
+                    or getattr(first_ln, "large_gap", False)
+                    or getattr(first_ln, "centered", False)
+                )
+                if strong_layout and starts_cap:
+                    kept.append(c)
+                    continue
+
 
         if _is_too_empty(text):
             reasons.append("empty_text")
@@ -304,17 +426,68 @@ def gate_heading_validity_candidates(
         if _starts_with_lowercase_letter(text):
             reasons.append("starts_with_lowercase")
 
-        # Local embedding gate (conservative): drop only when line is semantically identical
-        # to immediate neighbors, which strongly indicates body text, not a heading.
-        neigh = []
-        if idx - 1 >= 0:
-            neigh.append(candidate_texts[idx - 1])
-        if idx + 1 < len(candidate_texts):
-            neigh.append(candidate_texts[idx + 1])
+        # Extra deterministic filter: if the candidate line is not bold and starts lowercase,
+        # it is extremely likely to be mid-paragraph body text.
+        if line_by_id:
+            first_ln = line_by_id.get(int(c.start_line))
+            if _is_non_bold_lowercase_fake_heading(c=c, first_ln=first_ln):
+                reasons.append("not_bold_and_starts_lowercase")
 
-        is_fake, embed_reason = _embedding_gate_is_fake_heading(text=(text or ""), neighbors=neigh)
-        if is_fake:
-            reasons.append(f"embedding_fake({embed_reason})")
+        # MiniLM continuity gate: compare candidate to its local paragraph context (before/after)
+        neigh = []
+        neigh.extend(list(getattr(c, "before_context", []) or [])[-5:])
+        neigh.extend(list(getattr(c, "after_context", []) or [])[:5])
+
+        from src import config as cfg
+
+        # MiniLM continuity gate:
+        # Apply ONLY when the candidate does NOT have strong layout heading signals.
+        # This avoids dropping valid headings that are semantically similar to nearby body text.
+        t_norm = (text or "").strip()
+        is_title_case = bool(re.match(r"^[A-Z][A-Za-z0-9'’\-]*(?:\s+[A-Z][A-Za-z0-9'’\-]*){1,}$", t_norm))
+
+        strong_layout = False
+        if line_by_id:
+            first_ln = line_by_id.get(int(c.start_line))
+            if first_ln is not None:
+                strong_layout = bool(
+                    getattr(first_ln, "is_bold", False)
+                    or getattr(first_ln, "large_font", False)
+                    or getattr(first_ln, "large_gap", False)
+                    or getattr(first_ln, "centered", False)
+                )
+
+        if (not strong_layout) and (not is_title_case):
+            thr = float(getattr(cfg, "MINILM_FAKE_HEADING_SIM_THRESHOLD", None) or "0.88")
+            is_fake, embed_reason = _embedding_gate_is_fake_heading(
+                text=t_norm,
+                neighbors=neigh,
+                threshold=thr,
+                use_centroid=True,
+            )
+            if is_fake:
+                reasons.append(f"embedding_fake({embed_reason})")
+
+        # MiniLM page-body centroid gate (requested): if candidate is semantically too close
+        # to the overall page body, it's likely body text. Apply only to non-bold candidates.
+        if line_by_id and page_centroids:
+            first_ln = line_by_id.get(int(c.start_line))
+            if first_ln is not None and not getattr(first_ln, "is_bold", False):
+                pn = int(getattr(first_ln, "page_number", 0) or 0)
+                centroid = page_centroids.get(pn)
+                if centroid is None:
+                    centroid = page_centroids.get(0)
+                if centroid is not None and SentenceTransformer is not None and _np is not None:
+                    model = _get_minilm()
+                    if model is not None:
+                        try:
+                            cand_emb = model.encode([(text or "").strip()], normalize_embeddings=True)[0]
+                            sim = float(cand_emb @ centroid)
+                            thr2 = float(getattr(cfg, "MINILM_PAGE_BODY_SIM_THRESHOLD", None) or "0.80")
+                            if _word_count((text or "").strip()) > 4 and sim >= thr2:
+                                reasons.append(f"embedding_page_body(sim={sim:.3f} >= {thr2:.2f})")
+                        except Exception:
+                            pass
 
         if reasons:
             log.append(
