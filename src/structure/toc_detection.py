@@ -30,11 +30,23 @@ def classify_toc(
     req_batches: List[Dict[str, Any]] = []
     raw_batches: List[Dict[str, Any]] = []
 
-    for batch_id, _batch_candidates, parsed_by_id, raw_text, request_items in batches:
+    for batch_id, _batch_candidates, parsed_by_id, llm_result, request_items in batches:
         req_batches.append(
-            {"batch_id": batch_id, "model": "llm", "request": request_items}
+            {
+                "batch_id": batch_id,
+                "model": getattr(llm_result, "model", None),
+                "latency_ms": getattr(llm_result, "latency_ms", None),
+                "request": request_items,
+            }
         )
-        raw_batches.append({"batch_id": batch_id, "raw_model_text": raw_text})
+        raw_batches.append(
+            {
+                "batch_id": batch_id,
+                "model": getattr(llm_result, "model", None),
+                "latency_ms": getattr(llm_result, "latency_ms", None),
+                "raw_model_text": getattr(llm_result, "text", ""),
+            }
+        )
         for hid, v in parsed_by_id.items():
             parsed_results_by_id[hid] = v
 
@@ -87,6 +99,16 @@ def classify_toc(
             stage="llm_toc",
             decision="is_toc_true" if updated.is_toc else "is_toc_false",
             metadata={"reason": updated.toc_reason or ""},
+        )
+
+    # Include batch-level provider metadata for debugging/comparison across providers.
+    if parsed_log:
+        parsed_log.insert(
+            0,
+            {
+                "_batches": req_batches,
+                "_raw_batches": raw_batches,
+            },
         )
 
     logger.write_stage("llm_toc_classification", parsed_log)

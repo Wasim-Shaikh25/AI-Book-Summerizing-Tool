@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Optional
 
 import requests
@@ -106,12 +107,18 @@ class OllamaProvider:
 
         # Requests timeout expects seconds or (connect, read). Use (connect, read) so
         # we don't fail on long generations.
+        t0 = time.perf_counter()
         try:
             r = requests.post(url, json=payload, timeout=(10.0, self.timeout_s))
+            latency_ms = int((time.perf_counter() - t0) * 1000)
             if debug:
                 print(f"[OLLAMA] Status: {r.status_code}")
+                print(f"[OLLAMA] latency_ms={latency_ms}")
             r.raise_for_status()
         except requests.RequestException as e:
+            latency_ms = int((time.perf_counter() - t0) * 1000)
+            if debug:
+                print(f"[OLLAMA] latency_ms={latency_ms}")
             if debug:
                 print(f"[OLLAMA] Request failed: {e!r}")
                 try:
@@ -137,4 +144,15 @@ class OllamaProvider:
                 safe_response["response"] = _truncate(safe_response["response"], max_chars)
             print("[OLLAMA] Response=" + json.dumps(safe_response, ensure_ascii=False))
 
-        return LLMResult(text=msg, raw=data, usage=data.get("eval_count"))
+        # Ollama typically includes the resolved model name in `model` in the response.
+        resolved_model = None
+        if isinstance(data, dict):
+            resolved_model = data.get("model")
+
+        return LLMResult(
+            text=msg,
+            raw=data,
+            usage=data.get("eval_count"),
+            model=str(resolved_model or self.model),
+            latency_ms=latency_ms,
+        )

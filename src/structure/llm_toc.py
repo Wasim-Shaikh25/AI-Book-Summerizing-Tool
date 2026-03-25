@@ -4,6 +4,7 @@ import json
 from typing import Any, Dict, List, Sequence, Tuple
 
 from src.LLMAdaptor.client import LLMClient
+from src.LLMAdaptor.providers.base import LLMResult
 
 from src.core.models import HeadingCandidate
 
@@ -78,7 +79,7 @@ def _try_parse_json_array(text: str):
 
 def llm_toc_batch(
     batch: Sequence[HeadingCandidate],
-) -> Tuple[Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]:
+) -> Tuple[Dict[str, Dict[str, Any]], LLMResult, List[Dict[str, Any]]]:
     request_items = build_toc_request_items(batch)
     user_prompt = json.dumps(request_items, ensure_ascii=False)
 
@@ -110,17 +111,17 @@ def llm_toc_batch(
                     "reason": reason if isinstance(reason, str) else "",
                 }
 
-    return parsed, resp.text, request_items
+    return parsed, resp, request_items
 
 
 def llm_toc(
     candidates: Sequence[HeadingCandidate],
     *,
     batch_size: int = 20,
-) -> List[Tuple[int, Sequence[HeadingCandidate], Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]]:
+) -> List[Tuple[int, Sequence[HeadingCandidate], Dict[str, Dict[str, Any]], LLMResult, List[Dict[str, Any]]]]:
     batches = _chunks(candidates, batch_size)
-    out: List[Tuple[int, Sequence[HeadingCandidate], Dict[str, Dict[str, Any]], str, List[Dict[str, Any]]]] = []
+    out: List[Tuple[int, Sequence[HeadingCandidate], Dict[str, Dict[str, Any]], LLMResult, List[Dict[str, Any]]]] = []
     for i, b in enumerate(batches, start=1):
-        parsed, raw_text, request_items = llm_toc_batch(b)
-        out.append((i, b, parsed, raw_text, request_items))
+        parsed, llm_result, request_items = llm_toc_batch(b)
+        out.append((i, b, parsed, llm_result, request_items))
     return out

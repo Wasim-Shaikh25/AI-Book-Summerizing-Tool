@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Optional
 
 import requests
@@ -63,6 +64,8 @@ class OpenAIProvider:
         max_tokens: Optional[int] = None,
         response_mime_type: Optional[str] = None,
     ) -> LLMResult:
+        from src import config as cfg
+
         url = f"{self.base_url}/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -88,7 +91,18 @@ class OpenAIProvider:
         # but many of our prompts (e.g. toc_classifier) require a top-level JSON array.
         # We rely on prompt instructions + downstream tolerant parsing instead.
 
+        debug = bool(getattr(cfg, "LLM_HTTP_DEBUG", False))
+        if debug:
+            print("\n[OPENAI] Request")
+            print(f"[OPENAI] url={url}")
+            print(f"[OPENAI] model={self.model}")
+            print(f"[OPENAI] system={ (system or '')[:4000] }")
+            print(f"[OPENAI] user={ (user or '')[:4000] }")
+
+        t0 = time.perf_counter()
         r = requests.post(url, headers=headers, json=payload, timeout=(10.0, self.timeout_s))
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+
         r.raise_for_status()
         data = r.json()
 
@@ -98,5 +112,11 @@ class OpenAIProvider:
         except Exception:
             text = ""
 
+        if debug:
+            print(f"[OPENAI] latency_ms={latency_ms}")
+            print(f"[OPENAI] raw_text={ (text or '')[:4000] }")
+
         usage = data.get("usage")
-        return LLMResult(text=text or "", raw=data, usage=usage)
+        model = data.get("model") or self.model
+
+        return LLMResult(text=text or "", raw=data, usage=usage, model=model, latency_ms=latency_ms)
