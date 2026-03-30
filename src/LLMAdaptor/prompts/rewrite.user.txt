@@ -1,8 +1,0 @@
-SECTION TITLE:
-{title}
-
-OVERLAP CONTEXT (may be empty):
-{overlap}
-
-CONTENT TO REWRITE:
-{content}

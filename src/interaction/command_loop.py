@@ -2,10 +2,10 @@ import logging
 import os
 from typing import Any, Optional
 
-from src.legacy.core.retrieval_engine import RetrievalEngine
+from src.core.pipeline import run_pipeline
 
 from src.config import OUTPUT_FOLDER
-from src.core.content_generation_engine import ContentGenerationEngine
+from src.generation.content_generation import ContentGenerationEngine
 from src.export.word_exporter import WordExporter
 from src.interaction.command_parser import CommandParser, IntentResult
 from src.storage.book_repository import BookRepository
@@ -29,7 +29,7 @@ class CommandLoop:
         self.topic_repo = TopicRepository(self.store)
         self.toc_repo = TocRepository(self.store)
 
-        self.retrieval_engine = RetrievalEngine(self.topic_repo)
+        self.retrieval_engine = None
         self.gen_engine = ContentGenerationEngine()
         self.word_exporter = WordExporter(output_folder=OUTPUT_FOLDER)
         self.rewriter: Optional[Any] = None
@@ -104,12 +104,12 @@ class CommandLoop:
                 return
             response = results['markdown']
         else:
-            # STEP 2: Knowledge Retrieval
-            # STEP 3: Coverage Check
-            chunks, knowledge_gap = self.retrieval_engine.retrieve(intent)
-            
-            # STEP 4: Content Writing
-            response = self.gen_engine.generate(intent, chunks, knowledge_gap)
+            # NOTE: RetrievalEngine was removed in the current architecture.
+            # This interactive Q&A path needs a new retrieval implementation.
+            raise NotImplementedError(
+                "Interactive Q&A retrieval is not wired in this version. "
+                "Ingest a book and use full_book intents, or implement a retrieval adapter."
+            )
         
         if response:
             print("\n" + "-"*30)
@@ -158,7 +158,6 @@ class CommandLoop:
 
         try:
             from src.ingestion.pdf_extractor import extract_pdf
-            from src.core.pipeline import run_pipeline
 
             # Extract lightweight PDF metadata for the books table
             pdf_doc = extract_pdf(file_path)
