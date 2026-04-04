@@ -243,13 +243,15 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
 
     doc = fitz.open(pdf_path)
 
-    # Draw order: fragments (light blue), metadata (purple), noise (red), headings (green), TOC (yellow ON TOP)
-    # NOTE: TOC lines often overlap with "final headings". If headings are drawn last, TOC looks green.
+    # Draw order: fragments (light blue), noise (red), headings (green), TOC (yellow ON TOP), metadata (brown ON TOP)
+    # NOTE:
+    # - TOC lines often overlap with "final headings". If headings are drawn last, TOC looks green.
+    # - Metadata is often only a few title lines; draw it last with higher opacity so it's unmistakable.
     _draw_boxes(doc, fragment_boxes, stroke_rgb=(0.2, 0.4, 1.0), fill_rgb=(0.2, 0.4, 1.0), opacity=0.12, width=0.3)
-    _draw_boxes(doc, meta_boxes, stroke_rgb=(0.60, 0.35, 0.20), fill_rgb=(0.60, 0.35, 0.20), opacity=0.16, width=0.8)
     _draw_boxes(doc, noise_boxes, stroke_rgb=(1.0, 0.2, 0.2), fill_rgb=(1.0, 0.2, 0.2), opacity=0.22, width=0.4)
     _draw_boxes(doc, heading_boxes, stroke_rgb=(0.2, 0.8, 0.2), fill_rgb=(0.2, 0.8, 0.2), opacity=0.18, width=0.6)
     _draw_boxes(doc, toc_boxes, stroke_rgb=(1.0, 0.95, 0.0), fill_rgb=(1.0, 0.95, 0.0), opacity=0.35, width=1.2)
+    _draw_boxes(doc, meta_boxes, stroke_rgb=(0.60, 0.35, 0.20), fill_rgb=(0.60, 0.35, 0.20), opacity=0.45, width=1.6)
 
     out_path = run / "visualization.pdf"
     doc.save(out_path.as_posix())
