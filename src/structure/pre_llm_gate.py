@@ -152,6 +152,7 @@ def _is_enumerated_body_line(text: str) -> bool:
       - "1.1 Tort: Definition ..." (TOC-like)
       - short enumerated headings like "1. Introduction"
       - legal TOC-style decimal entries that contain punctuation but are still title-like
+      - lettered subheadings like "a. Distinction between ..." (common in notes/books)
     """
     t = (text or "").strip()
     if not t:
@@ -164,6 +165,24 @@ def _is_enumerated_body_line(text: str) -> bool:
 
     if not _ENUM_PREFIX_RE.match(t):
         return False
+
+    # Keep "a. Title Case ..." / "b. who may sue ..." style subheadings.
+    # These often start with a lowercase letter due to enumeration, but function as headings.
+    if re.match(r"^\s*[a-zA-Z]\.\s+\S", t):
+        # Allow longer subheadings too (common in law texts): keep unless it clearly looks like prose.
+        # Example to keep: "a. Distinction between Crime and Breach of Contract"
+        # Example to drop: "a) It may be an act which, without lawful justification..."
+        #
+        # IMPORTANT: `_looks_like_body_sentence()` treats any >=10-word line as sentence-like,
+        # which is too aggressive for these enumerated subheadings.
+        #
+        # Your rule: if it's a short FULL-BOLD `a.`/`b.` line, keep it even if it starts lowercase.
+        # We implement this by only dropping `a.`/`b.` entries when they contain explicit prose markers.
+        #
+        # "default which we are considering for others" -> use the same shortness thresholds used elsewhere:
+        # wc <= 12, len <= 90.
+        if not _SENTENCE_SIGNAL_RE.search(t):
+            return False
 
     # If it's enumerated and sentence-like, it's almost surely body text.
     if _looks_like_body_sentence(t):

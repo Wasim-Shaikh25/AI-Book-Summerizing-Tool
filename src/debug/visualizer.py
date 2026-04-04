@@ -38,11 +38,22 @@ def _load_json(path: Path) -> dict:
 
 
 def _iter_items(payload: dict) -> Iterable[dict]:
-    # PipelineLogger envelopes data as: {"stage": "...", "items": [...]}
+    """
+    PipelineLogger envelopes most stages as: {"stage": "...", "items": [...]}
+
+    Some debug stages (e.g. 05b_toc_local_detection.json) have items as a dict:
+      {"items": {"toc_blocks": [...], "metadata": {...}, "highlight_ranges": [...]}}
+    In that case, callers should use `_get_items_dict`.
+    """
     items = payload.get("items")
     if isinstance(items, list):
         return items
     return []
+
+
+def _get_items_dict(payload: dict) -> dict:
+    items = payload.get("items")
+    return items if isinstance(items, dict) else {}
 
 
 def _index_layout_boxes(layout_payload: dict) -> Dict[int, _LineBox]:
@@ -175,6 +186,7 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
     noise_path = run / "02_noise_filter.json"
     fragments_path = run / "07_fragments.json"
     final_headings_path = run / "09_final_headings.json"
+    toc_local_path = run / "05b_toc_local_detection.json"
 
     if not layout_path.exists():
         raise FileNotFoundError(f"Missing {layout_path}")
@@ -184,11 +196,14 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
         raise FileNotFoundError(f"Missing {fragments_path}")
     if not final_headings_path.exists():
         raise FileNotFoundError(f"Missing {final_headings_path}")
+    if not toc_local_path.exists():
+        raise FileNotFoundError(f"Missing {toc_local_path}")
 
     layout = _load_json(layout_path)
     noise = _load_json(noise_path)
     fragments = _load_json(fragments_path)
     final_headings = _load_json(final_headings_path)
+    toc_local = _load_json(toc_local_path)
 
     line_boxes = _index_layout_boxes(layout)
 
@@ -196,19 +211,45 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
     heading_ids = set(_collect_heading_line_ids(final_headings))
     fragment_ids = set(_collect_fragment_line_ids(fragments))
 
+    # TOC + Metadata ranges are emitted by local TOC detector as highlight_ranges.
+    toc_ids: set[int] = set()
+    meta_ids: set[int] = set()
+
+    toc_items = _get_items_dict(toc_local)
+    highlight_ranges = toc_items.get("highlight_ranges")
+    if isinstance(highlight_ranges, list):
+        for hr in highlight_ranges:
+            if not isinstance(hr, dict):
+                continue
+            label = (hr.get("label") or "").upper()
+            s = hr.get("start_line_id")
+            e = hr.get("end_line_id")
+            if s is None or e is None:
+                continue
+            ids = set(range(int(s), int(e) + 1))
+            if label == "TOC":
+                toc_ids |= ids
+            elif label == "METADATA":
+                meta_ids |= ids
+
     # Convert to boxes (skip if we don't have bbox for that line_id).
     noise_boxes = [line_boxes[i] for i in noise_ids if i in line_boxes]
     heading_boxes = [line_boxes[i] for i in heading_ids if i in line_boxes]
     fragment_boxes = [line_boxes[i] for i in fragment_ids if i in line_boxes]
+    toc_boxes = [line_boxes[i] for i in toc_ids if i in line_boxes]
+    meta_boxes = [line_boxes[i] for i in meta_ids if i in line_boxes]
 
     import fitz  # type: ignore
 
     doc = fitz.open(pdf_path)
 
-    # Draw order: fragments (light blue), noise (red), headings (green)
+    # Draw order: fragments (light blue), metadata (purple), noise (red), headings (green), TOC (yellow ON TOP)
+    # NOTE: TOC lines often overlap with "final headings". If headings are drawn last, TOC looks green.
     _draw_boxes(doc, fragment_boxes, stroke_rgb=(0.2, 0.4, 1.0), fill_rgb=(0.2, 0.4, 1.0), opacity=0.12, width=0.3)
+    _draw_boxes(doc, meta_boxes, stroke_rgb=(0.65, 0.2, 1.0), fill_rgb=(0.65, 0.2, 1.0), opacity=0.14, width=0.8)
     _draw_boxes(doc, noise_boxes, stroke_rgb=(1.0, 0.2, 0.2), fill_rgb=(1.0, 0.2, 0.2), opacity=0.22, width=0.4)
     _draw_boxes(doc, heading_boxes, stroke_rgb=(0.2, 0.8, 0.2), fill_rgb=(0.2, 0.8, 0.2), opacity=0.18, width=0.6)
+    _draw_boxes(doc, toc_boxes, stroke_rgb=(1.0, 0.95, 0.0), fill_rgb=(1.0, 0.95, 0.0), opacity=0.35, width=1.2)
 
     out_path = run / "visualization.pdf"
     doc.save(out_path.as_posix())
