@@ -246,7 +246,7 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
     # Draw order: fragments (light blue), metadata (purple), noise (red), headings (green), TOC (yellow ON TOP)
     # NOTE: TOC lines often overlap with "final headings". If headings are drawn last, TOC looks green.
     _draw_boxes(doc, fragment_boxes, stroke_rgb=(0.2, 0.4, 1.0), fill_rgb=(0.2, 0.4, 1.0), opacity=0.12, width=0.3)
-    _draw_boxes(doc, meta_boxes, stroke_rgb=(0.65, 0.2, 1.0), fill_rgb=(0.65, 0.2, 1.0), opacity=0.14, width=0.8)
+    _draw_boxes(doc, meta_boxes, stroke_rgb=(0.75, 0.9, 1.0), fill_rgb=(0.75, 0.9, 1.0), opacity=0.12, width=0.8)
     _draw_boxes(doc, noise_boxes, stroke_rgb=(1.0, 0.2, 0.2), fill_rgb=(1.0, 0.2, 0.2), opacity=0.22, width=0.4)
     _draw_boxes(doc, heading_boxes, stroke_rgb=(0.2, 0.8, 0.2), fill_rgb=(0.2, 0.8, 0.2), opacity=0.18, width=0.6)
     _draw_boxes(doc, toc_boxes, stroke_rgb=(1.0, 0.95, 0.0), fill_rgb=(1.0, 0.95, 0.0), opacity=0.35, width=1.2)
