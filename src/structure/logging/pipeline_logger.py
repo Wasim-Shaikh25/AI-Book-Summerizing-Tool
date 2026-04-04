@@ -52,6 +52,7 @@ class PipelineLogger:
         "06_toc_section_eval.json",
         "07_fragments.json",
         "08_hierarchy.json",
+        "08b_continuity_filter.json",
         "09_final_headings.json",
         "decision_trace.json",
     }
@@ -67,6 +68,7 @@ class PipelineLogger:
         "toc_section_eval": "06_toc_section_eval.json",
         "fragments": "07_fragments.json",
         "hierarchy": "08_hierarchy.json",
+        "continuity_filter": "08b_continuity_filter.json",
         "final_headings": "09_final_headings.json",
     }
 

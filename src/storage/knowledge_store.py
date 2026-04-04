@@ -1,6 +1,8 @@
+import json
 import logging
 import os
 import sqlite3
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +117,20 @@ class KnowledgeStore:
             )
         ''')
 
+        # JSON artifacts table for deterministic pipeline traces.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pipeline_artifacts (
+                artifact_id TEXT PRIMARY KEY,
+                book_id TEXT NOT NULL,
+                run_id TEXT,
+                stage_name TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (book_id) REFERENCES books (book_id)
+            )
+        ''')
+
         # Indexes for keyword search / joins
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_topic_name ON topics (topic)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_topics_book_id ON topics (book_id)')
@@ -122,6 +138,8 @@ class KnowledgeStore:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fragments_book_id ON fragments (book_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_heading_fragments_book_id ON heading_fragments (book_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_heading_fragments_heading_id ON heading_fragments (heading_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_pipeline_artifacts_book_id ON pipeline_artifacts (book_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_pipeline_artifacts_stage_name ON pipeline_artifacts (stage_name)')
 
         conn.commit()
         conn.close()
@@ -130,3 +148,29 @@ class KnowledgeStore:
     def get_connection(self):
         """Returns a connection to the SQLite database."""
         return sqlite3.connect(self.db_path)
+
+    def save_pipeline_artifact(
+        self,
+        *,
+        book_id: str,
+        stage_name: str,
+        filename: str,
+        payload: Any,
+        run_id: Optional[str] = None,
+    ) -> None:
+        artifact_id = f"{book_id}:{run_id or ''}:{stage_name}"
+        payload_json = payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False, indent=2)
+        conn = self.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT OR REPLACE INTO pipeline_artifacts
+                  (artifact_id, book_id, run_id, stage_name, filename, payload_json)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (artifact_id, book_id, run_id, stage_name, filename, payload_json),
+            )
+            conn.commit()
+        finally:
+            conn.close()

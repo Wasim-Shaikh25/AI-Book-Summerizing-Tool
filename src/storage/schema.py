@@ -13,7 +13,7 @@ class BookMetadata(BaseModel):
     title: str
     subject: str = "unknown"
     source_file_name: str
-    total_pages: int
+    total_pages: int = 0
 
 class TopicKnowledge(BaseModel):
     """

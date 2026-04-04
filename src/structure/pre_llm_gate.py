@@ -82,25 +82,38 @@ def _is_paragraph_like(text: str) -> bool:
     We intentionally do NOT use domain keywords (UNIT/MODULE/CHAPTER/etc.). This is universal.
 
     Returns True only when confidence is high.
+
+    Important: decimal TOC-like headings such as "1.1 Tort: Definition, ..." must not be
+    rejected merely because they contain commas or colons. Those are common in legal TOCs.
     """
     t = (text or "").strip()
     if not t:
         return False
 
-    # If it clearly looks like a sentence/paragraph (length + punctuation).
-    # Use lower thresholds than before because the scorer is selecting many body lines.
-    if len(t) >= 160:
-        return True
-
     wc = _word_count(t)
 
-    # Long line with commas/periods tends to be body text, not headings.
-    if wc >= 18 and (t.endswith(".") or t.count(",") >= 2):
+    # Protect TOC-like decimal headings even if they contain punctuation and look sentence-like.
+    if _DECIMAL_SECTION_RE.match(t):
+        if wc <= 16:
+            return False
+        if len(t) <= 110 and (t.count(",") <= 2 or t.count(":") <= 1):
+            return False
+
+    # Strong body-text signal: long prose-like lines with sentence punctuation.
+    if wc >= 8 and len(t) >= 70:
+        if t.endswith(".") or "," in t or ";" in t or ":" in t:
+            return True
+
+    # Sentence-style lines with common glue words and enough length are likely body text.
+    if wc >= 10 and _SENTENCE_SIGNAL_RE.search(t):
         return True
 
-    # If it contains multiple sentences, it's not a heading.
-    # (We keep this conservative: 2+ periods and long enough.)
-    if len(t) >= 140 and t.count(".") >= 2:
+    # Multiple clauses/sentences almost never indicate a heading.
+    if len(t) >= 100 and t.count(".") >= 2:
+        return True
+
+    # Medium-length lines that start like a sentence are likely body text.
+    if wc >= 7 and _starts_with_capital_letter(t) and t.endswith("."):
         return True
 
     return False
@@ -116,15 +129,15 @@ def _looks_like_body_sentence(text: str) -> bool:
         return False
 
     wc = _word_count(t)
-    if wc >= 14:
+    if wc >= 10 and len(t) >= 60:
         return True
 
     # sentence-ish punctuation / common glue words
-    if wc >= 10 and _SENTENCE_SIGNAL_RE.search(t):
+    if wc >= 8 and _SENTENCE_SIGNAL_RE.search(t):
         return True
 
     # Ends with a period and is not tiny
-    if wc >= 8 and t.endswith("."):
+    if wc >= 6 and t.endswith("."):
         return True
 
     return False
@@ -138,6 +151,7 @@ def _is_enumerated_body_line(text: str) -> bool:
     Keep:
       - "1.1 Tort: Definition ..." (TOC-like)
       - short enumerated headings like "1. Introduction"
+      - legal TOC-style decimal entries that contain punctuation but are still title-like
     """
     t = (text or "").strip()
     if not t:
@@ -145,13 +159,18 @@ def _is_enumerated_body_line(text: str) -> bool:
 
     # Keep decimal section headings (1.1 / 2.3.4) - common in TOCs.
     if _DECIMAL_SECTION_RE.match(t):
-        return False
+        if _word_count(t) <= 16 and len(t) <= 120:
+            return False
 
     if not _ENUM_PREFIX_RE.match(t):
         return False
 
     # If it's enumerated and sentence-like, it's almost surely body text.
     if _looks_like_body_sentence(t):
+        return True
+
+    # Even without obvious sentence glue, numbered prose lines are usually body text.
+    if _word_count(t) >= 8 and len(t) >= 50:
         return True
 
     return False
@@ -173,6 +192,36 @@ def _starts_with_capital_letter(text: str) -> bool:
     if not t:
         return False
     return bool(re.match(r"^[A-Z]", t))
+
+
+def _has_mixed_bold_segments(line: NormalizedLine | None) -> bool:
+    if line is None:
+        return False
+    return bool(getattr(line, "is_mix_bold", False))
+
+
+def _is_list_like_numbered_candidate(text: str) -> bool:
+    t = (text or "").strip()
+    if not t:
+        return False
+    return bool(
+        re.match(r"^\d+(\.\d+)*\s+[A-Za-z]", t)
+        or re.match(r"^[IVXLCDM]+\.\s+[A-Za-z]", t, re.IGNORECASE)
+        or re.match(r"^[A-Z]\.\s+[A-Za-z]", t)
+    )
+
+
+def _needs_continuity_check(c: HeadingCandidate, first_ln: NormalizedLine | None) -> bool:
+    text = (c.text or "").strip()
+    if first_ln is None:
+        return False
+    if getattr(first_ln, "is_bold", False) and _starts_with_lowercase_letter(text):
+        return True
+    if _is_list_like_numbered_candidate(text):
+        return True
+    if getattr(first_ln, "is_bold", False) and len(text.split()) >= 3 and len(text) >= 18:
+        return True
+    return False
 
 
 def _is_non_bold_lowercase_fake_heading(*, c: HeadingCandidate, first_ln: NormalizedLine | None) -> bool:
@@ -364,6 +413,7 @@ def gate_heading_validity_candidates(
     """
     kept: List[HeadingCandidate] = []
     log: List[Dict[str, Any]] = []
+    dropped: List[HeadingCandidate] = []
 
     # Optional layout lookup (for "bold+Capital never drop" safeguard)
     line_by_id: Dict[int, NormalizedLine] = {}
@@ -384,17 +434,9 @@ def gate_heading_validity_candidates(
     for idx, c in enumerate(candidates):
         text = c.text or ""
         reasons: List[str] = []
+        signals: List[str] = []
 
         # HARD RULE: if the candidate has strong layout heading signals, never drop it in this stage.
-        #
-        # Rationale: PyMuPDF-derived layout features are higher precision than semantic similarity
-        # (real headings are often semantically similar to adjacent body paragraphs).
-        #
-        # Protected if ANY of:
-        # - bold
-        # - large font (relative to page median)
-        # - large vertical gap above (relative to page median)
-        # - centered on the page
         if line_by_id:
             first_ln = line_by_id.get(int(c.start_line))
             t_strip = (text or "").lstrip()
@@ -407,31 +449,75 @@ def gate_heading_validity_candidates(
                     or getattr(first_ln, "centered", False)
                 )
                 if strong_layout and starts_cap:
-                    kept.append(c)
+                    signals.append("strong_layout_heading")
+                    kept.append(
+                        HeadingCandidate(
+                            id=c.id,
+                            text=c.text,
+                            start_line=c.start_line,
+                            end_line=c.end_line,
+                            before_context=list(c.before_context),
+                            after_context=list(c.after_context),
+                            full_context_preview=c.full_context_preview,
+                            is_valid=c.is_valid,
+                            valid_reason=c.valid_reason,
+                            is_toc=c.is_toc,
+                            toc_reason=c.toc_reason,
+                            confidence=c.confidence,
+                        )
+                    )
                     continue
-
+                leading_spaces = len(text) - len((text or "").lstrip(" "))
+                if not strong_layout and leading_spaces >= 2:
+                    sentence_like_spaced = (
+                        _word_count(t_strip) >= 10
+                        and (
+                            t_strip.endswith(".")
+                            or t_strip.count(",") >= 2
+                            or t_strip.count(".") >= 2
+                            or bool(re.search(r"\b(?:which|that|is|are|was|were|has|have)\b", t_strip, re.IGNORECASE))
+                        )
+                    )
+                    if sentence_like_spaced and not _DECIMAL_SECTION_RE.match(t_strip):
+                        reasons.append("indented_sentence_like_body_text")
+                        signals.append("indented_spacing_body_like")
 
         if _is_too_empty(text):
             reasons.append("empty_text")
-
+            signals.append("empty_text")
         if _is_obvious_noise_heading(text):
             reasons.append("obvious_noise")
-
+            signals.append("obvious_noise")
         if _is_paragraph_like(text):
             reasons.append("paragraph_like")
-
+            signals.append("paragraph_like")
         if _is_enumerated_body_line(text):
             reasons.append("enumerated_body_line")
-
+            signals.append("enumerated_body_line")
+        if _DECIMAL_SECTION_RE.match((text or "").strip()):
+            if _word_count(text) <= 16 and len((text or "").strip()) <= 120:
+                if "paragraph_like" in reasons:
+                    reasons.remove("paragraph_like")
+                if "enumerated_body_line" in reasons:
+                    reasons.remove("enumerated_body_line")
+                if "paragraph_like" in signals:
+                    signals.remove("paragraph_like")
+                if "enumerated_body_line" in signals:
+                    signals.remove("enumerated_body_line")
         if _starts_with_lowercase_letter(text):
             reasons.append("starts_with_lowercase")
+            signals.append("starts_with_lowercase")
 
-        # Extra deterministic filter: if the candidate line is not bold and starts lowercase,
-        # it is extremely likely to be mid-paragraph body text.
+        # Mixed bold/normal proxy -> reject as heading
         if line_by_id:
             first_ln = line_by_id.get(int(c.start_line))
+            if _has_mixed_bold_segments(first_ln):
+                reasons.append("mixed_bold_segments")
+                signals.append("mixed_bold_segments")
+
             if _is_non_bold_lowercase_fake_heading(c=c, first_ln=first_ln):
                 reasons.append("not_bold_and_starts_lowercase")
+                signals.append("not_bold_and_starts_lowercase")
 
         # MiniLM continuity gate: compare candidate to its local paragraph context (before/after)
         neigh = []
@@ -468,8 +554,6 @@ def gate_heading_validity_candidates(
             if is_fake:
                 reasons.append(f"embedding_fake({embed_reason})")
 
-        # MiniLM page-body centroid gate (requested): if candidate is semantically too close
-        # to the overall page body, it's likely body text. Apply only to non-bold candidates.
         if line_by_id and page_centroids:
             first_ln = line_by_id.get(int(c.start_line))
             if first_ln is not None and not getattr(first_ln, "is_bold", False):
@@ -489,18 +573,43 @@ def gate_heading_validity_candidates(
                         except Exception:
                             pass
 
+        first_ln = line_by_id.get(int(c.start_line)) if line_by_id else None
+        if _is_list_like_numbered_candidate(text):
+            signals.append("needs_continuity_check")
+        if _needs_continuity_check(c, first_ln):
+            signals.append("needs_continuity_check")
+
         if reasons:
+            reason_text = _normalize_reason(", ".join(reasons))
             log.append(
                 {
                     "heading_id": c.id,
                     "text": c.text,
                     "action": "drop_before_llm_validity",
-                    "reason": _normalize_reason(", ".join(reasons)),
+                    "reason": reason_text,
+                    "signals": sorted(set(signals)),
                 }
+            )
+            dropped.append(
+                HeadingCandidate(
+                    id=c.id,
+                    text=c.text,
+                    start_line=c.start_line,
+                    end_line=c.end_line,
+                    before_context=list(c.before_context),
+                    after_context=list(c.after_context),
+                    full_context_preview=c.full_context_preview,
+                    is_valid=False,
+                    valid_reason=reason_text,
+                    is_toc=c.is_toc,
+                    toc_reason=c.toc_reason,
+                    confidence=c.confidence,
+                )
             )
             continue
 
-        kept.append(c)
+        kept_c = c
+        kept.append(kept_c)
 
     return kept, log
 
@@ -608,6 +717,10 @@ def gate_toc_candidates(
             reasons.append("obvious_noise")
         if _is_paragraph_like(text):
             reasons.append("paragraph_like")
+        if _is_enumerated_body_line(text):
+            reasons.append("enumerated_body")
+        if _starts_with_capital_letter(text) and _looks_like_body_sentence(text):
+            reasons.append("sentence_like_body")
 
         if reasons:
             log.append(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from src.domain.document import NormalizedLine
+from src.core.models import NormalizedLine
 
 
 def normalize_text(pdf_extraction_result: Any) -> List[NormalizedLine]:

@@ -8,7 +8,10 @@ IMPORTANT:
 - Logic is intentionally minimal/stubbed for now (behavior will be implemented in later phases).
 """
 
+from __future__ import annotations
+
 from pathlib import Path
+import re
 from typing import Any, Optional
 
 from src.ingestion.layout_enrichment import lines_to_log
@@ -16,14 +19,10 @@ from src.ingestion.pdf_extractor import extract_pdf
 from src.ingestion.text_normalizer import normalize_text
 from src.structure.candidate_scoring import collect_candidates_scored
 from src.structure.fragments import build_fragments
-from src.structure.heading_validation import validate_headings
-from src.structure.hierarchy import assign_hierarchy
 from src.structure.noise_filter import mark_noise
 from src.structure.toc_cleaning import clean_toc
-from src.structure.toc_detection import classify_toc
-from src.structure.section_resolver import resolve_toc_sections
 from src.structure.logging.pipeline_logger import PipelineLogger
-from src.structure.pre_llm_gate import gate_heading_validity_candidates, gate_toc_candidates
+from src.structure.pre_llm_gate import gate_heading_validity_candidates
 
 
 def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:
@@ -63,88 +62,121 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
     candidates, scoring_log = collect_candidates_scored(lines)
     logger.write_stage("candidate_scoring", scoring_log)
 
+    # Layer 1: eliminate fake headings with deterministic pre-LLM rules.
     candidates, gate_log = gate_heading_validity_candidates(candidates, lines=lines)
     logger.write_stage("pre_llm_heading_gate", gate_log)
 
-    headings = validate_headings(candidates, logger=logger)
+    # Layer 2: continuity validation without any LLM intermediate step.
+    # This step computes deterministic signals and only keeps headings that remain plausible.
+    from .models import FinalHeading
 
-    headings, toc_gate_log = gate_toc_candidates(headings, lines=lines)
-    logger.write_stage("pre_llm_toc_gate", toc_gate_log)
+    def _continuity_signals(candidate: Any, line_obj: Any) -> list[str]:
+        text = (getattr(candidate, "text", "") or "").strip()
+        signals: list[str] = []
+        if text:
+            if text[0].isupper():
+                signals.append("starts_uppercase")
+            if len(text.split()) <= 12:
+                signals.append("short_heading_like")
+            if bool(getattr(line_obj, "is_bold", False)):
+                signals.append("bold")
+            if bool(getattr(line_obj, "large_font", False)):
+                signals.append("large_font")
+            if bool(getattr(line_obj, "centered", False)) or bool(getattr(line_obj, "is_centered", False)):
+                signals.append("centered")
+            if __import__("re").match(r"^(?:\d+(?:\.\d+)*|[IVXLCDM]+\.|[A-Z]\.|[a-z]\.)\s+", text, __import__("re").IGNORECASE):
+                signals.append("numbered_section")
+            if text.endswith(":"):
+                signals.append("trailing_colon")
+        return signals
 
-    # Stage 05: Gemini TOC classification (no fragment text used)
-    headings = classify_toc(headings, logger=logger)
+    headings = []
+    dropped_continuity_log = []
+    for c in candidates:
+        hid = getattr(c, "id", None) or getattr(c, "heading_id", None)
+        lid = _parse_line_id_from_heading_id(hid) or getattr(c, "start_line", None) or 0
+        line_obj = layout_by_line_id.get(lid)
+        signals = _continuity_signals(c, line_obj)
+        # deterministic drop for body-like text that survived layer 1
+        text = (getattr(c, "text", "") or "").strip()
+        word_count = len(text.split())
+        body_like = (
+            word_count >= 14
+            or text.endswith(".")
+            or "," in text
+            or ";" in text
+            or (word_count >= 8 and not signals)
+        )
 
-    # Stage 06: remove TOC blocks (3+ consecutive is_toc==true and is_valid==false)
-    headings = resolve_toc_sections(headings, lines=lines, logger=logger)
+        if body_like and not any(sig in signals for sig in ("bold", "large_font", "centered", "numbered_section")):
+            dropped_reason = "continuity_drop(body_like_no_heading_signals)"
+            dropped_continuity_log.append(
+                {
+                    "heading_id": hid,
+                    "text": text,
+                    "action": "drop_by_continuity",
+                    "reason": dropped_reason,
+                    "signals_used": signals,
+                    "line_id": lid,
+                }
+            )
+            continue
+
+        if text and not any(sig in signals for sig in ("bold", "large_font", "centered", "numbered_section")):
+            low_signal_body = (
+                len(text.split()) >= 10
+                or text.endswith(".")
+                or "," in text
+                or ";" in text
+                or ":" in text
+                or re.search(r"\b(?:which|that|because|therefore|however|whereas|although|since|while|when|where|this|these|those|they|it)\b", text, re.IGNORECASE)
+            )
+            if low_signal_body:
+                dropped_continuity_log.append(
+                    {
+                        "heading_id": hid,
+                        "text": text,
+                        "action": "drop_by_continuity",
+                        "reason": "continuity_drop(sentence_like_body)",
+                        "signals_used": signals,
+                        "line_id": lid,
+                    }
+                )
+                continue
+
+        continuity_reason = "continuity_valid(" + ",".join(signals) + ")" if signals else "continuity_valid(no_strong_signals)"
+        headings.append(
+            FinalHeading(
+                id=hid,
+                text=getattr(c, "text", ""),
+                line_id=int(lid) if isinstance(lid, int) else 0,
+                fragment_id=None,
+                parent_heading=None,
+                reason=continuity_reason,
+                signals_used=signals,
+                confidence=getattr(c, "confidence", None),
+            )
+        )
+    if dropped_continuity_log:
+        logger.write_stage("continuity_filter", dropped_continuity_log)
 
     fragments_result, fragments_log = build_fragments(lines, headings)
     logger.write_stage("fragments", fragments_log)
 
-    # Stage 08: hierarchy assignment (Gemini)
-    # Only use headings that survived validation + TOC filtering.
-    from .models import FinalHeading
-
-    fragment_map = getattr(fragments_result, "heading_to_fragment_id", {}) or {}
-    final_heads = [
-        FinalHeading(
-            id=getattr(h, "id", None) or getattr(h, "heading_id", None),
-            text=getattr(h, "text", ""),
-            level=1,
-            fragment_id=fragment_map.get(getattr(h, "id", None) or getattr(h, "heading_id", None)),
-        )
-        for h in headings
-        if getattr(h, "is_valid", None) is True and getattr(h, "is_toc", None) is False
-    ]
-
-    hierarchy = assign_hierarchy(final_heads, logger=logger)
-
-    # Backfill line_id/page_number from heading_id using stage-01 layout map
-    heading_id_to_line_id: dict[str, int] = {}
-    for fh in final_heads:
-        hid = getattr(fh, "id", None)
-        lid = _parse_line_id_from_heading_id(hid)
-        if isinstance(hid, str) and isinstance(lid, int):
-            heading_id_to_line_id[hid] = lid
-
-    hierarchy_log_items = []
-    for h in hierarchy:
+    heading_to_fragment_id = getattr(fragments_result, "heading_to_fragment_id", {}) or {}
+    for h in headings:
         hid = getattr(h, "id", None)
-        lid = _parse_line_id_from_heading_id(hid) if isinstance(hid, str) else None
-        if isinstance(hid, str) and isinstance(lid, int):
-            lid = heading_id_to_line_id.get(hid, lid)
+        if isinstance(hid, str) and hid in heading_to_fragment_id:
+            h.fragment_id = heading_to_fragment_id[hid]
 
-        page_number = None
-        if isinstance(lid, int):
-            layout = layout_by_line_id.get(lid)
-            if isinstance(layout, dict):
-                page_number = layout.get("page_number")
+    final_heads = headings
+    toc_out = clean_toc(final_heads, fragments=fragments_result.fragments)
 
-        hierarchy_log_items.append(
-            {
-                "heading_id": hid,
-                "text": getattr(h, "text", ""),
-                "line_id": lid,
-                "page_number": page_number,
-                "assigned_level": getattr(h, "level", None),
-                "parent_heading": getattr(h, "parent_heading", None),
-                "reason": getattr(h, "reason", None),
-                "signals_used": getattr(h, "signals_used", None),
-                "model": getattr(h, "hierarchy_model", None),
-                "latency_ms": getattr(h, "hierarchy_latency_ms", None),
-            }
-        )
-    logger.write_stage("hierarchy", hierarchy_log_items)
-
-    # Stage 09: final headings (post-clean)
-    toc_out = clean_toc(hierarchy, fragments=fragments_result.fragments)
+    # Stage 08: final headings after continuity validation and cleanup.
     final_headings_items = []
     for h in toc_out:
         hid = getattr(h, "id", None)
-
         lid = _parse_line_id_from_heading_id(hid) if isinstance(hid, str) else None
-        if isinstance(hid, str) and isinstance(lid, int):
-            lid = heading_id_to_line_id.get(hid, lid)
-
         page_number = None
         if isinstance(lid, int):
             layout = layout_by_line_id.get(lid)
@@ -163,8 +195,6 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
                 "confidence": getattr(h, "confidence", None),
                 "reason": getattr(h, "reason", None),
                 "signals_used": getattr(h, "signals_used", None),
-                "model": getattr(h, "hierarchy_model", None),
-                "latency_ms": getattr(h, "hierarchy_latency_ms", None),
             }
         )
     logger.write_stage("final_headings", final_headings_items)
@@ -180,23 +210,58 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
 
     # Production persistence (DB becomes source-of-truth)
     if persist_to_db:
+        from src.storage.book_repository import BookRepository
         from src.storage.knowledge_store import KnowledgeStore
+        from src.storage.schema import BookMetadata
         from src.storage.toc_repository import TocRepository
 
-        # Current system uses output/knowledge_base.db as default.
         store = KnowledgeStore()
+        book_repo = BookRepository(store)
         repo = TocRepository(store)
 
-        # For now, use pdf filename as book_id if caller didn't create a books row yet.
-        # Prefer: real book_id from books table once ingestion flow is wired.
-        book_id = Path(pdf_path).name
+        book = BookMetadata(
+            title=Path(pdf_path).stem,
+            subject="unknown",
+            source_file_name=Path(pdf_path).name,
+            total_pages=0,
+        )
+        book_repo.save_book(book)
 
         repo.save_full_toc(
-            book_id=book_id,
+            book_id=book.book_id,
             final_headings=result.final_headings,
             fragments=result.fragments,
             heading_to_fragment_id=result.heading_to_fragment_id,
             clear_existing=True,
         )
+
+        if logger is not None:
+            stage_files = {
+                "layout_lines": "01_layout_lines.json",
+                "noise_filter": "02_noise_filter.json",
+                "candidate_scoring": "03_candidate_scoring.json",
+                "pre_llm_heading_gate": "03b_pre_llm_heading_gate.json",
+                "llm_heading_validation": "04_llm_heading_validation.json",
+                "pre_llm_toc_gate": "04b_pre_llm_toc_gate.json",
+                "llm_toc_classification": "05_llm_toc_classification.json",
+                "toc_section_eval": "06_toc_section_eval.json",
+                "fragments": "07_fragments.json",
+                "hierarchy": "08_hierarchy.json",
+                "continuity_filter": "08b_continuity_filter.json",
+                "final_headings": "09_final_headings.json",
+                "decision_trace": "decision_trace.json",
+            }
+            for stage_name, filename in stage_files.items():
+                path = logger.run_dir / filename
+                if not path.exists():
+                    continue
+                payload = path.read_text(encoding="utf-8")
+                store.save_pipeline_artifact(
+                    book_id=book.book_id,
+                    stage_name=stage_name,
+                    filename=filename,
+                    payload=payload,
+                    run_id=getattr(logger, "run_id", None),
+                )
 
     return result, (logger if enable_logs else None)

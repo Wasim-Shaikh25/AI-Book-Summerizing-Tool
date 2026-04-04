@@ -5,7 +5,9 @@ from typing import Any, Optional
 from src.core.pipeline import run_pipeline
 
 from src.config import OUTPUT_FOLDER
-from src.generation.content_generation import ContentGenerationEngine
+# Content generation (full-book rewrite / Q&A generation) is not wired in this trimmed repo.
+# Keep import optional so ingestion + TOC/fragments pipeline can run.
+ContentGenerationEngine = None  # type: ignore
 from src.export.word_exporter import WordExporter
 from src.interaction.command_parser import CommandParser, IntentResult
 from src.storage.book_repository import BookRepository
@@ -30,7 +32,7 @@ class CommandLoop:
         self.toc_repo = TocRepository(self.store)
 
         self.retrieval_engine = None
-        self.gen_engine = ContentGenerationEngine()
+        self.gen_engine = ContentGenerationEngine() if ContentGenerationEngine else None
         self.word_exporter = WordExporter(output_folder=OUTPUT_FOLDER)
         self.rewriter: Optional[Any] = None
         self.current_file_path: Optional[str] = None

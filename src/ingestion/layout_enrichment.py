@@ -3,7 +3,7 @@ from __future__ import annotations
 from statistics import median
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from src.domain.document import NormalizedLine
+from src.core.models import NormalizedLine
 
 
 def _safe_float(x: Any) -> float:
@@ -30,6 +30,23 @@ def _is_bold_from_flags(flags: int) -> bool:
         return bool(flags & 16)
     except Exception:
         return False
+
+
+def _line_bold_mix_state(spans: List[Dict[str, Any]]) -> bool:
+    """
+    Return True only when a line contains a mixture of bold and non-bold spans.
+    A line where all spans are bold is not mixed bold.
+    """
+    if not spans:
+        return False
+    bold_states: List[bool] = []
+    for sp in spans:
+        if not isinstance(sp, dict):
+            continue
+        bold_states.append(_is_bold_from_flags(int(sp.get("flags") or 0)))
+    if not bold_states:
+        return False
+    return any(bold_states) and not all(bold_states)
 
 
 def _line_has_link(line: Dict[str, Any]) -> bool:
@@ -129,6 +146,7 @@ def _extract_lines_from_page_dict(
                     "x_center": x_center,
                     "font_size": font_size,
                     "is_bold": bool(bold_any),
+                    "is_mix_bold": _line_bold_mix_state(spans),
                     "page_width": page_w,
                     "page_height": page_h,
                     "is_link": _line_has_link(ln),
@@ -191,6 +209,11 @@ def _extract_lines_from_page_dict(
                 centered=centered,
                 large_font=large_font,
                 large_gap=large_gap,
+                x0=float(item.get("x0") or 0.0),
+                y0=float(item.get("y0") or 0.0),
+                x1=float(item.get("x1") or 0.0),
+                y1=float(item.get("y1") or 0.0),
+                is_italic=bool(item.get("is_italic") or False),
             )
         )
         line_id += 1
