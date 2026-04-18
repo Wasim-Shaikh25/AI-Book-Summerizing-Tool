@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from src.ingestion.layout_enrichment import lines_to_log
 from src.ingestion.pdf_extractor import extract_pdf
@@ -21,8 +21,35 @@ from src.structure.candidate_scoring import collect_candidates_scored
 from src.structure.fragments import build_fragments
 from src.structure.noise_filter import mark_noise
 from src.structure.toc_cleaning import clean_toc
+from src.structure.toc_repeat_detection import (
+    book_metadata_from_first_toc_section,
+    build_toc_sections_from_repeated_headings,
+    detect_deterministic_toc,
+)
 from src.structure.logging.pipeline_logger import PipelineLogger
 from src.structure.pre_llm_gate import gate_heading_validity_candidates
+
+
+def _final_headings_without_toc_and_metadata(
+    final_headings_items: List[Dict[str, Any]],
+    book_metadata_line_ids: Set[int],
+) -> List[Dict[str, Any]]:
+    """
+    Drop headings that are TOC, in a TOC section, or in book metadata (prefix + first TOC block).
+    Strips is_toc / in_toc_section from surviving rows.
+    """
+    out: List[Dict[str, Any]] = []
+    for it in final_headings_items:
+        if it.get("is_toc"):
+            continue
+        if it.get("in_toc_section"):
+            continue
+        lid = it.get("line_id")
+        if isinstance(lid, int) and lid in book_metadata_line_ids:
+            continue
+        row = {k: v for k, v in it.items() if k not in ("is_toc", "in_toc_section")}
+        out.append(row)
+    return out
 
 
 def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:
@@ -172,6 +199,20 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
     final_heads = headings
     toc_out = clean_toc(final_heads, fragments=fragments_result.fragments)
 
+    toc_seed_ids, det_seed_log = detect_deterministic_toc(lines, toc_out)
+    for h in toc_out:
+        lid = getattr(h, "line_id", None)
+        h.is_toc = bool(isinstance(lid, int) and lid in toc_seed_ids)
+
+    toc_section_line_ids, det_section_log = build_toc_sections_from_repeated_headings(lines, toc_out)
+    for h in toc_out:
+        lid = getattr(h, "line_id", None)
+        h.in_toc_section = bool(isinstance(lid, int) and lid in toc_section_line_ids)
+
+    det_toc_log_items = det_seed_log + det_section_log
+
+    book_metadata_line_ids, book_meta_log = book_metadata_from_first_toc_section(lines, det_section_log)
+
     # Stage 08: final headings after continuity validation and cleanup.
     final_headings_items = []
     for h in toc_out:
@@ -195,9 +236,17 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
                 "confidence": getattr(h, "confidence", None),
                 "reason": getattr(h, "reason", None),
                 "signals_used": getattr(h, "signals_used", None),
+                "is_toc": bool(getattr(h, "is_toc", False)),
+                "in_toc_section": bool(getattr(h, "in_toc_section", False)),
             }
         )
     logger.write_stage("final_headings", final_headings_items)
+    logger.write_stage(
+        "final_headings_2",
+        _final_headings_without_toc_and_metadata(final_headings_items, book_metadata_line_ids),
+    )
+    logger.write_stage("deterministic_toc", det_toc_log_items)
+    logger.write_stage("book_metadata", book_meta_log)
 
     # Return production artifacts (DB/export can be built from this)
     from .models import PipelineResult
@@ -249,6 +298,9 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
                 "hierarchy": "08_hierarchy.json",
                 "continuity_filter": "08b_continuity_filter.json",
                 "final_headings": "09_final_headings.json",
+                "deterministic_toc": "10_deterministic_toc.json",
+                "book_metadata": "11_book_metadata.json",
+                "final_headings_2": "12_final_headings_2.json",
                 "decision_trace": "decision_trace.json",
             }
             for stage_name, filename in stage_files.items():

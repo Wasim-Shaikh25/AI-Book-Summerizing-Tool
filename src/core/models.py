@@ -86,6 +86,7 @@ class FinalHeading:
     level: int = 1
     page_number: Optional[int] = None
     is_toc: bool = False
+    in_toc_section: bool = False
     reason: Optional[str] = None
     hierarchy_model: Optional[str] = None
     hierarchy_latency_ms: Optional[float] = None

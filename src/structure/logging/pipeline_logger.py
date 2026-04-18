@@ -54,6 +54,9 @@ class PipelineLogger:
         "08_hierarchy.json",
         "08b_continuity_filter.json",
         "09_final_headings.json",
+        "10_deterministic_toc.json",
+        "11_book_metadata.json",
+        "12_final_headings_2.json",
         "decision_trace.json",
     }
 
@@ -70,6 +73,9 @@ class PipelineLogger:
         "hierarchy": "08_hierarchy.json",
         "continuity_filter": "08b_continuity_filter.json",
         "final_headings": "09_final_headings.json",
+        "deterministic_toc": "10_deterministic_toc.json",
+        "book_metadata": "11_book_metadata.json",
+        "final_headings_2": "12_final_headings_2.json",
     }
 
     @staticmethod

@@ -7,12 +7,15 @@ It generates a simple, color-marked PDF that highlights:
 - noise lines (from 02_noise_filter.json)
 - final headings (from 09_final_headings.json)
 - fragments (from 07_fragments.json)
+- book document metadata (first TOC section, non-noise lines from 11_book_metadata.json, amber)
+- deterministic TOC section lines (`toc_section_span` in 10_deterministic_toc.json, else `is_toc`, purple)
+- legacy LLM TOC hints (from toc.json / 05_llm_toc_classification.json when present, orange)
 
 Implementation notes:
 - This is intentionally "best effort": if any optional dependency is missing
   (e.g. PyMuPDF), the caller will catch and report the error.
-- We try to avoid making assumptions about exact JSON schema beyond keys that
-  are already produced by PipelineLogger.
+- We try to avoid making assumptions about exact JSON schema beyond keys
+  that are already produced by PipelineLogger.
 """
 
 from __future__ import annotations
@@ -20,7 +23,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,10 +42,11 @@ def _load_json(path: Path) -> dict:
 
 def _iter_items(payload: dict) -> Iterable[dict]:
     """
-    PipelineLogger envelopes most stages as: {"stage": "...", "items": [...]}
+    PipelineLogger envelopes most stages as: {"stage": "...", "items": [...]}.
 
-    Some debug stages (e.g. 05b_toc_local_detection.json) have items as a dict:
+    Some debug stages may have items as a dict:
       {"items": {"toc_blocks": [...], "metadata": {...}, "highlight_ranges": [...]}}
+
     In that case, callers should use `_get_items_dict`.
     """
     items = payload.get("items")
@@ -63,7 +67,7 @@ def _index_layout_boxes(layout_payload: dict) -> Dict[int, _LineBox]:
     Expected layout payload item keys (best-effort):
       - line_id: int
       - page_number (1-based) OR page (0-based)
-      - bbox: [x0,y0,x1,y1]  OR x0,y0,x1,y1
+      - bbox: [x0,y0,x1,y1] OR x0,y0,x1,y1
     """
     out: Dict[int, _LineBox] = {}
     for it in _iter_items(layout_payload):
@@ -71,7 +75,6 @@ def _index_layout_boxes(layout_payload: dict) -> Dict[int, _LineBox]:
             continue
         line_id = int(it["line_id"])
 
-        # In our pipeline logs this is `page_number` and is 1-based.
         if "page_number" in it:
             page = int(it.get("page_number", 1)) - 1
         else:
@@ -85,10 +88,8 @@ def _index_layout_boxes(layout_payload: dict) -> Dict[int, _LineBox]:
             x1 = it.get("x1")
             y1 = it.get("y1")
             if None in (x0, y0, x1, y1):
-                # Can't draw without a bounding box.
                 continue
 
-        # Many lines may have zero bbox in the logs; skip them (nothing to draw).
         if float(x0) == 0.0 and float(y0) == 0.0 and float(x1) == 0.0 and float(y1) == 0.0:
             continue
 
@@ -106,8 +107,6 @@ def _index_layout_boxes(layout_payload: dict) -> Dict[int, _LineBox]:
 def _collect_noise_line_ids(noise_payload: dict) -> List[int]:
     ids: List[int] = []
     for it in _iter_items(noise_payload):
-        # 02_noise_filter.json payload is already "noise decisions"; it may not carry is_noise=True.
-        # Treat all listed line_ids as noise.
         if "line_id" in it:
             ids.append(int(it["line_id"]))
     return ids
@@ -116,11 +115,9 @@ def _collect_noise_line_ids(noise_payload: dict) -> List[int]:
 def _collect_heading_line_ids(final_headings_payload: dict) -> List[int]:
     ids: List[int] = []
     for it in _iter_items(final_headings_payload):
-        # 09_final_headings.json items should have line_id and/or start_line/end_line.
         if "line_id" in it:
             ids.append(int(it["line_id"]))
         else:
-            # Fallback: mark the heading range.
             s = it.get("start_line")
             e = it.get("end_line")
             if s is not None and e is not None:
@@ -143,6 +140,19 @@ def _collect_fragment_line_ids(fragments_payload: dict) -> List[int]:
     return ids
 
 
+def _collect_toc_line_ids(toc_payload: dict) -> List[int]:
+    ids: List[int] = []
+    for it in _iter_items(toc_payload):
+        if "line_id" in it:
+            ids.append(int(it["line_id"]))
+        else:
+            s = it.get("start_line")
+            e = it.get("end_line")
+            if s is not None and e is not None:
+                ids.extend(list(range(int(s), int(e) + 1)))
+    return ids
+
+
 def _draw_boxes(
     doc,
     boxes: Iterable[_LineBox],
@@ -152,10 +162,8 @@ def _draw_boxes(
     opacity: float = 0.25,
     width: float = 0.5,
 ) -> None:
-    # Requires PyMuPDF (fitz)
     import fitz  # type: ignore
 
-    # PyMuPDF expects color tuples in 0..1 floats, not named colors.
     stroke = stroke_rgb
     fill = fill_rgb
 
@@ -175,6 +183,123 @@ def _draw_boxes(
         )
 
 
+def _collect_toc_section_span_line_ids(det_toc_payload: dict) -> Set[int]:
+    """Line IDs inside `toc_section_span` items (prefers explicit `line_ids`)."""
+    ids: Set[int] = set()
+    for it in _iter_items(det_toc_payload):
+        if not isinstance(it, dict) or it.get("kind") != "toc_section_span":
+            continue
+        raw = it.get("line_ids")
+        if isinstance(raw, list) and raw:
+            for x in raw:
+                try:
+                    ids.add(int(x))
+                except (TypeError, ValueError):
+                    continue
+            continue
+        s = it.get("start_line_id")
+        e = it.get("end_line_id_inclusive")
+        if s is None or e is None:
+            continue
+        try:
+            si, ei = int(s), int(e)
+        except (TypeError, ValueError):
+            continue
+        if ei < si:
+            continue
+        ids.update(range(si, ei + 1))
+    return ids
+
+
+def _collect_book_metadata_line_ids(
+    book_meta_payload: dict,
+    noise_payload: dict,
+    layout_payload: dict,
+) -> Set[int]:
+    """
+    Same rule as `book_metadata_from_first_toc_section`: optional document prefix
+    range plus first TOC section range, minus noise.
+    """
+    noise_ids = set(_collect_noise_line_ids(noise_payload))
+    ids: Set[int] = set()
+
+    def _add_range(lo: int, hi: int) -> None:
+        if hi < lo:
+            return
+        for x in _iter_items(layout_payload):
+            if not isinstance(x, dict) or "line_id" not in x:
+                continue
+            try:
+                lid = int(x["line_id"])
+            except (TypeError, ValueError):
+                continue
+            if lid < lo or lid > hi:
+                continue
+            if lid in noise_ids:
+                continue
+            ids.add(lid)
+
+    for it in _iter_items(book_meta_payload):
+        if not isinstance(it, dict) or it.get("kind") != "book_metadata_first_toc":
+            continue
+        ps = it.get("document_prefix_start_line_id")
+        pe = it.get("document_prefix_end_line_id_inclusive")
+        if ps is not None and pe is not None:
+            try:
+                _add_range(int(ps), int(pe))
+            except (TypeError, ValueError):
+                pass
+
+        ss = it.get("first_toc_section_start_line_id")
+        se = it.get("first_toc_section_end_line_id_inclusive")
+        if ss is None:
+            ss = it.get("start_line_id")
+        if se is None:
+            se = it.get("end_line_id_inclusive")
+        if ss is not None and se is not None:
+            try:
+                _add_range(int(ss), int(se))
+            except (TypeError, ValueError):
+                pass
+    return ids
+
+
+def _collect_is_toc_line_ids(final_headings_payload: dict) -> Set[int]:
+    """Fallback: line IDs for headings marked `is_toc` (TOC seeds only)."""
+    ids: Set[int] = set()
+    for it in _iter_items(final_headings_payload):
+        if not isinstance(it, dict):
+            continue
+        if it.get("is_toc") is not True:
+            continue
+        lid = it.get("line_id")
+        if lid is None:
+            continue
+        try:
+            ids.add(int(lid))
+        except (TypeError, ValueError):
+            continue
+    return ids
+
+
+def _resolve_toc_payload(run: Path) -> dict:
+    """
+    TOC line highlights are optional: production runs may skip LLM TOC stages.
+
+    Prefer legacy debug filenames, then the whitelisted pipeline stage log.
+    """
+    candidates = [
+        run / "toc.json",
+        run.parent / "toc.json",
+        run / "05b_toc_local_detection.json",
+        run / "05_llm_toc_classification.json",
+    ]
+    for p in candidates:
+        if p.exists():
+            return _load_json(p)
+    return {"stage": "toc_overlay_skipped", "items": []}
+
+
 def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
     """
     Create a visualization PDF for a previously generated run directory.
@@ -186,7 +311,6 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
     noise_path = run / "02_noise_filter.json"
     fragments_path = run / "07_fragments.json"
     final_headings_path = run / "09_final_headings.json"
-    toc_local_path = run / "05b_toc_local_detection.json"
 
     if not layout_path.exists():
         raise FileNotFoundError(f"Missing {layout_path}")
@@ -196,64 +320,66 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
         raise FileNotFoundError(f"Missing {fragments_path}")
     if not final_headings_path.exists():
         raise FileNotFoundError(f"Missing {final_headings_path}")
-    if not toc_local_path.exists():
-        raise FileNotFoundError(f"Missing {toc_local_path}")
 
     layout = _load_json(layout_path)
     noise = _load_json(noise_path)
     fragments = _load_json(fragments_path)
     final_headings = _load_json(final_headings_path)
-    toc_local = _load_json(toc_local_path)
+    toc_source = _resolve_toc_payload(run)
+
+    det_toc_path = run / "10_deterministic_toc.json"
+    det_toc_ids: Set[int] = set()
+    if det_toc_path.exists():
+        det_toc_ids = _collect_toc_section_span_line_ids(_load_json(det_toc_path))
+    if not det_toc_ids:
+        det_toc_ids = _collect_is_toc_line_ids(final_headings)
+
+    book_meta_path = run / "11_book_metadata.json"
+    book_meta_ids: Set[int] = set()
+    if book_meta_path.exists():
+        book_meta_ids = _collect_book_metadata_line_ids(_load_json(book_meta_path), noise, layout)
 
     line_boxes = _index_layout_boxes(layout)
 
     noise_ids = set(_collect_noise_line_ids(noise))
     heading_ids = set(_collect_heading_line_ids(final_headings))
     fragment_ids = set(_collect_fragment_line_ids(fragments))
+    toc_ids = set(_collect_toc_line_ids(toc_source))
 
-    # TOC + Metadata ranges are emitted by local TOC detector as highlight_ranges.
-    toc_ids: set[int] = set()
-    meta_ids: set[int] = set()
-
-    toc_items = _get_items_dict(toc_local)
-    highlight_ranges = toc_items.get("highlight_ranges")
-    if isinstance(highlight_ranges, list):
-        for hr in highlight_ranges:
-            if not isinstance(hr, dict):
-                continue
-            label = (hr.get("label") or "").upper()
-            s = hr.get("start_line_id")
-            e = hr.get("end_line_id")
-            if s is None or e is None:
-                continue
-            ids = set(range(int(s), int(e) + 1))
-            if label == "TOC":
-                toc_ids |= ids
-            elif label == "METADATA":
-                meta_ids |= ids
-
-    # Convert to boxes (skip if we don't have bbox for that line_id).
-    noise_boxes = [line_boxes[i] for i in noise_ids if i in line_boxes]
-    heading_boxes = [line_boxes[i] for i in heading_ids if i in line_boxes]
-    fragment_boxes = [line_boxes[i] for i in fragment_ids if i in line_boxes]
-    toc_boxes = [line_boxes[i] for i in toc_ids if i in line_boxes]
-    meta_boxes = [line_boxes[i] for i in meta_ids if i in line_boxes]
+    boxes_noise = [line_boxes[i] for i in noise_ids if i in line_boxes]
+    boxes_toc_llm = [line_boxes[i] for i in toc_ids if i in line_boxes]
+    boxes_det_toc = [line_boxes[i] for i in det_toc_ids if i in line_boxes]
+    boxes_book_meta = [line_boxes[i] for i in book_meta_ids if i in line_boxes]
+    boxes_heading = [line_boxes[i] for i in heading_ids if i in line_boxes]
+    boxes_fragment = [line_boxes[i] for i in fragment_ids if i in line_boxes]
 
     import fitz  # type: ignore
 
     doc = fitz.open(pdf_path)
+    try:
+        _draw_boxes(doc, boxes_fragment, stroke_rgb=(0.1, 0.7, 0.9), fill_rgb=(0.1, 0.7, 0.9), opacity=0.08, width=0.4)
+        _draw_boxes(
+            doc,
+            boxes_book_meta,
+            stroke_rgb=(0.92, 0.68, 0.08),
+            fill_rgb=(0.92, 0.68, 0.08),
+            opacity=0.16,
+            width=0.75,
+        )
+        _draw_boxes(
+            doc,
+            boxes_det_toc,
+            stroke_rgb=(0.55, 0.15, 0.85),
+            fill_rgb=(0.55, 0.15, 0.85),
+            opacity=0.14,
+            width=0.85,
+        )
+        _draw_boxes(doc, boxes_heading, stroke_rgb=(0.2, 0.8, 0.2), fill_rgb=(0.2, 0.8, 0.2), opacity=0.16, width=0.7)
+        _draw_boxes(doc, boxes_toc_llm, stroke_rgb=(0.95, 0.45, 0.1), fill_rgb=(0.95, 0.45, 0.1), opacity=0.22, width=0.9)
+        _draw_boxes(doc, boxes_noise, stroke_rgb=(0.8, 0.2, 0.2), fill_rgb=(0.8, 0.2, 0.2), opacity=0.20, width=0.7)
 
-    # Draw order: fragments (light blue), noise (red), headings (green), TOC (yellow ON TOP), metadata (brown ON TOP)
-    # NOTE:
-    # - TOC lines often overlap with "final headings". If headings are drawn last, TOC looks green.
-    # - Metadata is often only a few title lines; draw it last with higher opacity so it's unmistakable.
-    _draw_boxes(doc, fragment_boxes, stroke_rgb=(0.2, 0.4, 1.0), fill_rgb=(0.2, 0.4, 1.0), opacity=0.12, width=0.3)
-    _draw_boxes(doc, noise_boxes, stroke_rgb=(1.0, 0.2, 0.2), fill_rgb=(1.0, 0.2, 0.2), opacity=0.22, width=0.4)
-    _draw_boxes(doc, heading_boxes, stroke_rgb=(0.2, 0.8, 0.2), fill_rgb=(0.2, 0.8, 0.2), opacity=0.18, width=0.6)
-    _draw_boxes(doc, toc_boxes, stroke_rgb=(1.0, 0.95, 0.0), fill_rgb=(1.0, 0.95, 0.0), opacity=0.35, width=1.2)
-    _draw_boxes(doc, meta_boxes, stroke_rgb=(0.60, 0.35, 0.20), fill_rgb=(0.60, 0.35, 0.20), opacity=0.45, width=1.6)
-
-    out_path = run / "visualization.pdf"
-    doc.save(out_path.as_posix())
-    doc.close()
-    return out_path
+        output_path = run / "visualization.pdf"
+        doc.save(str(output_path))
+        return output_path
+    finally:
+        doc.close()
