@@ -123,7 +123,12 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
 
     det_toc_log_items = det_seed_log + det_section_log
 
-    book_metadata_line_ids, book_meta_log = book_metadata_from_first_toc_section(lines, det_section_log)
+    book_metadata_line_ids, book_meta_log = book_metadata_from_first_toc_section(
+        lines,
+        det_section_log,
+        headings=toc_out,
+        fragments=getattr(fragments_result, "fragments", []) or [],
+    )
 
     # Stage 08: final headings after continuity validation and cleanup.
     final_headings_items = []

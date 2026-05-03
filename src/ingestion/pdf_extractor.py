@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import fitz  # PyMuPDF
@@ -136,6 +137,20 @@ def extract_visual_elements(pdf_path: str) -> List[Dict[str, Any]]:
     return elements
 
 
+def _title_from_path(pdf_path: str) -> str:
+    """Derive a clean book title from the PDF filename (no OCR, no I/O)."""
+    import re as _re
+    base = Path(pdf_path).stem
+    base = _re.sub(r'\[\d+-\d+\]', '', base)
+    base = _re.sub(r'Notes\s*(MU)?\s*(New\s*syllabus)?\s*\d{4}\s*\d{2}\s*\d{2}', '', base, flags=_re.IGNORECASE)
+    base = _re.sub(r'Notes\s*(\d{4}\s*\d{2}\s*\d{2})?', '', base, flags=_re.IGNORECASE)
+    for word in ("Notes", "PDF", "final", "summary"):
+        base = _re.sub(word, '', base, flags=_re.IGNORECASE)
+    base = _re.sub(r'chapter\s*\d+', '', base, flags=_re.IGNORECASE)
+    title = _re.sub(r'\s+', ' ', base).strip()
+    return title if title else "Rewritten Book Notes"
+
+
 def extract_pdf(pdf_path: str) -> Tuple[List[NormalizedLine], str]:
     """
     Phase: robust extraction.
@@ -144,13 +159,9 @@ def extract_pdf(pdf_path: str) -> Tuple[List[NormalizedLine], str]:
       (enriched_lines, book_title)
 
     - enriched_lines: List[NormalizedLine] with PyMuPDF-derived layout metadata.
-    - book_title: reuses the existing filename-based extractor from PDFReader for compatibility.
+    - book_title: derived from the filename (no OCR, no page-by-page text scan).
     """
-    # Title: keep existing behavior (filename-based) without changing logic.
-    # Use a stable default folder, but still allow passing explicit paths anywhere in the repo.
-    from src.config import PDF_FOLDER
-    reader = PDFReader(pdf_folder=PDF_FOLDER)
-    _pages_data, book_title = reader.read_all_pdfs(specific_file=pdf_path)
+    book_title = _title_from_path(pdf_path)
 
     # Layout: true structured extraction for universal pipeline
     pages_dict = _pymupdf_extract_pages_dict(pdf_path)

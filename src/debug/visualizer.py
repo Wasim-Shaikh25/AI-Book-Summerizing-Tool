@@ -278,27 +278,46 @@ def _collect_book_metadata_line_ids(
             ids.add(lid)
 
     for it in _iter_items(book_meta_payload):
-        if not isinstance(it, dict) or it.get("kind") != "book_metadata_first_toc":
+        if not isinstance(it, dict):
             continue
-        ps = it.get("document_prefix_start_line_id")
-        pe = it.get("document_prefix_end_line_id_inclusive")
-        if ps is not None and pe is not None:
-            try:
-                _add_range(int(ps), int(pe))
-            except (TypeError, ValueError):
-                pass
+        kind = it.get("kind")
+        if kind == "book_metadata_first_toc":
+            ps = it.get("document_prefix_start_line_id")
+            pe = it.get("document_prefix_end_line_id_inclusive")
+            if ps is not None and pe is not None:
+                try:
+                    _add_range(int(ps), int(pe))
+                except (TypeError, ValueError):
+                    pass
 
-        ss = it.get("first_toc_section_start_line_id")
-        se = it.get("first_toc_section_end_line_id_inclusive")
-        if ss is None:
-            ss = it.get("start_line_id")
-        if se is None:
-            se = it.get("end_line_id_inclusive")
-        if ss is not None and se is not None:
-            try:
-                _add_range(int(ss), int(se))
-            except (TypeError, ValueError):
-                pass
+            ss = it.get("first_toc_section_start_line_id")
+            se = it.get("first_toc_section_end_line_id_inclusive")
+            if ss is None:
+                ss = it.get("start_line_id")
+            if se is None:
+                se = it.get("end_line_id_inclusive")
+            if ss is not None and se is not None:
+                try:
+                    _add_range(int(ss), int(se))
+                except (TypeError, ValueError):
+                    pass
+        elif kind == "book_metadata_additional_toc":
+            # Later mini-TOC metadata: explicit heading_line_ids list
+            lids = it.get("heading_line_ids")
+            if isinstance(lids, list):
+                for x in lids:
+                    try:
+                        xi = int(x)
+                    except (TypeError, ValueError):
+                        continue
+                    # Only add if not noise
+                    for ly in _iter_items(layout_payload):
+                        if not isinstance(ly, dict) or ly.get("line_id") != xi:
+                            continue
+                        # find in noise set
+                        if xi not in noise_ids:
+                            ids.add(xi)
+                        break
     return ids
 
 

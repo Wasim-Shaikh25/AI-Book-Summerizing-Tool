@@ -22,7 +22,7 @@ import re
 from collections import Counter
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from src.core.models import FinalHeading, NormalizedLine
+from src.core.models import FinalHeading, NormalizedLine, Fragment
 
 
 def _norm(s: str) -> str:
@@ -329,6 +329,8 @@ def build_toc_sections_from_repeated_headings(
 def book_metadata_from_first_toc_section(
     lines: List[NormalizedLine],
     span_records: List[Dict[str, Any]],
+    headings: Optional[List[FinalHeading]] = None,
+    fragments: Optional[List[Fragment]] = None,
 ) -> Tuple[Set[int], List[Dict[str, Any]]]:
     """
     Book-level metadata for the opening of the document:
@@ -383,4 +385,89 @@ def book_metadata_from_first_toc_section(
     if i0 > 0:
         log_item["document_prefix_start_line_id"] = lines[0].line_id
         log_item["document_prefix_end_line_id_inclusive"] = lines[i0 - 1].line_id
-    return meta_ids, [log_item]
+    log_items: List[Dict[str, Any]] = [log_item]
+
+    # Additional metadata from subsequent mini-TOC sections:
+    # Policy: For every later TOC span, include ONLY the initial run of headings
+    # within that span whose fragments have NO body content (empty normalized text).
+    # Stop at the first heading with non-empty fragment text.
+    if headings and fragments and len(spans) > 1:
+        # Build quick lookups
+        frag_by_heading_id: Dict[str, Fragment] = {}
+        for f in fragments:
+            hid = getattr(f, "assigned_heading_id", None)
+            if isinstance(hid, str) and hid:
+                frag_by_heading_id[hid] = f
+
+        # Map line_id to NormalizedLine for noise checks
+        by_lid: Dict[int, NormalizedLine] = {ln.line_id: ln for ln in lines}
+
+        # All headings sorted by line_id for easy slicing
+        all_sorted = sorted(
+            [h for h in headings if isinstance(getattr(h, "line_id", None), int)],
+            key=lambda hh: int(getattr(hh, "line_id", 0)),
+        )
+
+        def _is_empty_frag(h) -> bool:
+            hid = getattr(h, "id", None)
+            lid = int(getattr(h, "line_id", 0) or 0)
+            if not isinstance(hid, str) or lid == 0:
+                return False
+            ln = by_lid.get(lid)
+            if ln is not None and getattr(ln, "is_noise", False):
+                return False
+            f = frag_by_heading_id.get(hid)
+            return (getattr(f, "text", None) or "").strip() == "" if f is not None else False
+
+        sorted_spans = sorted(spans, key=lambda r: int(r["start_line_id"]))
+
+        # Process spans after the first
+        for idx, sp in enumerate(sorted_spans[1:], start=1):
+            s_lid = int(sp.get("start_line_id"))
+            e_lid = int(sp.get("end_line_id_inclusive"))
+
+            # --- PRE-SPAN: walk backwards from span start, collect empty-fragment headings ---
+            # Lower bound: end of the previous span (don't go further back into already-classified meta)
+            prev_end = int(sorted_spans[idx - 1].get("end_line_id_inclusive"))
+            before_span = [
+                h for h in all_sorted
+                if prev_end < int(getattr(h, "line_id", 0)) < s_lid
+            ]
+            pre_lids: List[int] = []
+            for h in reversed(before_span):
+                if _is_empty_frag(h):
+                    pre_lids.append(int(getattr(h, "line_id", 0)))
+                else:
+                    break  # stop at first heading that has body content
+            pre_lids.reverse()  # restore ascending order
+
+            # --- IN-SPAN: walk forward inside [s_lid, e_lid], stop at first non-empty ---
+            in_span = [h for h in all_sorted if s_lid <= int(getattr(h, "line_id", 0)) <= e_lid]
+            in_lids: List[int] = []
+            for h in in_span:
+                if _is_empty_frag(h):
+                    in_lids.append(int(getattr(h, "line_id", 0)))
+                else:
+                    break
+
+            included_lids = pre_lids + in_lids
+            for lid in included_lids:
+                meta_ids.add(lid)
+
+            if included_lids:
+                log_items.append(
+                    {
+                        "kind": "book_metadata_additional_toc",
+                        "source": "later_toc_section_headings_with_empty_fragments",
+                        "page_number_start": sp.get("page_number_start"),
+                        "page_number_end": sp.get("page_number_end"),
+                        "start_line_id": s_lid,
+                        "end_line_id_inclusive": e_lid,
+                        "pre_span_heading_line_ids": pre_lids,
+                        "in_span_heading_line_ids": in_lids,
+                        "heading_line_ids": included_lids,
+                        "count": len(included_lids),
+                    }
+                )
+
+    return meta_ids, log_items
