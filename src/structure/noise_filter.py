@@ -11,6 +11,11 @@ _PAGE_NUM_PATTERNS = [
     re.compile(r"^\s*\d+\s*/\s*\d+\s*$", re.IGNORECASE),
     re.compile(r"^\s*\d+\s+of\s+\d+\s*$", re.IGNORECASE),
     re.compile(r"^\s*-\s*\d+\s*-\s*$", re.IGNORECASE),
+    # Spaced-letter variants: "29| P a g e", "13 | P a g e", "P a g e | 29"
+    re.compile(r"^\s*\d+\s*\|\s*[Pp]\s*[Aa]\s*[Gg]\s*[Ee]\s*$"),
+    re.compile(r"^\s*[Pp]\s*[Aa]\s*[Gg]\s*[Ee]\s*\|?\s*\d+\s*$"),
+    # Plain spaced "P a g e" without a number (just the word)
+    re.compile(r"^\s*[Pp]\s*[Aa]\s*[Gg]\s*[Ee]\s*$"),
 ]
 
 
@@ -174,6 +179,29 @@ def mark_noise(lines: Sequence[NormalizedLine]) -> tuple[List[NormalizedLine], L
                     noise_type = "header" if bucket == "top" else "footer"
                     pages_hit = len(text_occurrences.get((norm_text, bucket), set()))
                     reason = f"repeats_on_{pages_hit}_pages(>=2) + bucket={bucket}"
+
+        # 3) Spaced-letter page footer: "29| P a g e" etc. — appears on many pages
+        # These can have y_pos=0.0 due to PDF coordinate quirks and miss the margin sampler.
+        if decision == "keep" and _looks_like_page_number(ln.text):
+            norm_key = _normalize_for_header_footer(ln.text)  # "| p a g e" or "p a g e"
+            # Count how many pages this normalised form appeared on (any bucket)
+            pages_with_this = sum(
+                len(pset)
+                for (k, _b), pset in text_occurrences.items()
+                if k == norm_key
+            )
+            if pages_with_this == 0:
+                # Fall back: count raw occurrences across all lines in this run
+                pages_with_this = sum(
+                    1 for l2 in lines
+                    if _normalize_for_header_footer(l2.text) == norm_key
+                       and l2.page_number != ln.page_number
+                )
+            min_pages = max(2, threshold_pages // 2)
+            if pages_with_this >= min_pages:
+                decision = "noise"
+                noise_type = "page_number"
+                reason = f"spaced_page_pattern + seen_on_{pages_with_this}_pages"
 
         if decision == "noise":
             out.append(

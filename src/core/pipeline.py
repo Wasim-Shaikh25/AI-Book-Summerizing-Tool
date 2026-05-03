@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from src.ingestion.layout_enrichment import lines_to_log
-from src.ingestion.pdf_extractor import extract_pdf, extract_visual_elements
+from src.ingestion.pdf_extractor import extract_pdf
 from src.ingestion.text_normalizer import normalize_text
 from src.structure.candidate_scoring import collect_candidates_scored
 from src.structure.fragments import build_fragments
@@ -65,19 +65,15 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
     """
     logger = PipelineLogger.create(pdf_file=Path(pdf_path).name, enabled=enable_logs)
 
-    pdf_doc = extract_pdf(pdf_path)
-    lines = normalize_text(pdf_doc)
+    enriched_lines, book_title, visual_elements = extract_pdf(pdf_path)
+    lines = normalize_text((enriched_lines, book_title))
 
     # Stage 01: layout extraction
     layout_payload = lines_to_log(lines)
     logger.write_stage("layout_lines", layout_payload)
 
-    # Stage 01b: visual elements (tables, images, diagrams) — best-effort, never blocks pipeline
-    try:
-        visual_elements = extract_visual_elements(pdf_path)
-        logger.write_stage("visual_elements", visual_elements)
-    except Exception:
-        pass
+    # Stage 01b: visual elements (tables with cells, images with OCR, diagrams)
+    logger.write_stage("visual_elements", visual_elements)
 
     # Stage 02: noise detection (never deletes lines)
     lines, noise_log = mark_noise(lines)
@@ -129,6 +125,44 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
         headings=toc_out,
         fragments=getattr(fragments_result, "fragments", []) or [],
     )
+
+    # ── Doubted-section logic ────────────────────────────────────────────────
+    # If the first TOC section is found after page 3 (late TOC), the "document
+    # prefix + first TOC section" might actually contain real content.  Instead
+    # of marking those lines as metadata we flag them as "doubted for review":
+    #   - headings / fragments are left exactly as detected
+    #   - the lines are NOT metadata (book_metadata_line_ids cleared)
+    #   - two sub-groups are recorded:
+    #       doubted_toc_ids  : lines that are also TOC entries  → amber-orange
+    #       doubted_body_ids : remaining doubted lines           → coral
+    doubted_body_ids: Set[int] = set()
+    doubted_toc_ids: Set[int] = set()
+    first_toc_page: int = 0
+    for sr in det_section_log:
+        if sr.get("kind") == "toc_section_span":
+            pg = int(sr.get("page_number_start") or 0)
+            if pg and (first_toc_page == 0 or pg < first_toc_page):
+                first_toc_page = pg
+
+    if first_toc_page > 3:
+        # All TOC line IDs that were detected so far
+        _all_toc_ids = toc_seed_ids | toc_section_line_ids
+        doubted_toc_ids = book_metadata_line_ids & _all_toc_ids
+        doubted_body_ids = book_metadata_line_ids - doubted_toc_ids
+        book_metadata_line_ids = set()
+        book_meta_log = []
+
+    doubted_log = {
+        "first_toc_page": first_toc_page,
+        "is_doubted": first_toc_page > 3,
+        "reason": f"first_toc_found_on_page_{first_toc_page}" if first_toc_page > 3 else "first_toc_within_page_3",
+        "doubted_body_line_ids": sorted(doubted_body_ids),
+        "doubted_toc_line_ids": sorted(doubted_toc_ids),
+        "doubted_body_count": len(doubted_body_ids),
+        "doubted_toc_count": len(doubted_toc_ids),
+    }
+    logger.write_stage("doubted_sections", doubted_log)
+    # ────────────────────────────────────────────────────────────────────────
 
     # Stage 08: final headings after continuity validation and cleanup.
     final_headings_items = []

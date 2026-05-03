@@ -16,6 +16,29 @@ class OCRReader:
         if tesseract_cmd:
             pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
+    def extract_text_from_region(self, pdf_path: str, page_num: int, bbox: List[float]) -> str:
+        """
+        OCR a specific bounding-box region on one page (1-based page_num).
+
+        Renders only the clipped region at 2x zoom for quality, then runs
+        pytesseract.  Never scans the entire PDF — fixes the whole-document hang.
+        """
+        try:
+            doc = fitz.open(pdf_path)
+            try:
+                page = doc.load_page(page_num - 1)
+                clip = fitz.Rect(float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3]))
+                mat = fitz.Matrix(2.0, 2.0)
+                pix = page.get_pixmap(matrix=mat, clip=clip)
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                text = pytesseract.image_to_string(img).strip()
+                return text
+            finally:
+                doc.close()
+        except Exception as e:
+            logger.error(f"OCR region failed page={page_num} bbox={bbox}: {e}")
+            return ""
+
     def extract_text_from_images(self, pdf_path: str) -> List[Dict[str, Any]]:
         """
         Iterates through PDF pages, extracts images, and performs OCR.

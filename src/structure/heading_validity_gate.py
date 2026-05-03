@@ -20,6 +20,10 @@ except Exception:  # pragma: no cover
 _WS_RE = re.compile(r"\s+")
 _WORD_RE = re.compile(r"\b\w+\b")
 _PAGE_OF_RE = re.compile(r"^page\s*\d+\s*(of\s*\d+)?\s*$", re.IGNORECASE)
+# Spaced-letter page footer variants: "29| P a g e", "P a g e | 13", "P a g e"
+_SPACED_PAGE_RE = re.compile(
+    r"^\s*(?:\d+\s*\|?\s*)?[Pp]\s*[Aa]\s*[Gg]\s*[Ee]\s*(?:\|?\s*\d+)?\s*$"
+)
 _ROMAN_RE = re.compile(r"^(?=[MDCLXVI])M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})\.?$", re.IGNORECASE)
 
 # Enumerated-body patterns we can safely drop in the deterministic gate.
@@ -63,6 +67,10 @@ def _is_obvious_noise_heading(text: str) -> bool:
 
     # Standalone page markers like "Page 1" / "Page 1 of 133"
     if _PAGE_OF_RE.match(t):
+        return True
+
+    # Spaced-letter page footers: "29| P a g e", "P a g e | 13", "P a g e"
+    if _SPACED_PAGE_RE.match(t):
         return True
 
     # Pure numbers / page numbers / section numbers with nothing else.
@@ -505,6 +513,22 @@ def gate_heading_validity_candidates(
         text = c.text or ""
         reasons: List[str] = []
         signals: List[str] = []
+
+        # HARD RULE (priority 0): drop headings whose source line is inside a table or image OCR block.
+        # Table headers and image captions should never be treated as document headings.
+        if line_by_id:
+            _src_ln = line_by_id.get(int(c.start_line))
+            if _src_ln is not None and getattr(_src_ln, "source", "") in ("table", "image_ocr"):
+                log.append({
+                    "id": c.id,
+                    "text": c.text,
+                    "decision": "dropped",
+                    "reason": "inside_table_or_image",
+                    "source": getattr(_src_ln, "source", ""),
+                    "page_number": getattr(_src_ln, "page_number", None),
+                })
+                dropped.append(c)
+                continue
 
         # HARD RULE: if the candidate has strong layout heading signals, never drop it in this stage.
         if line_by_id:

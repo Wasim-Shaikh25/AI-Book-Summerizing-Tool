@@ -58,6 +58,7 @@ class PipelineLogger:
         "11_book_metadata.json",
         "12_final_headings_2.json",
         "13_visual_elements.json",
+        "14_doubted_sections.json",
         "decision_trace.json",
     }
 
@@ -78,6 +79,7 @@ class PipelineLogger:
         "book_metadata": "11_book_metadata.json",
         "final_headings_2": "12_final_headings_2.json",
         "visual_elements": "13_visual_elements.json",
+        "doubted_sections": "14_doubted_sections.json",
     }
 
     @staticmethod

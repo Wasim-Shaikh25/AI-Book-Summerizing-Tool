@@ -56,11 +56,24 @@ def _line_has_link(line: Dict[str, Any]) -> bool:
     return False
 
 
+def _bbox_overlap_ratio(a: List[float], b: List[float]) -> float:
+    """Fraction of bbox 'a' area that overlaps with bbox 'b'."""
+    ix0 = max(a[0], b[0]); iy0 = max(a[1], b[1])
+    ix1 = min(a[2], b[2]); iy1 = min(a[3], b[3])
+    if ix1 <= ix0 or iy1 <= iy0:
+        return 0.0
+    inter = (ix1 - ix0) * (iy1 - iy0)
+    a_area = (a[2] - a[0]) * (a[3] - a[1])
+    return inter / a_area if a_area > 0 else 0.0
+
+
 def _extract_lines_from_page_dict(
     *,
     page_dict: Dict[str, Any],
     page_number: int,
     line_id_start: int,
+    table_bboxes: Optional[List[List[float]]] = None,
+    image_ocr_items: Optional[List[Dict[str, Any]]] = None,
 ) -> Tuple[List[NormalizedLine], int]:
     """
     Extracts normalized lines from a single PyMuPDF page.get_text("dict") output.
@@ -72,6 +85,8 @@ def _extract_lines_from_page_dict(
 
     # First pass: collect raw line items
     raw_items: List[Dict[str, Any]] = []
+    _table_bboxes: List[List[float]] = table_bboxes or []
+
     for b in blocks:
         if not isinstance(b, dict):
             continue
@@ -139,6 +154,12 @@ def _extract_lines_from_page_dict(
             y_pos = y0  # top of line
 
             font_size = _safe_median(sizes, default=0.0)
+            line_bbox = [x0, y0, x1, y1]
+            # Tag lines whose bbox falls largely inside a detected table
+            in_table = any(
+                _bbox_overlap_ratio(line_bbox, tb) > 0.5
+                for tb in _table_bboxes
+            )
             raw_items.append(
                 {
                     "text": line_text,
@@ -150,15 +171,54 @@ def _extract_lines_from_page_dict(
                     "page_width": page_w,
                     "page_height": page_h,
                     "is_link": _line_has_link(ln),
-                    "bbox": [x0, y0, x1, y1],
+                    "bbox": line_bbox,
                     "x0": x0,
                     "y0": y0,
                     "x1": x1,
                     "y1": y1,
                     "font_name": str(spans[0].get("font") or ""),
                     "is_italic": bool(int(spans[0].get("flags") or 0) & 2),
+                    "source": "table" if in_table else "",
                 }
             )
+
+    # Inject image OCR lines: create raw_items from OCR text, sorted by y0 into the page
+    if image_ocr_items:
+        for ocr_item in image_ocr_items:
+            ocr_text = (ocr_item.get("text") or "").strip()
+            if not ocr_text:
+                continue
+            ib = ocr_item.get("bbox") or []
+            if len(ib) != 4:
+                continue
+            ix0, iy0, ix1, iy1 = float(ib[0]), float(ib[1]), float(ib[2]), float(ib[3])
+            img_h = max(iy1 - iy0, 1.0)
+            ocr_lines = [l for l in ocr_text.splitlines() if l.strip()]
+            n = max(len(ocr_lines), 1)
+            for i, lt in enumerate(ocr_lines):
+                est_y = iy0 + (i / n) * img_h
+                raw_items.append({
+                    "text": lt.strip(),
+                    "y_pos": est_y,
+                    "x_center": (ix0 + ix1) / 2.0,
+                    "font_size": 10.0,
+                    "is_bold": False,
+                    "is_mix_bold": False,
+                    "page_width": page_w,
+                    "page_height": page_h,
+                    "is_link": False,
+                    "bbox": [ix0, est_y, ix1, est_y + (img_h / n)],
+                    "x0": ix0,
+                    "y0": est_y,
+                    "x1": ix1,
+                    "y1": est_y + (img_h / n),
+                    "font_name": "",
+                    "is_italic": False,
+                    "source": "image_ocr",
+                })
+
+    # Sort all raw_items by y0 so OCR lines are interleaved in reading order
+    raw_items.sort(key=lambda it: float(it.get("y0") or it.get("y_pos") or 0.0))
 
     # Second pass: compute vertical gaps (per page)
     # Use y_pos ordering to compute gap above.
@@ -214,6 +274,7 @@ def _extract_lines_from_page_dict(
                 x1=float(item.get("x1") or 0.0),
                 y1=float(item.get("y1") or 0.0),
                 is_italic=bool(item.get("is_italic") or False),
+                source=str(item.get("source") or ""),
             )
         )
         line_id += 1
@@ -223,10 +284,27 @@ def _extract_lines_from_page_dict(
 
 def enrich_layout_from_pymupdf_pages(
     pages: List[Dict[str, Any]],
+    visual_elements: Optional[List[Dict[str, Any]]] = None,
 ) -> List[NormalizedLine]:
     """
     Convert a list of page dicts (from PyMuPDF page.get_text('dict')) into enriched NormalizedLine list.
+    Optionally accepts visual_elements to:
+      - tag lines inside table bboxes with source='table'
+      - inject image OCR text as source='image_ocr' lines (interleaved by y0)
     """
+    # Build per-page lookup from visual_elements
+    table_bboxes_by_page: Dict[int, List[List[float]]] = {}
+    image_ocr_by_page: Dict[int, List[Dict[str, Any]]] = {}
+    if visual_elements:
+        for el in visual_elements:
+            pg = int(el.get("page_number") or 0)
+            if not pg:
+                continue
+            if el.get("kind") == "table":
+                table_bboxes_by_page.setdefault(pg, []).append(el["bbox"])
+            elif el.get("kind") == "image" and el.get("text"):
+                image_ocr_by_page.setdefault(pg, []).append(el)
+
     out: List[NormalizedLine] = []
     line_id = 0
     for idx, page_dict in enumerate(pages):
@@ -235,6 +313,8 @@ def enrich_layout_from_pymupdf_pages(
             page_dict=page_dict,
             page_number=page_number,
             line_id_start=line_id,
+            table_bboxes=table_bboxes_by_page.get(page_number),
+            image_ocr_items=image_ocr_by_page.get(page_number),
         )
         out.extend(lines)
     return out
@@ -277,7 +357,8 @@ def lines_to_log(lines: Iterable[NormalizedLine]) -> List[Dict[str, Any]]:
                 "large_gap": ln.large_gap,
                 "large_font": ln.large_font,
                 "is_link": ln.is_link,
-                "is_table": False,
+                "is_table": getattr(ln, "source", "") == "table",
+                "source": getattr(ln, "source", ""),
                 "raw_line_index": raw_idx,
             }
         )

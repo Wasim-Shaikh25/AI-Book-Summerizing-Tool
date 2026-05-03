@@ -125,19 +125,62 @@ def _collect_heading_line_ids(final_headings_payload: dict) -> List[int]:
     return ids
 
 
-def _collect_fragment_line_ids(fragments_payload: dict) -> List[int]:
-    ids: List[int] = []
+# Pastel palette for alternating fragment colors (RGB 0-1)
+_FRAGMENT_PALETTE: List[Tuple[float, float, float]] = [
+    (0.55, 0.85, 1.00),  # sky blue
+    (0.65, 1.00, 0.75),  # mint green
+    (1.00, 0.92, 0.55),  # soft yellow
+    (1.00, 0.75, 0.85),  # blush pink
+    (0.80, 0.70, 1.00),  # lavender
+    (0.70, 1.00, 0.95),  # aqua
+    (1.00, 0.80, 0.60),  # peach
+    (0.85, 0.85, 0.85),  # light gray
+]
+
+
+def _collect_fragments_ordered(fragments_payload: dict) -> List[Tuple[int, int]]:
+    """Return sorted list of (start_line, end_line) per fragment."""
+    pairs: List[Tuple[int, int]] = []
     for it in _iter_items(fragments_payload):
         s = it.get("start_line")
         e = it.get("end_line")
         if s is None or e is None:
             continue
-        s_i = int(s)
-        e_i = int(e)
-        if e_i < s_i:
-            continue
-        ids.extend(list(range(s_i, e_i + 1)))
-    return ids
+        s_i, e_i = int(s), int(e)
+        if e_i >= s_i:
+            pairs.append((s_i, e_i))
+    pairs.sort()
+    return pairs
+
+
+def _draw_fragments_colored(
+    doc,
+    fragments: List[Tuple[int, int]],
+    line_boxes: Dict[int, "_LineBox"],
+    claimed: Set[int],
+) -> None:
+    """Draw each fragment body line-by-line in a cycling pastel color so section
+    boundaries are visible without creating large merged blocks."""
+    import fitz  # type: ignore
+
+    for frag_idx, (s, e) in enumerate(fragments):
+        color = _FRAGMENT_PALETTE[frag_idx % len(_FRAGMENT_PALETTE)]
+        for lid in range(s, e + 1):
+            if lid in claimed or lid not in line_boxes:
+                continue
+            b = line_boxes[lid]
+            if b.page < 0 or b.page >= len(doc):
+                continue
+            rect = fitz.Rect(b.x0, b.y0, b.x1, b.y1)
+            doc[b.page].draw_rect(
+                rect,
+                color=color,
+                fill=color,
+                overlay=True,
+                width=0.3,
+                fill_opacity=0.10,
+                stroke_opacity=0.20,
+            )
 
 
 def _collect_toc_line_ids(toc_payload: dict) -> List[int]:
@@ -396,6 +439,16 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
     if book_meta_path.exists():
         book_meta_ids = _collect_book_metadata_line_ids(_load_json(book_meta_path), noise, layout)
 
+    doubted_body_ids: Set[int] = set()
+    doubted_toc_ids: Set[int] = set()
+    doubted_path = run / "14_doubted_sections.json"
+    if doubted_path.exists():
+        dp = _load_json(doubted_path)
+        _di = dp.get("items")
+        _d = _di if isinstance(_di, dict) else (dp if isinstance(dp, dict) else {})
+        doubted_body_ids = set(int(x) for x in (_d.get("doubted_body_line_ids") or []))
+        doubted_toc_ids  = set(int(x) for x in (_d.get("doubted_toc_line_ids")  or []))
+
     visual_elements_path = run / "13_visual_elements.json"
     visual_elements: List[dict] = []
     if visual_elements_path.exists():
@@ -408,7 +461,8 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
 
     noise_ids = set(_collect_noise_line_ids(noise))
     heading_ids = set(_collect_heading_line_ids(final_headings))
-    fragment_ids = set(_collect_fragment_line_ids(fragments))
+    fragment_pairs = _collect_fragments_ordered(fragments)
+    fragment_ids = set(lid for s, e in fragment_pairs for lid in range(s, e + 1))
     toc_ids = set(_collect_toc_line_ids(toc_source))
 
     # Priority deduplication: each line_id gets exactly ONE color layer.
@@ -420,18 +474,30 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
         _claimed.update(ids)
         return result
 
-    boxes_noise     = _exclusive(noise_ids)
-    boxes_det_toc   = _exclusive(det_toc_ids)
-    boxes_book_meta = _exclusive(book_meta_ids)
-    boxes_toc_llm   = _exclusive(toc_ids)
-    boxes_heading   = _exclusive(heading_ids)
-    boxes_fragment  = _exclusive(fragment_ids)
+    boxes_noise          = _exclusive(noise_ids)
+    boxes_doubted_toc    = _exclusive(doubted_toc_ids)
+    boxes_det_toc        = _exclusive(det_toc_ids)
+    boxes_book_meta      = _exclusive(book_meta_ids)
+    boxes_toc_llm        = _exclusive(toc_ids)
+    boxes_heading        = _exclusive(heading_ids)
+    boxes_doubted_body   = _exclusive(doubted_body_ids)
+    # fragments drawn separately with per-fragment colors; still claim their ids
+    _claimed.update(fragment_ids)
 
     import fitz  # type: ignore
 
     doc = fitz.open(pdf_path)
     try:
-        _draw_boxes(doc, boxes_fragment, stroke_rgb=(0.1, 0.7, 0.9), fill_rgb=(0.1, 0.7, 0.9), opacity=0.08, width=0.4)
+        # Fragment coloring disabled per user request — body text left plain white
+        # _draw_fragments_colored(doc, fragment_pairs, line_boxes, set(_claimed))
+        # Doubted body lines — coral/salmon
+        _draw_boxes(doc, boxes_doubted_body,
+                    stroke_rgb=(0.95, 0.35, 0.25), fill_rgb=(0.95, 0.35, 0.25),
+                    opacity=0.18, width=0.9)
+        # Doubted TOC lines — amber-orange (distinct from metadata gold)
+        _draw_boxes(doc, boxes_doubted_toc,
+                    stroke_rgb=(0.95, 0.60, 0.10), fill_rgb=(0.95, 0.60, 0.10),
+                    opacity=0.20, width=1.0)
         _draw_boxes(
             doc,
             boxes_book_meta,
@@ -459,9 +525,9 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
         # Images  — sky blue border
         _draw_visual_elements(doc, visual_elements, "image",
                               stroke_rgb=(0.1, 0.45, 0.9), fill_rgb=(0.3, 0.6, 1.0), opacity=0.14, width=1.2)
-        # Diagrams — lavender border
+        # Diagrams — lavender border (now with text extraction check to reduce false positives)
         _draw_visual_elements(doc, visual_elements, "diagram",
-                              stroke_rgb=(0.5, 0.2, 0.8), fill_rgb=(0.7, 0.5, 1.0), opacity=0.10, width=1.0)
+                      stroke_rgb=(0.5, 0.2, 0.8), fill_rgb=(0.7, 0.5, 1.0), opacity=0.10, width=1.0)
 
         output_path = run / "visualization.pdf"
         doc.save(str(output_path))

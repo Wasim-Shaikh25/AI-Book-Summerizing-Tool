@@ -35,6 +35,7 @@ class NormalizedLine:
     indent_level: int = 0
     vertical_gap_above: float = 0.0
     vertical_gap_below: float = 0.0
+    source: str = ""  # "": normal text  |  "table": inside table cell  |  "image_ocr": from OCR
 
 
 @dataclass
