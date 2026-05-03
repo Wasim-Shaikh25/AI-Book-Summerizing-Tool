@@ -22,7 +22,7 @@ _WORD_RE = re.compile(r"\b\w+\b")
 _PAGE_OF_RE = re.compile(r"^page\s*\d+\s*(of\s*\d+)?\s*$", re.IGNORECASE)
 _ROMAN_RE = re.compile(r"^(?=[MDCLXVI])M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})\.?$", re.IGNORECASE)
 
-# Enumerated-body patterns we can safely drop before LLM.
+# Enumerated-body patterns we can safely drop in the deterministic gate.
 # Goal: remove "1. This is a sentence..." / "a) This is a sentence..." which are almost always body text.
 _ENUM_PREFIX_RE = re.compile(
     r"^\s*(?:"
@@ -32,7 +32,7 @@ _ENUM_PREFIX_RE = re.compile(
     r")\s+"
 )
 # True headings often look like 1.1 / 2.3.4; we should NOT treat those as enumerated-body.
-_DECIMAL_SECTION_RE = re.compile(r"^\s*\d+(\.\d+){1,6}\b")
+_DECIMAL_SECTION_RE = re.compile(r"^\s*\d+(\.\s*\d+){1,6}\b")
 # Cheap sentence signals (domain agnostic)
 _SENTENCE_SIGNAL_RE = re.compile(r"[,\.;:]\s|(?:\bwhich\b|\bthat\b|\bis\b|\bare\b|\bwas\b|\bwere\b|\bhas\b|\bhave\b)", re.IGNORECASE)
 
@@ -42,6 +42,13 @@ _MINILM: Any = None  # lazy-loaded singleton
 
 def _word_count(text: str) -> int:
     return len(_WORD_RE.findall(text or ""))
+
+
+_TRAILING_FUNC_WORD_RE = re.compile(
+    r"\b(?:the|a|an|of|in|to|for|with|from|by|at|on|and|or|is|are|was|were|that|which|this|be|has|have|its|their|his|her|it|as)\s*$",
+    re.IGNORECASE,
+)
+_HYPHEN_SLUG_RE = re.compile(r"\b\w+(-\w+){3,}\b")
 
 
 def _is_obvious_noise_heading(text: str) -> bool:
@@ -75,7 +82,7 @@ def _is_obvious_noise_heading(text: str) -> bool:
     return False
 
 
-def _is_paragraph_like(text: str) -> bool:
+def _is_paragraph_like(text: str, is_bold: bool = False, is_mix_bold: bool = False) -> bool:
     """
     Conservative heuristic: identify lines that are almost certainly body sentences.
 
@@ -85,10 +92,16 @@ def _is_paragraph_like(text: str) -> bool:
 
     Important: decimal TOC-like headings such as "1.1 Tort: Definition, ..." must not be
     rejected merely because they contain commas or colons. Those are common in legal TOCs.
+    
+    NEW: Don't penalize : and , in fully bold lines. Reject mixed bold lines.
     """
     t = (text or "").strip()
     if not t:
         return False
+
+    # NEW: Reject mixed bold lines immediately
+    if is_mix_bold:
+        return True
 
     wc = _word_count(t)
 
@@ -99,9 +112,14 @@ def _is_paragraph_like(text: str) -> bool:
         if len(t) <= 110 and (t.count(",") <= 2 or t.count(":") <= 1):
             return False
 
+    # NEW: Don't penalize : and , in fully bold lines
+    punctuation_to_check = [";", "."]
+    if not is_bold:
+        punctuation_to_check.extend([",", ":"])
+
     # Strong body-text signal: long prose-like lines with sentence punctuation.
     if wc >= 8 and len(t) >= 70:
-        if t.endswith(".") or "," in t or ";" in t or ":" in t:
+        if any(punct in t for punct in punctuation_to_check):
             return True
 
     # Sentence-style lines with common glue words and enough length are likely body text.
@@ -207,10 +225,43 @@ def _starts_with_lowercase_letter(text: str) -> bool:
 
 
 def _starts_with_capital_letter(text: str) -> bool:
-    t = (text or "").lstrip()
-    if not t:
+    t = (text or "").strip()
+    return bool(t) and bool(re.match(r"^[A-Z]", t))
+
+
+def _is_multi_line_bold_heading(candidate: Any, lines_by_id: Dict[int, Any]) -> bool:
+    """
+    Detect if a heading candidate extends across multiple lines with full bold formatting.
+    Reject headings that span across 2+ consecutive lines all in bold.
+    """
+    if not lines_by_id or not hasattr(candidate, 'start_line') or not hasattr(candidate, 'end_line'):
         return False
-    return bool(re.match(r"^[A-Z]", t))
+    
+    try:
+        start_line = int(candidate.start_line)
+        end_line = int(candidate.end_line)
+        
+        # Check if spans multiple lines (more than 1 line difference)
+        if end_line - start_line >= 2:  # Spans 3+ lines (current, next, and third)
+            consecutive_bold_lines = 0
+            current_line = start_line
+            
+            while current_line <= end_line and current_line in lines_by_id:
+                line_obj = lines_by_id[current_line]
+                if getattr(line_obj, "is_bold", False) and not getattr(line_obj, "is_mix_bold", False):
+                    consecutive_bold_lines += 1
+                else:
+                    break
+                current_line += 1
+            
+            # Reject if we have 3+ consecutive bold lines
+            if consecutive_bold_lines >= 3:
+                return True
+                
+    except Exception:
+        pass
+    
+    return False
 
 
 def _has_mixed_bold_segments(line: NormalizedLine | None) -> bool:
@@ -419,10 +470,10 @@ def gate_heading_validity_candidates(
     lines: Sequence[NormalizedLine] | None = None,
 ) -> Tuple[List[HeadingCandidate], List[Dict[str, Any]]]:
     """
-    Pre-LLM gate for heading validity.
+    Deterministic gate for heading validity.
 
     Goal:
-      - Reduce obvious non-headings BEFORE calling the LLM.
+      - Reduce obvious non-headings using layout and embedding heuristics only.
       - Be conservative: only drop when we're extremely confident.
 
     Notes:
@@ -467,7 +518,16 @@ def gate_heading_validity_candidates(
                     or getattr(first_ln, "large_gap", False)
                     or getattr(first_ln, "centered", False)
                 )
-                if strong_layout and starts_cap:
+                is_numbered_sec = bool(_DECIMAL_SECTION_RE.match(t_strip))
+                t_wc = _word_count(t_strip)
+                max_wc = 20 if is_numbered_sec else 13
+                ends_with_func_word = bool(_TRAILING_FUNC_WORD_RE.search(t_strip))
+                has_slug = bool(_HYPHEN_SLUG_RE.search(t_strip))
+                
+                if (strong_layout and starts_cap
+                        and t_wc <= max_wc
+                        and not ends_with_func_word
+                        and not has_slug):
                     signals.append("strong_layout_heading")
                     kept.append(
                         HeadingCandidate(
@@ -507,7 +567,20 @@ def gate_heading_validity_candidates(
         if _is_obvious_noise_heading(text):
             reasons.append("obvious_noise")
             signals.append("obvious_noise")
-        if _is_paragraph_like(text):
+        # Extract bold information from line if available
+        is_bold = False
+        is_mix_bold = False
+        if line_by_id and int(c.start_line) in line_by_id:
+            line_obj = line_by_id[int(c.start_line)]
+            is_bold = getattr(line_obj, "is_bold", False)
+            is_mix_bold = getattr(line_obj, "is_mix_bold", False)
+        
+        # NEW: Reject multi-line bold headings
+        if _is_multi_line_bold_heading(c, line_by_id):
+            reasons.append("multi_line_bold_heading")
+            signals.append("multi_line_bold_heading")
+        
+        if _is_paragraph_like(text, is_bold=is_bold, is_mix_bold=is_mix_bold):
             reasons.append("paragraph_like")
             signals.append("paragraph_like")
         if _is_enumerated_body_line(text):
@@ -604,7 +677,7 @@ def gate_heading_validity_candidates(
                 {
                     "heading_id": c.id,
                     "text": c.text,
-                    "action": "drop_before_llm_validity",
+                    "action": "drop_heading_validity_gate",
                     "reason": reason_text,
                     "signals": sorted(set(signals)),
                 }
@@ -639,17 +712,16 @@ def gate_toc_candidates(
     lines: Sequence[NormalizedLine] | None = None,
 ) -> Tuple[List[HeadingCandidate], List[Dict[str, Any]]]:
     """
-    Pre-LLM gate for TOC classification.
+    Deterministic gate for TOC-oriented heading signals (optional / not used by current run_pipeline).
 
     Goal:
-      - Avoid spending TOC LLM calls when we can deterministically classify TOC entries
-        using layout metadata (structured PDFs).
+      - When layout metadata allows, classify TOC-like entries without an LLM.
       - Be conservative: only mark is_toc True/False when confidence is high.
       - Drop only extreme junk (same as before).
 
     Output:
       - Returns (headings_with_possible_is_toc_set, log_items)
-      - Some headings may have is_toc pre-filled. Remaining headings are left as-is for LLM.
+      - Some headings may have is_toc pre-filled. Remaining headings are left unchanged.
 
     Deterministic TOC signals used (when `lines` is provided):
       - Heading located on early pages (configurable window)
@@ -734,7 +806,11 @@ def gate_toc_candidates(
             reasons.append("empty_text")
         if _is_obvious_noise_heading(text):
             reasons.append("obvious_noise")
-        if _is_paragraph_like(text):
+        # Extract bold information from heading if available
+        is_bold = getattr(h, "is_bold", False)
+        is_mix_bold = getattr(h, "is_mix_bold", False)
+        
+        if _is_paragraph_like(text, is_bold=is_bold, is_mix_bold=is_mix_bold):
             reasons.append("paragraph_like")
         if _is_enumerated_body_line(text):
             reasons.append("enumerated_body")
@@ -746,7 +822,7 @@ def gate_toc_candidates(
                 {
                     "heading_id": h.id,
                     "text": h.text,
-                    "action": "drop_before_llm_toc",
+                    "action": "drop_toc_gate",
                     "reason": _normalize_reason(", ".join(reasons)),
                     "is_valid": h.is_valid,
                     "is_toc": h.is_toc,
@@ -782,7 +858,7 @@ def gate_toc_candidates(
                 {
                     "heading_id": updated.id,
                     "text": updated.text,
-                    "action": "mark_is_toc_true_before_llm",
+                    "action": "mark_is_toc_true",
                     "reason": updated.toc_reason,
                     "page_number": pn,
                 }
@@ -791,7 +867,7 @@ def gate_toc_candidates(
 
         # Deterministic "definitely NOT TOC" signals (very conservative):
         # - If it is far beyond the early pages window, it's extremely unlikely to be a TOC entry.
-        # This allows us to skip LLM calls for the main-body headings in structured PDFs.
+        # This avoids false TOC labels for main-body headings in structured PDFs.
         if h.is_toc is None and pn > max_toc_pages and pn > 0:
             updated = HeadingCandidate(
                 id=h.id,
@@ -811,7 +887,7 @@ def gate_toc_candidates(
                 {
                     "heading_id": updated.id,
                     "text": updated.text,
-                    "action": "mark_is_toc_false_before_llm",
+                    "action": "mark_is_toc_false",
                     "reason": updated.toc_reason,
                     "page_number": pn,
                 }

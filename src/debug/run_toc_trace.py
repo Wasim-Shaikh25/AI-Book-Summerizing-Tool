@@ -1,21 +1,13 @@
 """
-Debug runner: end-to-end TOC trace with deterministic artifacts.
+Debug runner: end-to-end TOC trace with deterministic pipeline artifacts.
 
-Goal (triage):
-- Show what is sent to Gemini (heading validation request payload)
-- Show what is received from Gemini (raw + parsed response)
-- Show TOC after:
-  1) candidate collection (raw)
-  2) Gemini filtering (validated/filtered)
-  3) fragment building
-  4) hierarchy assignment
-  5) TOC cleaning
-
-This is intentionally a debug-only entrypoint. It does NOT try to "fix" logic.
+Runs the same path as production (`run_pipeline` with logging + optional DB persist):
+  layout → noise → candidates → heading gate → continuity → fragments → TOC pass-through
+  → deterministic TOC / metadata → final headings JSON.
 
 Flags:
   --visualize       Write visualization.pdf in the run folder.
-  --open-folder       After the run, open the run folder in the system file manager (Windows: Explorer).
+  --open-folder     Open the run folder in the system file manager (Windows: Explorer).
 """
 
 from __future__ import annotations
@@ -36,10 +28,10 @@ def run(pdf_path: str) -> Path:
     Thin debug wrapper around the production pipeline.
 
     Behavior:
-      - Calls src.core.pipeline.run_pipeline(...) with logging ENABLED
+      - Calls src.book_pipeline.run_pipeline(...) with logging ENABLED
       - Returns the created run folder path from the production logger
     """
-    from src.core.pipeline import run_pipeline
+    from src.book_pipeline import run_pipeline
 
     pdf_abs = str(Path(pdf_path).resolve())
     _, logger = run_pipeline(pdf_abs, enable_logs=True, persist_to_db=True)

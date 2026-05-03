@@ -270,6 +270,7 @@ def lines_to_log(lines: Iterable[NormalizedLine]) -> List[Dict[str, Any]]:
                 "font_name": str(getattr(ln, "font_name", "")),
                 "is_bold": ln.is_bold,
                 "is_italic": bool(getattr(ln, "is_italic", False)),
+                "is_mix_bold": ln.is_mix_bold,
                 "x_center": ln.x_center,
                 "centered": ln.centered,
                 "vertical_gap_above": ln.vertical_gap_above,

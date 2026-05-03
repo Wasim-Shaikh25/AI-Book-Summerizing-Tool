@@ -85,8 +85,8 @@ def mark_noise(lines: Sequence[NormalizedLine]) -> tuple[List[NormalizedLine], L
     # Page universe
     pages = sorted({ln.page_number for ln in lines if ln.page_number is not None})
     total_pages = len(pages)
-    # Header/footer repetition rule (as requested): mark as noise if it appears on 2+ pages.
-    threshold_pages = 2 if total_pages else 0
+    # Header/footer repetition rule (updated): mark as noise if it appears on 20+ pages.
+    threshold_pages = 20 if total_pages >= 20 else total_pages if total_pages > 0 else 0
 
     # Group lines by page
     by_page: Dict[int, List[NormalizedLine]] = {}

@@ -11,11 +11,10 @@ IMPORTANT:
 from __future__ import annotations
 
 from pathlib import Path
-import re
 from typing import Any, Dict, List, Optional, Set
 
 from src.ingestion.layout_enrichment import lines_to_log
-from src.ingestion.pdf_extractor import extract_pdf
+from src.ingestion.pdf_extractor import extract_pdf, extract_visual_elements
 from src.ingestion.text_normalizer import normalize_text
 from src.structure.candidate_scoring import collect_candidates_scored
 from src.structure.fragments import build_fragments
@@ -26,8 +25,12 @@ from src.structure.toc_repeat_detection import (
     build_toc_sections_from_repeated_headings,
     detect_deterministic_toc,
 )
+from src.structure.continuity_filter import (
+    apply_continuity_filter,
+    parse_line_id_from_heading_id,
+)
 from src.structure.logging.pipeline_logger import PipelineLogger
-from src.structure.pre_llm_gate import gate_heading_validity_candidates
+from src.structure.heading_validity_gate import gate_heading_validity_candidates
 
 
 def _final_headings_without_toc_and_metadata(
@@ -52,17 +55,6 @@ def _final_headings_without_toc_and_metadata(
     return out
 
 
-def _parse_line_id_from_heading_id(hid: Any) -> Optional[int]:
-    if not isinstance(hid, str):
-        return None
-    if not hid.startswith("L"):
-        return None
-    try:
-        return int(hid[1:].split(":", 1)[0])
-    except Exception:
-        return None
-
-
 def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: bool = False):
     """
     Orchestrates the clean core pipeline.
@@ -79,11 +71,20 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
     # Stage 01: layout extraction
     layout_payload = lines_to_log(lines)
     logger.write_stage("layout_lines", layout_payload)
-    layout_by_line_id = {it["line_id"]: it for it in layout_payload if isinstance(it, dict) and isinstance(it.get("line_id"), int)}
+
+    # Stage 01b: visual elements (tables, images, diagrams) — best-effort, never blocks pipeline
+    try:
+        visual_elements = extract_visual_elements(pdf_path)
+        logger.write_stage("visual_elements", visual_elements)
+    except Exception:
+        pass
 
     # Stage 02: noise detection (never deletes lines)
     lines, noise_log = mark_noise(lines)
     logger.write_stage("noise_filter", noise_log)
+    
+    # Create layout_by_line_id AFTER noise filter to use updated line data
+    layout_by_line_id = {it["line_id"]: it for it in lines_to_log(lines) if isinstance(it, dict) and isinstance(it.get("line_id"), int)}
 
     # Stage 03: candidate scoring (authoritative candidate selection)
     candidates, scoring_log = collect_candidates_scored(lines)
@@ -91,99 +92,10 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
 
     # Layer 1: eliminate fake headings with deterministic pre-LLM rules.
     candidates, gate_log = gate_heading_validity_candidates(candidates, lines=lines)
-    logger.write_stage("pre_llm_heading_gate", gate_log)
+    logger.write_stage("heading_validity_gate", gate_log)
 
-    # Layer 2: continuity validation without any LLM intermediate step.
-    # This step computes deterministic signals and only keeps headings that remain plausible.
-    from .models import FinalHeading
-
-    def _continuity_signals(candidate: Any, line_obj: Any) -> list[str]:
-        text = (getattr(candidate, "text", "") or "").strip()
-        signals: list[str] = []
-        if text:
-            if text[0].isupper():
-                signals.append("starts_uppercase")
-            if len(text.split()) <= 12:
-                signals.append("short_heading_like")
-            if bool(getattr(line_obj, "is_bold", False)):
-                signals.append("bold")
-            if bool(getattr(line_obj, "large_font", False)):
-                signals.append("large_font")
-            if bool(getattr(line_obj, "centered", False)) or bool(getattr(line_obj, "is_centered", False)):
-                signals.append("centered")
-            if __import__("re").match(r"^(?:\d+(?:\.\d+)*|[IVXLCDM]+\.|[A-Z]\.|[a-z]\.)\s+", text, __import__("re").IGNORECASE):
-                signals.append("numbered_section")
-            if text.endswith(":"):
-                signals.append("trailing_colon")
-        return signals
-
-    headings = []
-    dropped_continuity_log = []
-    for c in candidates:
-        hid = getattr(c, "id", None) or getattr(c, "heading_id", None)
-        lid = _parse_line_id_from_heading_id(hid) or getattr(c, "start_line", None) or 0
-        line_obj = layout_by_line_id.get(lid)
-        signals = _continuity_signals(c, line_obj)
-        # deterministic drop for body-like text that survived layer 1
-        text = (getattr(c, "text", "") or "").strip()
-        word_count = len(text.split())
-        body_like = (
-            word_count >= 14
-            or text.endswith(".")
-            or "," in text
-            or ";" in text
-            or (word_count >= 8 and not signals)
-        )
-
-        if body_like and not any(sig in signals for sig in ("bold", "large_font", "centered", "numbered_section")):
-            dropped_reason = "continuity_drop(body_like_no_heading_signals)"
-            dropped_continuity_log.append(
-                {
-                    "heading_id": hid,
-                    "text": text,
-                    "action": "drop_by_continuity",
-                    "reason": dropped_reason,
-                    "signals_used": signals,
-                    "line_id": lid,
-                }
-            )
-            continue
-
-        if text and not any(sig in signals for sig in ("bold", "large_font", "centered", "numbered_section")):
-            low_signal_body = (
-                len(text.split()) >= 10
-                or text.endswith(".")
-                or "," in text
-                or ";" in text
-                or ":" in text
-                or re.search(r"\b(?:which|that|because|therefore|however|whereas|although|since|while|when|where|this|these|those|they|it)\b", text, re.IGNORECASE)
-            )
-            if low_signal_body:
-                dropped_continuity_log.append(
-                    {
-                        "heading_id": hid,
-                        "text": text,
-                        "action": "drop_by_continuity",
-                        "reason": "continuity_drop(sentence_like_body)",
-                        "signals_used": signals,
-                        "line_id": lid,
-                    }
-                )
-                continue
-
-        continuity_reason = "continuity_valid(" + ",".join(signals) + ")" if signals else "continuity_valid(no_strong_signals)"
-        headings.append(
-            FinalHeading(
-                id=hid,
-                text=getattr(c, "text", ""),
-                line_id=int(lid) if isinstance(lid, int) else 0,
-                fragment_id=None,
-                parent_heading=None,
-                reason=continuity_reason,
-                signals_used=signals,
-                confidence=getattr(c, "confidence", None),
-            )
-        )
+    # Layer 2: continuity validation (deterministic; see structure.continuity_filter).
+    headings, dropped_continuity_log = apply_continuity_filter(candidates, layout_by_line_id)
     if dropped_continuity_log:
         logger.write_stage("continuity_filter", dropped_continuity_log)
 
@@ -217,7 +129,7 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
     final_headings_items = []
     for h in toc_out:
         hid = getattr(h, "id", None)
-        lid = _parse_line_id_from_heading_id(hid) if isinstance(hid, str) else None
+        lid = parse_line_id_from_heading_id(hid) if isinstance(hid, str) else None
         page_number = None
         if isinstance(lid, int):
             layout = layout_by_line_id.get(lid)
@@ -289,9 +201,9 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
                 "layout_lines": "01_layout_lines.json",
                 "noise_filter": "02_noise_filter.json",
                 "candidate_scoring": "03_candidate_scoring.json",
-                "pre_llm_heading_gate": "03b_pre_llm_heading_gate.json",
+                "heading_validity_gate": "03b_heading_validity_gate.json",
                 "llm_heading_validation": "04_llm_heading_validation.json",
-                "pre_llm_toc_gate": "04b_pre_llm_toc_gate.json",
+                "toc_candidate_gate": "04b_toc_candidate_gate.json",
                 "llm_toc_classification": "05_llm_toc_classification.json",
                 "toc_section_eval": "06_toc_section_eval.json",
                 "fragments": "07_fragments.json",
@@ -300,6 +212,7 @@ def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: boo
                 "final_headings": "09_final_headings.json",
                 "deterministic_toc": "10_deterministic_toc.json",
                 "book_metadata": "11_book_metadata.json",
+                "visual_elements": "13_visual_elements.json",
                 "final_headings_2": "12_final_headings_2.json",
                 "decision_trace": "decision_trace.json",
             }

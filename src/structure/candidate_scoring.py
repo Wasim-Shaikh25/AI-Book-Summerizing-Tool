@@ -43,10 +43,11 @@ def _score_line(ln: NormalizedLine) -> Tuple[int, Dict[str, Any]]:
         score += 1
         reasons["signals"].append("+1 short_line")
 
-    # Margin penalty
-    if ln.page_height > 0 and (ln.y_pos < ln.page_height * 0.07 or ln.y_pos > ln.page_height * 0.93):
-        score -= 2
-        reasons["signals"].append("-2 margin_zone")
+    # Margin penalty (noise filter already removes true headers/footers before this runs)
+    if ln.page_height > 0 and (ln.y_pos < ln.page_height * 0.04 or ln.y_pos > ln.page_height * 0.96):
+        penalty = 1 if ln.is_bold else 2
+        score -= penalty
+        reasons["signals"].append(f"-{penalty} margin_zone")
 
     reasons["score"] = score
     return score, reasons

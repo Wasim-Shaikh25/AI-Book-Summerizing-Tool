@@ -20,13 +20,23 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from src.core.models import FinalHeading, NormalizedLine
 
 
 def _norm(s: str) -> str:
-    return (s or "").strip()
+    s = (s or "").strip()
+    # Collapse decimal section numbers with internal spaces: "3. 4" -> "3.4"
+    s = re.sub(r'(\d)\.\s+(\d)', r'\1.\2', s)
+    # Add space after comma before digit: "Act,1988" -> "Act, 1988"
+    s = re.sub(r',(\d)', r', \1', s)
+    # Normalize runs of whitespace to a single space and spacing around & for consistent matching
+    s = re.sub(r'\s+', ' ', s)
+    s = re.sub(r'\s*&\s*', ' & ', s)
+    # Strip trailing period: "...Councils." == "...Councils" for matching purposes
+    s = re.sub(r'\.\s*$', '', s)
+    return s.strip()
 
 
 # Syllabus / outline rows usually start with "1.2", "2.3.1", etc. Used to break false seed chains.
@@ -117,74 +127,199 @@ def _is_toc_flag(h: Any) -> bool:
     return bool(getattr(h, "is_toc", False))
 
 
+_MIN_TOC_GROUP_SIZE = 3    # need at least 3 consecutive headings to call it a TOC listing
+_MAX_CONSECUTIVE_GAP = 10  # headings <= 10 line_ids apart are considered consecutive
+
+
 def build_toc_sections_from_repeated_headings(
     lines: List[NormalizedLine],
     final_headings: List[Any],
 ) -> Tuple[Set[int], List[Dict[str, Any]]]:
     """
-    For each normalized heading text T with at least one is_toc heading:
-    - start = first line_id (document order) where a final heading has text T and is_toc
-    - end_exclusive = line_id of the next final heading with text T after start
-    - Section lines: every line from document index of `start` up to but not including
-      the line index of `end_exclusive`
+    Correct TOC section detection algorithm:
 
-    Returns all line_ids belonging to any such section, plus toc_section_span log items.
+    1. Sort all final headings by line_id.
+    2. Find CONSECUTIVE groups: headings where each adjacent pair is within
+       _MAX_CONSECUTIVE_GAP line_ids of each other (close together on a TOC page).
+    3. For each group of size >= _MIN_TOC_GROUP_SIZE, check if ALL heading texts
+       in that group appear at least twice anywhere in the full document.
+    4. If yes -> the FIRST such group is a TOC listing. Mark only those specific
+       heading line_ids as in_toc_section=True.
+    5. The second occurrences of those headings (in the body) are NOT touched —
+       they remain as valid body headings.
+
+    This avoids sweeping body content between first and second occurrence.
     """
     if not lines:
         return set(), []
 
-    index_by_lid = {ln.line_id: i for i, ln in enumerate(lines)}
+    # Count every text across ALL raw lines (not just headings)
+    line_text_counts: Counter = Counter(_norm(ln.text) for ln in lines)
+    by_lid: Dict[int, NormalizedLine] = {ln.line_id: ln for ln in lines}
 
-    rows: List[Tuple[int, bool, str]] = []
-    for h in final_headings:
-        lid = _heading_line_id(h)
-        if lid is None:
-            continue
-        t = _heading_text_norm(h)
-        if not t:
-            continue
-        rows.append((lid, _is_toc_flag(h), t))
+    # Sort headings by line_id
+    sorted_heads = sorted(
+        [h for h in final_headings if _heading_line_id(h) is not None],
+        key=lambda h: _heading_line_id(h),  # type: ignore[arg-type]
+    )
+    if len(sorted_heads) < _MIN_TOC_GROUP_SIZE:
+        return set(), []
 
-    rows.sort(key=lambda x: x[0])
-
-    by_text: Dict[str, List[Tuple[int, bool]]] = {}
-    for lid, it, t in rows:
-        by_text.setdefault(t, []).append((lid, it))
+    # Step 1: partition into consecutive groups
+    groups: List[List[Any]] = []
+    current: List[Any] = [sorted_heads[0]]
+    for i in range(1, len(sorted_heads)):
+        prev_lid = _heading_line_id(sorted_heads[i - 1])
+        curr_lid = _heading_line_id(sorted_heads[i])
+        if prev_lid is not None and curr_lid is not None and (curr_lid - prev_lid) <= _MAX_CONSECUTIVE_GAP:
+            current.append(sorted_heads[i])
+        else:
+            if len(current) >= _MIN_TOC_GROUP_SIZE:
+                groups.append(list(current))
+            current = [sorted_heads[i]]
+    if len(current) >= _MIN_TOC_GROUP_SIZE:
+        groups.append(list(current))
 
     section_line_ids: Set[int] = set()
     span_records: List[Dict[str, Any]] = []
 
-    for T, lst in by_text.items():
-        lst.sort(key=lambda x: x[0])
-        toc_lids = [lid for lid, is_t in lst if is_t]
-        if not toc_lids:
-            continue
-        start = toc_lids[0]
-        all_lids = [lid for lid, _ in lst]
-        later = [lid for lid in all_lids if lid > start]
-        if not later:
-            continue
-        end_ex = later[0]
+    # Build per-text occurrence list (all line_ids for each heading text, sorted)
+    all_occ: Dict[str, List[int]] = {}
+    for h in sorted_heads:
+        t = _heading_text_norm(h)
+        lid = _heading_line_id(h)
+        if t and lid is not None:
+            all_occ.setdefault(t, []).append(lid)
 
-        i0 = index_by_lid.get(start)
-        i1 = index_by_lid.get(end_ex)
-        if i0 is None or i1 is None or i0 >= i1:
-            continue
+    # First-occurrence lookup: smallest line_id per text
+    first_occ: Dict[str, int] = {t: lids[0] for t, lids in all_occ.items()}
 
-        for j in range(i0, i1):
-            section_line_ids.add(lines[j].line_id)
+    # Set of all final heading line_ids (continuation lines must NOT be headings themselves)
+    heading_lid_set: Set[int] = {_heading_line_id(h) for h in sorted_heads if _heading_line_id(h) is not None}
 
-        last_inclusive = lines[i1 - 1].line_id
+    # All known body heading texts (for prefix matching)
+    all_heading_texts: Set[str] = set(all_occ.keys())
+
+    # Sorted line_ids for finding the next raw line after a given lid
+    sorted_line_ids = sorted(by_lid.keys())
+    lid_pos = {lid: i for i, lid in enumerate(sorted_line_ids)}
+
+    def _next_non_heading_line(lid: int) -> Optional[NormalizedLine]:
+        """Return the next raw layout line after lid that is not itself a heading."""
+        pos = lid_pos.get(lid)
+        if pos is None:
+            return None
+        for i in range(pos + 1, min(pos + 4, len(sorted_line_ids))):
+            candidate = by_lid[sorted_line_ids[i]]
+            if sorted_line_ids[i] not in heading_lid_set:
+                return candidate
+        return None
+
+    def _try_continuation(t: str, lid: int) -> Optional[Tuple[str, Optional[int]]]:
+        """
+        For a truncated heading that fails condition A, try two strategies:
+
+        Case A — TOC text is SHORTER than body heading:
+          Check if `t` is a prefix of any known body heading (min 6 words).
+          If yes, grab the next non-heading raw line and combine; verify exact match.
+
+        Case B — TOC text is LONGER than body heading:
+          Both are truncated from the same long title at different line-break points.
+          Check if `t` starts with any known body heading (min 8 words).
+          If yes, they're the same section — no continuation line needed.
+
+        Returns (matched_body_heading_text, continuation_line_id_or_None) or None.
+        """
+        if len(t.split()) < 6:
+            return None
+
+        # Case B: t is longer — check if t starts with a known heading (prefix of t)
+        for ht in all_heading_texts:
+            if ht != t and len(ht.split()) >= 8 and t.startswith(ht):
+                return (ht, None)
+
+        # Case A: t is shorter — find any known heading that starts with t.
+        # Prefix match alone is sufficient evidence (min 6 words already enforced above).
+        for ht in all_heading_texts:
+            if ht.startswith(t) and ht != t:
+                return (ht, None)
+        return None
+
+    # Step 2: for each consecutive group, find the longest qualifying sub-run
+    for group in groups:
+        # Evaluate each heading: does it satisfy both conditions?
+        # Extra: track continuation lines for truncated headings
+        qualifies = []
+        continuation_lids: Dict[int, int] = {}  # heading_lid -> continuation_lid
+        for h in group:
+            t = _heading_text_norm(h)
+            lid = _heading_line_id(h)
+            cond_a = bool(t) and line_text_counts.get(t, 0) >= 2
+            cond_b = bool(t) and lid is not None and first_occ.get(t) == lid
+            # If cond_a fails but cond_b passes, try continuation-line extension
+            if not cond_a and cond_b and t and lid is not None:
+                ext = _try_continuation(t, lid)
+                if ext is not None:
+                    _full_text, cont_lid = ext
+                    cond_a = True
+                    if cont_lid is not None:
+                        continuation_lids[lid] = cont_lid
+            qualifies.append(cond_a and cond_b)
+
+        # Slide through to find longest consecutive run of qualifying headings
+        best_start = best_end = -1
+        run_start = -1
+        for i, ok in enumerate(qualifies):
+            if ok:
+                if run_start < 0:
+                    run_start = i
+                run_len = i - run_start + 1
+                if run_len > best_end - best_start:
+                    best_start, best_end = run_start, i
+            else:
+                run_start = -1
+
+        if best_start < 0 or (best_end - best_start + 1) < _MIN_TOC_GROUP_SIZE:
+            continue  # no qualifying sub-run of sufficient size
+
+        toc_sub = group[best_start: best_end + 1]
+        lids = [_heading_line_id(h) for h in toc_sub if _heading_line_id(h) is not None]
+
+        # Condition C: second occurrences must NOT be clustered together.
+        # In a true TOC each heading reappears in a different chapter (spread far apart).
+        # In a repeated template (e.g. "Facts → Issues → Judgment" per case), the second
+        # occurrences are also consecutive — detect and reject that pattern.
+        second_occ_lids = []
+        for h in toc_sub:
+            t = _heading_text_norm(h)
+            occ = all_occ.get(t, [])
+            if len(occ) >= 2:
+                second_occ_lids.append(occ[1])
+        if second_occ_lids:
+            second_spread = max(second_occ_lids) - min(second_occ_lids)
+            # Threshold: allow at most group_size * gap lines between second occurrences
+            max_spread = len(toc_sub) * _MAX_CONSECUTIVE_GAP
+            if second_spread <= max_spread:
+                continue  # second occurrences are clustered → repeated template, not TOC
+
+        for lid in lids:
+            section_line_ids.add(lid)
+            # Also mark continuation lines (second half of a truncated TOC entry)
+            if lid in continuation_lids:
+                section_line_ids.add(continuation_lids[lid])
+
+        pg_start = (by_lid.get(lids[0]) or NormalizedLine(0, "")).page_number
+        pg_end = (by_lid.get(lids[-1]) or NormalizedLine(0, "")).page_number
+        texts = [_heading_text_norm(h) for h in toc_sub]
         span_records.append(
             {
                 "kind": "toc_section_span",
-                "heading_text": T,
-                "page_number_start": lines[i0].page_number,
-                "page_number_end": lines[i1 - 1].page_number,
-                "start_line_id": start,
-                "end_line_id_inclusive": last_inclusive,
-                "repeat_heading_line_id": end_ex,
-                "line_count": i1 - i0,
+                "heading_text": texts[0],
+                "page_number_start": pg_start,
+                "page_number_end": pg_end,
+                "start_line_id": lids[0],
+                "end_line_id_inclusive": lids[-1],
+                "group_size": len(lids),
             }
         )
 
@@ -214,28 +349,27 @@ def book_metadata_from_first_toc_section(
     first = min(spans, key=lambda r: int(r["start_line_id"]))
     index_by_lid = {ln.line_id: i for i, ln in enumerate(lines)}
     start = int(first["start_line_id"])
-    end_ex = int(first["repeat_heading_line_id"])
+    end_inc = int(first["end_line_id_inclusive"])
 
     i0 = index_by_lid.get(start)
-    i1 = index_by_lid.get(end_ex)
-    if i0 is None or i1 is None or i0 >= i1:
+    i_end = index_by_lid.get(end_inc)
+    if i0 is None or i_end is None:
         return set(), []
 
     meta_ids: Set[int] = set()
 
+    # Document prefix: all non-noise lines before the first TOC group
     for j in range(0, i0):
         ln = lines[j]
-        if getattr(ln, "is_noise", False):
-            continue
-        meta_ids.add(ln.line_id)
+        if not getattr(ln, "is_noise", False):
+            meta_ids.add(ln.line_id)
 
-    for j in range(i0, i1):
+    # First TOC group: lines from start up to and including the last TOC heading
+    for j in range(i0, i_end + 1):
         ln = lines[j]
-        if getattr(ln, "is_noise", False):
-            continue
-        meta_ids.add(ln.line_id)
+        if not getattr(ln, "is_noise", False):
+            meta_ids.add(ln.line_id)
 
-    last_inc = lines[i1 - 1].line_id
     log_item: Dict[str, Any] = {
         "kind": "book_metadata_first_toc",
         "source": "document_prefix_and_first_toc_section_excluding_noise",
@@ -243,8 +377,7 @@ def book_metadata_from_first_toc_section(
         "page_number_start": first.get("page_number_start"),
         "page_number_end": first.get("page_number_end"),
         "first_toc_section_start_line_id": start,
-        "first_toc_section_end_line_id_inclusive": last_inc,
-        "repeat_heading_line_id": end_ex,
+        "first_toc_section_end_line_id_inclusive": end_inc,
         "non_noise_line_count": len(meta_ids),
     }
     if i0 > 0:

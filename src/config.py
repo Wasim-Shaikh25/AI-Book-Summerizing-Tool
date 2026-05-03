@@ -38,8 +38,8 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 CHUNK_SIZE_WORDS = 1500
 CHUNK_OVERLAP_WORDS = 150
 
-# Active provider for LLM calls (TOC / validation / rewrite).
-# Supported: "GEMINI", "OLLAMA", "OPENAI"
+# Legacy: no in-repo LLM client. These env vars remain for optional future wiring / tooling.
+# Supported values if reintroduced: "GEMINI", "OLLAMA", "OPENAI"
 #
 # Env vars (preferred):
 #   - LLM_PROVIDER=OLLAMA|GEMINI|OPENAI

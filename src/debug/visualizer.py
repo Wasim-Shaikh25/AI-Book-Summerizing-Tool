@@ -183,6 +183,44 @@ def _draw_boxes(
         )
 
 
+def _draw_visual_elements(
+    doc,
+    elements: List[dict],
+    kind: str,
+    *,
+    stroke_rgb: Tuple[float, float, float],
+    fill_rgb: Tuple[float, float, float],
+    opacity: float = 0.18,
+    width: float = 1.2,
+) -> None:
+    """Draw bounding boxes for tables/images/diagrams directly by page number + bbox."""
+    import fitz  # type: ignore
+
+    for el in elements:
+        if not isinstance(el, dict) or el.get("kind") != kind:
+            continue
+        page_num = el.get("page_number")
+        bbox = el.get("bbox")
+        if page_num is None or not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+            continue
+        page_idx = int(page_num) - 1
+        if page_idx < 0 or page_idx >= len(doc):
+            continue
+        try:
+            rect = fitz.Rect(float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3]))
+        except Exception:
+            continue
+        doc[page_idx].draw_rect(
+            rect,
+            color=stroke_rgb,
+            fill=fill_rgb,
+            overlay=True,
+            width=width,
+            fill_opacity=opacity,
+            stroke_opacity=min(opacity * 2.0, 1.0),
+        )
+
+
 def _collect_toc_section_span_line_ids(det_toc_payload: dict) -> Set[int]:
     """Line IDs inside `toc_section_span` items (prefers explicit `line_ids`)."""
     ids: Set[int] = set()
@@ -339,6 +377,14 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
     if book_meta_path.exists():
         book_meta_ids = _collect_book_metadata_line_ids(_load_json(book_meta_path), noise, layout)
 
+    visual_elements_path = run / "13_visual_elements.json"
+    visual_elements: List[dict] = []
+    if visual_elements_path.exists():
+        ve_payload = _load_json(visual_elements_path)
+        raw = ve_payload.get("items") if isinstance(ve_payload, dict) else ve_payload
+        if isinstance(raw, list):
+            visual_elements = raw
+
     line_boxes = _index_layout_boxes(layout)
 
     noise_ids = set(_collect_noise_line_ids(noise))
@@ -346,12 +392,21 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
     fragment_ids = set(_collect_fragment_line_ids(fragments))
     toc_ids = set(_collect_toc_line_ids(toc_source))
 
-    boxes_noise = [line_boxes[i] for i in noise_ids if i in line_boxes]
-    boxes_toc_llm = [line_boxes[i] for i in toc_ids if i in line_boxes]
-    boxes_det_toc = [line_boxes[i] for i in det_toc_ids if i in line_boxes]
-    boxes_book_meta = [line_boxes[i] for i in book_meta_ids if i in line_boxes]
-    boxes_heading = [line_boxes[i] for i in heading_ids if i in line_boxes]
-    boxes_fragment = [line_boxes[i] for i in fragment_ids if i in line_boxes]
+    # Priority deduplication: each line_id gets exactly ONE color layer.
+    # Higher priority layers claim their ids first; lower layers skip already-claimed ids.
+    _claimed: Set[int] = set()
+
+    def _exclusive(ids: Set[int]) -> List[_LineBox]:
+        result = [line_boxes[i] for i in ids if i in line_boxes and i not in _claimed]
+        _claimed.update(ids)
+        return result
+
+    boxes_noise     = _exclusive(noise_ids)
+    boxes_det_toc   = _exclusive(det_toc_ids)
+    boxes_book_meta = _exclusive(book_meta_ids)
+    boxes_toc_llm   = _exclusive(toc_ids)
+    boxes_heading   = _exclusive(heading_ids)
+    boxes_fragment  = _exclusive(fragment_ids)
 
     import fitz  # type: ignore
 
@@ -377,6 +432,17 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
         _draw_boxes(doc, boxes_heading, stroke_rgb=(0.2, 0.8, 0.2), fill_rgb=(0.2, 0.8, 0.2), opacity=0.16, width=0.7)
         _draw_boxes(doc, boxes_toc_llm, stroke_rgb=(0.95, 0.45, 0.1), fill_rgb=(0.95, 0.45, 0.1), opacity=0.22, width=0.9)
         _draw_boxes(doc, boxes_noise, stroke_rgb=(0.8, 0.2, 0.2), fill_rgb=(0.8, 0.2, 0.2), opacity=0.20, width=0.7)
+
+        # Visual elements: drawn directly by page+bbox (not line_id)
+        # Tables  — teal border
+        _draw_visual_elements(doc, visual_elements, "table",
+                              stroke_rgb=(0.0, 0.6, 0.6), fill_rgb=(0.0, 0.8, 0.8), opacity=0.12, width=1.5)
+        # Images  — sky blue border
+        _draw_visual_elements(doc, visual_elements, "image",
+                              stroke_rgb=(0.1, 0.45, 0.9), fill_rgb=(0.3, 0.6, 1.0), opacity=0.14, width=1.2)
+        # Diagrams — lavender border
+        _draw_visual_elements(doc, visual_elements, "diagram",
+                              stroke_rgb=(0.5, 0.2, 0.8), fill_rgb=(0.7, 0.5, 1.0), opacity=0.10, width=1.0)
 
         output_path = run / "visualization.pdf"
         doc.save(str(output_path))

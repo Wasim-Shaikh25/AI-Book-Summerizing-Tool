@@ -1,28 +1,31 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 import pytest
 
-if os.getenv("RUN_INTEGRATION") != "1":
-    pytest.skip("Skipping integration tests (set RUN_INTEGRATION=1 to enable).", allow_module_level=True)
-
 from src.core.pipeline import run_pipeline
+from src.structure.logging.pipeline_logger import PipelineLogger
 
-ALLOWED_FILES = {
+# Bundled PDF used for deterministic pipeline tests (repo root relative paths).
+def _law_of_tort_pdf() -> str:
+    return str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
+
+
+# Stages always written for law_of_tort.pdf (continuity drops are non-empty → 08b exists).
+EXPECTED_FILES_LAW_OF_TORT: Set[str] = {
     "01_layout_lines.json",
     "02_noise_filter.json",
     "03_candidate_scoring.json",
-    "04_llm_heading_validation.json",
-    "05_llm_toc_classification.json",
-    "06_toc_section_eval.json",
+    "03b_heading_validity_gate.json",
+    "08b_continuity_filter.json",
     "07_fragments.json",
-    "08_hierarchy.json",
     "09_final_headings.json",
-    "decision_trace.json",
+    "10_deterministic_toc.json",
+    "11_book_metadata.json",
+    "12_final_headings_2.json",
 }
 
 
@@ -50,7 +53,6 @@ def _assert_stage_envelope(payload: Any) -> Dict[str, Any]:
 
 
 def _assert_items_have_keys(items: List[Dict[str, Any]], required_keys: List[str]) -> None:
-    # Only spot-check a few items to keep tests fast on big PDFs
     for it in items[:5]:
         assert isinstance(it, dict)
         for k in required_keys:
@@ -58,57 +60,39 @@ def _assert_items_have_keys(items: List[Dict[str, Any]], required_keys: List[str
 
 
 @pytest.fixture(autouse=True)
-def _run_in_tmp_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """
-    Ensure tests don't pollute project ./logs by running in a temp cwd.
-    This assumes the pipeline writes logs relative to cwd (it does today).
-    """
+def _run_in_tmp_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pipeline writes logs relative to cwd; keep tests isolated."""
     monkeypatch.chdir(tmp_path)
-    # Create minimal repo-like structure for relative paths if needed
-    os.makedirs("logs", exist_ok=True)
+    (tmp_path / "logs").mkdir(parents=True, exist_ok=True)
     yield
 
 
 @pytest.mark.integration
-def test_logging_contract_generates_only_expected_files():
-    pdf = str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
-    run_pipeline(pdf, enable_logs=True)
+def test_logging_contract_generates_expected_stage_files() -> None:
+    """Run folder contains exactly the expected deterministic stage JSON files."""
+    run_pipeline(_law_of_tort_pdf(), enable_logs=True)
 
-    logs_dir = Path("logs")
-    run_dir = _latest_run_dir(logs_dir)
-
+    run_dir = _latest_run_dir(Path("logs"))
     files = {p.name for p in run_dir.iterdir() if p.is_file()}
-    # This test will initially fail until refactor is completed.
-    assert files == ALLOWED_FILES, f"Unexpected log files: {sorted(files - ALLOWED_FILES)} / missing: {sorted(ALLOWED_FILES - files)}"
 
-
-import pytest
+    allowed = PipelineLogger._ALLOWED_FILES  # type: ignore[attr-defined]
+    assert files <= allowed, f"Unexpected files not in whitelist: {sorted(files - allowed)}"
+    assert EXPECTED_FILES_LAW_OF_TORT <= files, f"Missing expected files: {sorted(EXPECTED_FILES_LAW_OF_TORT - files)}"
 
 
 @pytest.mark.integration
-def test_each_stage_log_has_envelope_schema():
-    """
-    This test exercises the full pipeline with enable_logs=True.
-    It may call external LLM services (Gemini) depending on configuration,
-    so keep it as an integration test to avoid flaky CI/unit runs.
-    """
-    pdf = str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
-    run_pipeline(pdf, enable_logs=True)
-
+def test_each_stage_log_has_envelope_schema() -> None:
+    run_pipeline(_law_of_tort_pdf(), enable_logs=True)
     run_dir = _latest_run_dir(Path("logs"))
 
-    for name in sorted(ALLOWED_FILES):
-        if name == "decision_trace.json":
-            continue
+    for name in sorted(EXPECTED_FILES_LAW_OF_TORT):
         payload = _read_json(run_dir / name)
         _assert_stage_envelope(payload)
 
 
 @pytest.mark.integration
-def test_stage_item_shapes_spot_check():
-    pdf = str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
-    run_pipeline(pdf, enable_logs=True)
-
+def test_stage_item_shapes_spot_check() -> None:
+    run_pipeline(_law_of_tort_pdf(), enable_logs=True)
     run_dir = _latest_run_dir(Path("logs"))
 
     layout = _assert_stage_envelope(_read_json(run_dir / "01_layout_lines.json"))
@@ -174,3 +158,6 @@ def test_stage_item_shapes_spot_check():
             "large_gap",
         ],
     )
+
+    gate = _assert_stage_envelope(_read_json(run_dir / "03b_heading_validity_gate.json"))
+    assert isinstance(gate["items"], list)

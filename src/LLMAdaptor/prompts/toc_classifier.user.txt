@@ -1,4 +1,0 @@
-Return JSON only as an array in the schema described.
-
-Input JSON:
-{items_json}

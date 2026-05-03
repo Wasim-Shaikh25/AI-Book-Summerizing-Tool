@@ -1,3 +1,0 @@
-Rewrite the following JSON request. Return ONLY a JSON object that matches the expected response schema.
-
-{request_json}

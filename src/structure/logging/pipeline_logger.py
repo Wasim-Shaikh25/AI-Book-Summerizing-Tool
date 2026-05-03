@@ -45,9 +45,9 @@ class PipelineLogger:
         "01_layout_lines.json",
         "02_noise_filter.json",
         "03_candidate_scoring.json",
-        "03b_pre_llm_heading_gate.json",
+        "03b_heading_validity_gate.json",
         "04_llm_heading_validation.json",
-        "04b_pre_llm_toc_gate.json",
+        "04b_toc_candidate_gate.json",
         "05_llm_toc_classification.json",
         "06_toc_section_eval.json",
         "07_fragments.json",
@@ -57,6 +57,7 @@ class PipelineLogger:
         "10_deterministic_toc.json",
         "11_book_metadata.json",
         "12_final_headings_2.json",
+        "13_visual_elements.json",
         "decision_trace.json",
     }
 
@@ -64,9 +65,9 @@ class PipelineLogger:
         "layout_lines": "01_layout_lines.json",
         "noise_filter": "02_noise_filter.json",
         "candidate_scoring": "03_candidate_scoring.json",
-        "pre_llm_heading_gate": "03b_pre_llm_heading_gate.json",
+        "heading_validity_gate": "03b_heading_validity_gate.json",
         "llm_heading_validation": "04_llm_heading_validation.json",
-        "pre_llm_toc_gate": "04b_pre_llm_toc_gate.json",
+        "toc_candidate_gate": "04b_toc_candidate_gate.json",
         "llm_toc_classification": "05_llm_toc_classification.json",
         "toc_section_eval": "06_toc_section_eval.json",
         "fragments": "07_fragments.json",
@@ -76,6 +77,7 @@ class PipelineLogger:
         "deterministic_toc": "10_deterministic_toc.json",
         "book_metadata": "11_book_metadata.json",
         "final_headings_2": "12_final_headings_2.json",
+        "visual_elements": "13_visual_elements.json",
     }
 
     @staticmethod

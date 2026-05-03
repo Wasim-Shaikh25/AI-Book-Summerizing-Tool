@@ -4,15 +4,12 @@ import json
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
-from src.LLMAdaptor.client import LLMClient
-
 from src.core.models import FinalHeading, Fragment
 
 
 def _ensure_toc_trace_dir() -> Path:
     base = Path("logs") / "toc_trace"
     base.mkdir(parents=True, exist_ok=True)
-    # Keep it simple: one rolling trace file (no extra folders)
     return base
 
 
@@ -34,7 +31,6 @@ def _build_fragment_text_by_id(
 
 
 def _normalize_heading_key(text: str) -> str:
-    # Drop "L123:" prefix if present, lowercase, collapse spaces.
     t = text.strip()
     if ":" in t and t.split(":", 1)[0].startswith("L") and t.split(":", 1)[0][1:].isdigit():
         t = t.split(":", 1)[1].strip()
@@ -59,18 +55,11 @@ def _dedupe_keep_stronger(
 ) -> Tuple[List[FinalHeading], List[Dict], Dict[str, bool]]:
     """
     Remove duplicate headings (same normalized text). Keep the one with more fragment text.
-
-    IMPORTANT:
-      This is phase-1. We only decide which instance to KEEP.
-      The kept heading will be the only one considered in the LLM TOC phase,
-      so we don't accidentally evaluate/remove both duplicates.
-
-    Returns (kept_headings, removals_log).
+    Returns (kept_headings, removals_log, evaluated_by_dedupe).
     """
     key_to_best: Dict[str, FinalHeading] = {}
     key_to_best_len: Dict[str, int] = {}
     removed: List[Dict] = []
-    # Only mark keys as "evaluated_by_dedupe" if duplicates actually existed for that key.
     evaluated_by_dedupe: Dict[str, bool] = {}
 
     for h in headings:
@@ -105,36 +94,9 @@ def _dedupe_keep_stronger(
                 }
             )
 
-    # Preserve original order of kept headings
     kept_ids = {h.id for h in key_to_best.values()}
     kept_ordered = [h for h in headings if h.id in kept_ids]
     return kept_ordered, removed, evaluated_by_dedupe
-
-
-def _llm_is_toc(heading_text: str, content_preview: str) -> bool:
-    user_prompt = json.dumps(
-        {
-            "heading": heading_text,
-            "content_preview": content_preview,
-            "task": "Decide if this heading is from TOC (true) or a real body heading (false).",
-        },
-        ensure_ascii=False,
-    )
-    prompt = LLMClient.from_config().prompts.get("toc_cleaner")
-    resp = LLMClient.from_config().generate(
-        system=prompt.system,
-        user=user_prompt,
-        temperature=0.2,
-        response_mime_type="application/json",
-    )
-    try:
-        parsed = json.loads(resp.text)
-    except Exception:
-        parsed = None
-
-    if isinstance(parsed, dict) and isinstance(parsed.get("is_toc"), bool):
-        return bool(parsed["is_toc"])
-    return False  # safe default
 
 
 def clean_toc(
@@ -144,15 +106,8 @@ def clean_toc(
     fragment_text_by_id: Dict[str, str] | None = None,
     _min_fragment_chars: int = 20,
     _min_lines_after_heading: int = 3,
-    _enable_llm_toc_check: bool = True,
 ) -> List[FinalHeading]:
     """
-    NOTE (disabled):
-    This stage previously performed:
-      1) duplicate removal by normalized text
-      2) low-content + LLM TOC removal
-
-    Per current configuration, toc_cleaner does not remove anything and returns
-    the headings unchanged (identity function).
+    Identity pass: headings unchanged. Helpers above remain for a future non-identity implementation.
     """
     return list(headings)
