@@ -38,6 +38,15 @@
 
 ---
 
+## Stage 5 — Chapter hierarchy + Word export ✅
+
+- [x] Stage 15e `chapter_hierarchy_builder.py` (LLM + rule fallback)
+- [x] Structured DOCX export (`docx_notes_exporter.py`, cover/TOC/page breaks)
+- [x] TOC page numbers via Word PAGEREF + `pywin32` field refresh
+- [x] Scripts: `run_full_openai_pipeline.py`, `reexport_docx.py`
+
+---
+
 ## Dependencies
 
 ```

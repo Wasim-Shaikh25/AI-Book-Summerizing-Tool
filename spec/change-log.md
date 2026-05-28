@@ -6,6 +6,26 @@
 
 ---
 
+## [2026-05-28] — Repo cleanup after hierarchical DOCX export
+
+- **What:** Added `models/README.md`, gitignore for local GGUF weights, removed stray `models/BIT632.tmp`.
+- **Why:** Keep repository lean; model binaries belong on disk only.
+- **Impact:** Clone stays small; operators place GGUF files under `models/` locally.
+
+---
+
+## [2026-05-28] — Stage 15e + structured Word export with TOC page numbers
+
+- **What:**
+  - `chapter_hierarchy_builder.py` (15e) with LLM + rule fallback and consolidation.
+  - `docx_notes_exporter.py`: cover, hierarchical TOC (PAGEREF), footer page numbers, Word COM field refresh (`pywin32`).
+  - Pipeline scripts: `run_full_openai_pipeline.py`, `reexport_docx.py`.
+  - Fixed TOC block insertion order and field update (no premature unlink).
+- **Why:** Full-book notes need chapter hierarchy and accurate Word TOC page numbers.
+- **Impact:** Export produces formatted DOCX; requires `pywin32` on Windows for auto TOC pagination.
+
+---
+
 ## [2026-05-27] — Stages 2–4: LLM hardening, CLI/export, plugin pipeline
 
 - **What:**
