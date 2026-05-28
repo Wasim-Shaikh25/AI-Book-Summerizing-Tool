@@ -1,8 +1,16 @@
 # 08 — Generation, tests
 
-## LLM stack (removed)
+## LLM stack
 
-The in-repo **`src/LLMAdaptor`** package and LLM-driven structure modules (`llm_validity`, `llm_toc`, `toc_detection`, LLM `heading_validation`, `hierarchy`, `section_resolver`, `heading_candidates`) have been **removed**. The deterministic pipeline does not depend on them.
+Legacy **`src/LLMAdaptor`** and LLM-driven structure stages (`llm_validity`, `llm_toc`, etc.) are **removed**.
+
+**Stage 15b:** Fast deterministic pass on all doubted segments, then **selective revalidation** via a small local model (`DOUBTED_RESOLVER_MODE=revalidate_selected`).
+
+- Fast models (Ollama / llama.cpp): `qwen2.5:0.5b-instruct`, `qwen2.5:1.5b-instruct`, `llama3.2:1b-instruct`
+- Env (fast default): `DOUBTED_RESOLVER_LLM=llamacpp`, `LLAMACPP_MODEL_PATH=...gguf`
+- Ollama alternative: `DOUBTED_RESOLVER_LLM=ollama`, `DOUBTED_REVALIDATION_MODEL=qwen2.5:0.5b-instruct`
+- Logs: `15b_doubted_resolved.json`, `15b_revalidation.json`
+- BigBird (`DOUBTED_RESOLVER_LLM=bigbird`) is legacy and slow; not recommended.
 
 Legacy **stage JSON filenames** such as `04_llm_heading_validation.json` may still appear in `PipelineLogger` allowlists for optional artifacts from older runs; `run_pipeline` does not produce those stages today.
 

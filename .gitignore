@@ -22,3 +22,8 @@ venv/
 logs/
 output/
 tmp/
+
+# Local LLM model weights (download separately)
+models/*.gguf
+models/*.tmp
+models/*.bin

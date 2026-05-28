@@ -4,6 +4,6 @@ Single import path for the book structure pipeline (same behavior as src.core.pi
 Use: ``from src.book_pipeline import run_pipeline``
 """
 
-from src.core.pipeline import run_pipeline
+from src.modules.pipeline import run_pipeline
 
 __all__ = ["run_pipeline"]

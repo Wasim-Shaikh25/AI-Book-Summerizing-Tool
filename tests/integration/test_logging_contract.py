@@ -6,26 +6,25 @@ from typing import Any, Dict, List, Set
 
 import pytest
 
-from src.core.pipeline import run_pipeline
-from src.structure.logging.pipeline_logger import PipelineLogger
+from src.modules.pipeline import run_pipeline
+from src.modules.structure.logging.pipeline_logger import PipelineLogger
 
-# Bundled PDF used for deterministic pipeline tests (repo root relative paths).
-def _law_of_tort_pdf() -> str:
-    return str(Path(__file__).resolve().parents[1] / "src" / "debug" / "pdf_files" / "law_of_tort.pdf")
+from tests.conftest import sample_pdf_path
 
-
-# Stages always written for law_of_tort.pdf (continuity drops are non-empty → 08b exists).
-EXPECTED_FILES_LAW_OF_TORT: Set[str] = {
+# Stages written for the bundled Law of Torts PDF (continuity drops → 08b exists).
+EXPECTED_STAGE_FILES: Set[str] = {
     "01_layout_lines.json",
     "02_noise_filter.json",
     "03_candidate_scoring.json",
     "03b_heading_validity_gate.json",
-    "08b_continuity_filter.json",
     "07_fragments.json",
+    "08b_continuity_filter.json",
     "09_final_headings.json",
     "10_deterministic_toc.json",
     "11_book_metadata.json",
     "12_final_headings_2.json",
+    "13_visual_elements.json",
+    "14_doubted_sections.json",
 }
 
 
@@ -59,40 +58,32 @@ def _assert_items_have_keys(items: List[Dict[str, Any]], required_keys: List[str
             assert k in it, f"missing item key {k} in {it}"
 
 
-@pytest.fixture(autouse=True)
-def _run_in_tmp_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Pipeline writes logs relative to cwd; keep tests isolated."""
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "logs").mkdir(parents=True, exist_ok=True)
-    yield
-
-
 @pytest.mark.integration
 def test_logging_contract_generates_expected_stage_files() -> None:
-    """Run folder contains exactly the expected deterministic stage JSON files."""
-    run_pipeline(_law_of_tort_pdf(), enable_logs=True)
+    """Run folder contains the expected deterministic stage JSON files."""
+    run_pipeline(sample_pdf_path(), enable_logs=True)
 
     run_dir = _latest_run_dir(Path("logs"))
     files = {p.name for p in run_dir.iterdir() if p.is_file()}
 
     allowed = PipelineLogger._ALLOWED_FILES  # type: ignore[attr-defined]
     assert files <= allowed, f"Unexpected files not in whitelist: {sorted(files - allowed)}"
-    assert EXPECTED_FILES_LAW_OF_TORT <= files, f"Missing expected files: {sorted(EXPECTED_FILES_LAW_OF_TORT - files)}"
+    assert EXPECTED_STAGE_FILES <= files, f"Missing expected files: {sorted(EXPECTED_STAGE_FILES - files)}"
 
 
 @pytest.mark.integration
 def test_each_stage_log_has_envelope_schema() -> None:
-    run_pipeline(_law_of_tort_pdf(), enable_logs=True)
+    run_pipeline(sample_pdf_path(), enable_logs=True)
     run_dir = _latest_run_dir(Path("logs"))
 
-    for name in sorted(EXPECTED_FILES_LAW_OF_TORT):
+    for name in sorted(EXPECTED_STAGE_FILES):
         payload = _read_json(run_dir / name)
         _assert_stage_envelope(payload)
 
 
 @pytest.mark.integration
 def test_stage_item_shapes_spot_check() -> None:
-    run_pipeline(_law_of_tort_pdf(), enable_logs=True)
+    run_pipeline(sample_pdf_path(), enable_logs=True)
     run_dir = _latest_run_dir(Path("logs"))
 
     layout = _assert_stage_envelope(_read_json(run_dir / "01_layout_lines.json"))

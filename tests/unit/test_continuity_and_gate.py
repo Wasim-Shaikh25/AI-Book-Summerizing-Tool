@@ -1,7 +1,7 @@
-"""Unit-style checks for gate helpers (no full PDF)."""
+"""Unit checks for gate helpers (no full PDF)."""
 
-from src.structure.continuity_filter import parse_line_id_from_heading_id
-from src.structure.heading_heuristics import should_force_invalid_enumerated_list_item
+from src.modules.structure.continuity_filter import parse_line_id_from_heading_id
+from src.modules.structure.heading_heuristics import should_force_invalid_enumerated_list_item
 
 
 def test_parse_line_id_from_heading_id() -> None:

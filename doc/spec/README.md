@@ -1,4 +1,7 @@
-# Project specs (method / call-chain index)
+# Project specs (legacy call-chain index)
+
+> **Superseded by MESO `/spec`.** Authoritative SDD: [`../../spec/index.md`](../../spec/index.md).  
+> This folder is retained for detailed call-chain reference only.
 
 This folder documents the **AI Notes Creator / Book Summarizing** codebase as **call chains**: who calls whom, in what order, for each major flow.
 

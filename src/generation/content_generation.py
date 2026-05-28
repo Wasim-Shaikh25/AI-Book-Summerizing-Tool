@@ -1,4 +1,2 @@
-"""Content generation orchestration.
-
-This module is intentionally lightweight in this task environment.
-"""
+# MESO compat shim — use src.modules.generation.content_generation
+from src.modules.generation.content_generation import *  # noqa: F403
