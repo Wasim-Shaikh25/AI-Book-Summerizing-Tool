@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_TAB_ALIGNMENT, WD_TAB_LEADER
@@ -14,6 +14,11 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 
 from src.modules.export.document_formatter import BookCoverMeta
+from src.modules.generation.rewrite_validation import (
+    SECTION_ID_TAG,
+    heading_similarity,
+    normalize_heading,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +147,9 @@ def _prepend_toc_block(
         _add_toc_line(doc, level=level, title=heading, bookmark=bookmark)
         block.append(doc.paragraphs[-1]._element)
 
+    _add_page_break(doc)
+    block.append(doc.paragraphs[-1]._element)
+
     anchor = insert_before
     for el in reversed(block):
         anchor.addprevious(el)
@@ -176,10 +184,11 @@ def _add_inline_runs(paragraph, text: str) -> None:
         run.italic = is_i
 
 
-def append_markdown_body(doc: Document, text: str) -> None:
+def append_markdown_body(doc: Document, text: str, *, compact: bool = False) -> None:
     """Render common markdown (headings, bullets, paragraphs) into the document."""
     if not (text or "").strip():
         return
+    space_after = Pt(2) if compact else None
     blocks = re.split(r"\n\s*\n", text.strip())
     for block in blocks:
         lines = [ln.rstrip() for ln in block.split("\n") if ln.strip()]
@@ -187,37 +196,52 @@ def append_markdown_body(doc: Document, text: str) -> None:
             continue
         first = lines[0].strip()
         if first.startswith("### "):
-            doc.add_heading(first[4:].strip(), level=3)
+            h = doc.add_heading(first[4:].strip(), level=3)
+            if compact:
+                h.paragraph_format.space_after = space_after
             for ln in lines[1:]:
-                _append_line(doc, ln)
+                _append_line(doc, ln, compact=compact)
             continue
         if first.startswith("## "):
-            doc.add_heading(first[3:].strip(), level=2)
+            h = doc.add_heading(first[3:].strip(), level=2)
+            if compact:
+                h.paragraph_format.space_after = space_after
             for ln in lines[1:]:
-                _append_line(doc, ln)
+                _append_line(doc, ln, compact=compact)
             continue
         if all(ln.lstrip().startswith(("- ", "* ")) for ln in lines):
             for ln in lines:
                 item = re.sub(r"^[\-*]\s+", "", ln.lstrip())
                 p = doc.add_paragraph(style="List Bullet")
+                if compact:
+                    p.paragraph_format.space_after = space_after
                 _add_inline_runs(p, item)
             continue
         p = doc.add_paragraph()
+        if compact:
+            p.paragraph_format.space_after = space_after
         _add_inline_runs(p, " ".join(lines))
 
 
-def _append_line(doc: Document, line: str) -> None:
+def _append_line(doc: Document, line: str, *, compact: bool = False) -> None:
     s = line.strip()
     if not s:
         return
+    space_after = Pt(2) if compact else None
     if s.startswith(("- ", "* ")):
         p = doc.add_paragraph(style="List Bullet")
+        if compact:
+            p.paragraph_format.space_after = space_after
         _add_inline_runs(p, s[2:].strip())
         return
     if s.startswith("### "):
-        doc.add_heading(s[4:].strip(), level=3)
+        h = doc.add_heading(s[4:].strip(), level=3)
+        if compact:
+            h.paragraph_format.space_after = space_after
         return
     p = doc.add_paragraph()
+    if compact:
+        p.paragraph_format.space_after = space_after
     _add_inline_runs(p, s)
 
 
@@ -282,13 +306,27 @@ class DocxNotesExporter:
         hierarchy: Dict[str, Any],
         rewritten: Dict[str, str],
         reference_docx: Optional[str] = None,
+        bundle_size: int = 1,
+        bundle_export: bool = False,
+        compact_toc: bool = False,
+        chapter_page_breaks: Optional[bool] = None,
     ) -> str:
+        from src.modules.generation.section_bundler import build_rewrite_bundles, resolve_chapter_page_breaks
+
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
         doc = Document()
         bookmark_ids = _BookmarkIds()
         toc_rows: List[tuple[int, str, str]] = []
         first_chapter_el = None
+        chapter_index = 0
+        use_bundles = bundle_export and bundle_size > 1
+        toc_sections = not compact_toc and not use_bundles
+        if chapter_page_breaks is None:
+            chapter_page_breaks = resolve_chapter_page_breaks(
+                compact_toc=compact_toc,
+                use_bundles=use_bundles,
+            )
 
         _add_cover_page(doc, cover)
         _add_page_break(doc)
@@ -297,32 +335,63 @@ class DocxNotesExporter:
             ch_heading = str(ch.get("heading") or "").strip()
             if not ch_heading:
                 continue
-            sec_blocks: List[tuple[str, str, str]] = []
+            sec_rows: List[Dict[str, Any]] = []
             for sec in ch.get("sections") or []:
                 sid = str(sec.get("section_id") or "")
                 body = (rewritten.get(sid) or "").strip()
                 if not body:
                     continue
-                sec_blocks.append((sid, str(sec.get("heading") or sid), body))
-            if not sec_blocks:
+                sec_rows.append(
+                    {
+                        "section_id": sid,
+                        "heading": str(sec.get("heading") or sid).strip(),
+                        "chapter_heading": ch_heading,
+                        "text": body,
+                    }
+                )
+            if not sec_rows:
                 continue
 
-            _add_page_break(doc)
-            if first_chapter_el is None:
-                first_chapter_el = doc.paragraphs[-1]._element
+            if chapter_index > 0 and chapter_page_breaks:
+                _add_page_break(doc)
+            chapter_index += 1
 
             ch_id = str(ch.get("chapter_id") or ch_heading)
             ch_bm = _sanitize_bookmark_name(f"ch_{ch_id}")
             h1 = doc.add_heading(ch_heading, level=1)
+            if first_chapter_el is None:
+                first_chapter_el = h1._element
             _add_bookmark(h1, ch_bm, bookmark_ids)
             toc_rows.append((1, ch_heading, ch_bm))
 
-            for sid, sec_heading, body in sec_blocks:
-                sec_bm = _sanitize_bookmark_name(f"sec_{sid}")
-                h2 = doc.add_heading(sec_heading[:200], level=2)
-                _add_bookmark(h2, sec_bm, bookmark_ids)
-                toc_rows.append((2, sec_heading[:110], sec_bm))
-                append_markdown_body(doc, body)
+            if use_bundles:
+                for bundle in build_rewrite_bundles(sec_rows, bundle_size=bundle_size):
+                    bundle_bm = _sanitize_bookmark_name(f"b_{bundle.bundle_id}_{ch_id}")
+                    h2 = doc.add_heading(bundle.label[:200], level=2)
+                    _add_bookmark(h2, bundle_bm, bookmark_ids)
+                    if toc_sections:
+                        toc_rows.append((2, bundle.label[:110], bundle_bm))
+                    for sid, sec_heading in zip(bundle.section_ids, bundle.headings):
+                        body = (rewritten.get(sid) or "").strip()
+                        if not body:
+                            continue
+                        sec_bm = _sanitize_bookmark_name(f"sec_{sid}")
+                        h3 = doc.add_heading(sec_heading[:200], level=3)
+                        _add_bookmark(h3, sec_bm, bookmark_ids)
+                        if toc_sections:
+                            toc_rows.append((3, sec_heading[:110], sec_bm))
+                        append_markdown_body(doc, body, compact=True)
+            else:
+                for row in sec_rows:
+                    sid = str(row.get("section_id") or "")
+                    sec_heading = str(row.get("heading") or sid)
+                    body = str(row.get("text") or "")
+                    sec_bm = _sanitize_bookmark_name(f"sec_{sid}")
+                    h2 = doc.add_heading(sec_heading[:200], level=2)
+                    _add_bookmark(h2, sec_bm, bookmark_ids)
+                    if toc_sections:
+                        toc_rows.append((2, sec_heading[:110], sec_bm))
+                    append_markdown_body(doc, body, compact=compact_toc)
 
         if first_chapter_el is not None and toc_rows:
             _prepend_toc_block(doc, insert_before=first_chapter_el, toc_rows=toc_rows)
@@ -377,22 +446,30 @@ def _refresh_word_fields(docx_path: str) -> None:
             word.Quit()
 
 
-def parse_section_bodies_from_markdown(md_text: str) -> Dict[str, str]:
-    """Map section heading -> body text from all ## sections in the notes body."""
+def parse_markdown_sections(md_text: str) -> Tuple[Dict[str, str], Dict[str, str]]:
+    """Return (by_heading, by_section_id) from markdown body."""
     m = re.search(r"# Table of Contents[\s\S]*?\n# ([^\n]+)", md_text)
     body = md_text[m.start(1) :] if m else md_text
 
-    sections: Dict[str, str] = {}
+    by_heading: Dict[str, str] = {}
+    by_sid: Dict[str, str] = {}
     current_heading = ""
+    current_sid = ""
     buf: List[str] = []
     skip_block = False
 
     def flush() -> None:
-        nonlocal buf, current_heading
-        if current_heading and buf:
-            text = "\n".join(buf).strip()
-            if text:
-                sections[current_heading] = text
+        nonlocal buf, current_heading, current_sid
+        if not buf:
+            return
+        text = "\n".join(buf).strip()
+        if not text:
+            buf = []
+            return
+        if current_sid:
+            by_sid[current_sid] = text
+        if current_heading:
+            by_heading[current_heading] = text
         buf = []
 
     for line in body.splitlines():
@@ -406,35 +483,177 @@ def parse_section_bodies_from_markdown(md_text: str) -> Dict[str, str]:
         if line.startswith("# ") and not line.startswith("## "):
             flush()
             current_heading = ""
+            current_sid = ""
             continue
         if line.startswith("## ") and not line.startswith("### "):
             flush()
-            current_heading = line[3:].strip()
-            if re.match(r"^\d+\.\s+", current_heading):
-                current_heading = ""
+            raw = line[3:].strip()
+            sid_m = SECTION_ID_TAG.search(raw)
+            current_sid = sid_m.group(1) if sid_m else ""
+            current_heading = SECTION_ID_TAG.sub("", raw).strip()
             continue
-        if current_heading:
+        if current_heading or current_sid:
             buf.append(line)
     flush()
-    return sections
+    return by_heading, by_sid
+
+
+def parse_section_bodies_from_markdown(md_text: str) -> Dict[str, str]:
+    """Map section heading -> body text (backward compatible)."""
+    by_heading, _ = parse_markdown_sections(md_text)
+    return by_heading
 
 
 def _norm_heading(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "").strip().lower())
+    return normalize_heading(text)
+
+
+def _match_body_for_section(
+    *,
+    sid: str,
+    heading: str,
+    by_sid: Dict[str, str],
+    by_heading: Dict[str, str],
+    used_headings: set[str],
+    fuzzy_threshold: float,
+) -> str:
+    if sid and sid in by_sid:
+        return by_sid[sid]
+    if heading in by_heading and heading not in used_headings:
+        used_headings.add(heading)
+        return by_heading[heading]
+    nh = _norm_heading(heading)
+    for key, val in by_heading.items():
+        if key in used_headings:
+            continue
+        if _norm_heading(key) == nh:
+            used_headings.add(key)
+            return val
+    best_key = ""
+    best_score = 0.0
+    for key, val in by_heading.items():
+        if key in used_headings:
+            continue
+        score = heading_similarity(key, heading)
+        if score > best_score:
+            best_score = score
+            best_key = key
+    if best_score >= fuzzy_threshold and best_key:
+        used_headings.add(best_key)
+        return by_heading[best_key]
+    return ""
 
 
 def rewritten_map_from_section_bodies(
     hierarchy: Dict[str, Any],
     section_bodies: Dict[str, str],
+    *,
+    by_section_id: Optional[Dict[str, str]] = None,
+    md_text: Optional[str] = None,
+    fuzzy_threshold: float = 0.82,
 ) -> Dict[str, str]:
-    """Match section bodies to section_id by normalized heading."""
-    by_norm = {_norm_heading(k): v for k, v in section_bodies.items()}
+    """Match section bodies to section_id by sid tag, exact heading, then fuzzy match."""
+    by_heading = dict(section_bodies)
+    by_sid = dict(by_section_id or {})
+    used_headings: set[str] = set()
     result: Dict[str, str] = {}
+
     for ch in hierarchy.get("chapters") or []:
         for sec in ch.get("sections") or []:
             sid = str(sec.get("section_id") or "")
             heading = str(sec.get("heading") or "").strip()
-            body = section_bodies.get(heading) or by_norm.get(_norm_heading(heading), "")
+            body = _match_body_for_section(
+                sid=sid,
+                heading=heading,
+                by_sid=by_sid,
+                by_heading=by_heading,
+                used_headings=used_headings,
+                fuzzy_threshold=fuzzy_threshold,
+            )
             if body:
                 result[sid] = body
+
+    # Positional fallback per chapter when MD section count matches hierarchy
+    md_by_chapter = _sections_by_chapter_from_markdown(md_text) if md_text else {}
+    if not md_by_chapter and by_heading:
+        md_by_chapter = {"": [(k, v) for k, v in by_heading.items()]}
+    for ch in hierarchy.get("chapters") or []:
+        ch_name = _norm_heading(str(ch.get("heading") or ""))
+        md_secs = md_by_chapter.get(ch_name) or []
+        h_secs = [s for s in ch.get("sections") or [] if str(s.get("section_id") or "") not in result]
+        if not h_secs or not md_secs:
+            continue
+        if len(md_secs) == len(h_secs):
+            for sec, (_, body) in zip(h_secs, md_secs):
+                sid = str(sec.get("section_id") or "")
+                if sid and body:
+                    result[sid] = body
     return result
+
+
+def _sections_by_chapter_from_markdown(md_text: str) -> Dict[str, List[Tuple[str, str]]]:
+    """Group ## sections under their preceding # chapter heading."""
+    m = re.search(r"# Table of Contents[\s\S]*?\n# ([^\n]+)", md_text)
+    body = md_text[m.start(1) :] if m else md_text
+    out: Dict[str, List[Tuple[str, str]]] = {}
+    chapter_key = ""
+    current_heading = ""
+    buf: List[str] = []
+    skip_block = False
+
+    def flush() -> None:
+        nonlocal buf, current_heading
+        if current_heading and buf:
+            text = "\n".join(buf).strip()
+            if text:
+                out.setdefault(chapter_key, []).append((current_heading, text))
+        buf = []
+
+    for line in body.splitlines():
+        if line.strip().startswith("```{=openxml}"):
+            skip_block = True
+            continue
+        if skip_block:
+            if line.strip() == "```":
+                skip_block = False
+            continue
+        if line.startswith("# ") and not line.startswith("## "):
+            flush()
+            chapter_key = _norm_heading(line[2:].strip())
+            current_heading = ""
+            continue
+        if line.startswith("## ") and not line.startswith("### "):
+            flush()
+            raw = line[3:].strip()
+            current_heading = SECTION_ID_TAG.sub("", raw).strip()
+            continue
+        if current_heading:
+            buf.append(line)
+    flush()
+    return out
+
+
+def resolve_rewritten_map(
+    hierarchy: Dict[str, Any],
+    *,
+    rewritten_by_id: Optional[Dict[str, str]] = None,
+    md_text: Optional[str] = None,
+) -> Dict[str, str]:
+    """Prefer section_id sidecar; fall back to markdown parsing."""
+    if rewritten_by_id:
+        return {str(k): str(v) for k, v in rewritten_by_id.items() if v and str(v).strip()}
+    if md_text:
+        by_heading, by_sid = parse_markdown_sections(md_text)
+        if by_sid:
+            result: Dict[str, str] = {}
+            for ch in hierarchy.get("chapters") or []:
+                for sec in ch.get("sections") or []:
+                    sid = str(sec.get("section_id") or "")
+                    if sid and sid in by_sid:
+                        result[sid] = by_sid[sid]
+            if len(result) >= len(by_sid) * 0.5:
+                return result
+        return rewritten_map_from_section_bodies(
+            hierarchy, by_heading, by_section_id=by_sid, md_text=md_text
+        )
+    return {}

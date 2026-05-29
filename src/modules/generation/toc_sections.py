@@ -58,8 +58,32 @@ def load_chapter_hierarchy_json(path: str | Path) -> Dict[str, Any]:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     items = data.get("items") if isinstance(data, dict) else data
     if not isinstance(items, dict):
-        raise ValueError(f"Invalid 15e payload in {path}")
+        raise ValueError(f"Invalid chapter hierarchy payload in {path}")
     return items
+
+
+def find_latest_hierarchy_log(*, pdf_name: str, logs_dir: str | Path = "logs") -> Optional[Path]:
+    """Prefer cleaned 15f artifact, then raw 15e."""
+    base = Path(logs_dir)
+    if not base.is_dir():
+        return None
+    candidates: List[Path] = []
+    for run_dir in sorted(base.glob("run_*"), reverse=True):
+        for name in ("15f_heading_cleanup.json", "15e_chapter_hierarchy.json"):
+            p = run_dir / name
+            if not p.exists():
+                continue
+            meta = run_dir / "11_book_metadata.json"
+            if meta.exists():
+                try:
+                    meta_data = json.loads(meta.read_text(encoding="utf-8"))
+                    if meta_data.get("pdf_file") and pdf_name not in str(meta_data.get("pdf_file")):
+                        continue
+                except Exception:
+                    pass
+            candidates.append(p)
+            break
+    return candidates[0] if candidates else None
 
 
 def find_latest_15e_log(*, pdf_name: str, logs_dir: str | Path = "logs") -> Optional[Path]:
@@ -233,7 +257,7 @@ def load_rewrite_sections(
     if lines is not None:
         path_15e = Path(chapter_hierarchy_path) if chapter_hierarchy_path else None
         if path_15e is None and prefer_15e and pdf_path:
-            path_15e = find_latest_15e_log(pdf_name=Path(pdf_path).name)
+            path_15e = find_latest_hierarchy_log(pdf_name=Path(pdf_path).name)
         if prefer_15e and path_15e and path_15e.exists():
             hierarchy = load_chapter_hierarchy_json(path_15e)
             sections = load_rewrite_sections_from_15e(hierarchy, lines=lines)

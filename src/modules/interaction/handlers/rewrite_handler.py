@@ -46,7 +46,10 @@ class RewriteHandler:
                 lines, _, _ = extract_pdf(self.pdf_path)
             if self.ultimate_log_dir:
                 ultimate_path = Path(self.ultimate_log_dir) / "15d_ultimate_sections.json"
-                hierarchy_path = Path(self.ultimate_log_dir) / "15e_chapter_hierarchy.json"
+                log_dir = Path(self.ultimate_log_dir)
+                h15f = log_dir / "15f_heading_cleanup.json"
+                h15e = log_dir / "15e_chapter_hierarchy.json"
+                hierarchy_path = h15f if h15f.exists() else h15e
 
             results = self.engine.run(
                 user_instruction=intent.normalized_query,

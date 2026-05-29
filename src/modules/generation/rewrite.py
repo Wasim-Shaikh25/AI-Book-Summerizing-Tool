@@ -6,6 +6,8 @@ import logging
 
 import re
 
+import threading
+
 from datetime import datetime
 
 from pathlib import Path
@@ -27,7 +29,12 @@ from src.modules.export.document_formatter import (
 
 from src.modules.generation.model_router import RewriteModelRouter
 
-from src.modules.generation.rewrite_prompts import build_section_user_prompt, rewrite_system_prompt
+from src.modules.generation.parallel_rewrite import (
+    resolve_context_overlap_chars,
+    resolve_parallel_workers,
+    rewrite_sections_parallel,
+)
+from src.modules.generation.rewrite_prompts import is_exam_oriented_mode, rewrite_system_prompt
 
 from src.modules.generation.toc_sections import load_chapter_hierarchy_json, load_rewrite_sections
 
@@ -103,43 +110,39 @@ class RewriteEngine:
 
         cap = max_source_chars or int(getattr(config, "ULTIMATE_MAX_REWRITE_SECTION_CHARS", 6000) or 6000)
 
-        system = rewrite_system_prompt()
+        exam_oriented = is_exam_oriented_mode()
+        system = rewrite_system_prompt(exam_oriented=exam_oriented)
+        workers = resolve_parallel_workers()
+        overlap = resolve_context_overlap_chars()
 
-        rewritten: Dict[str, str] = {}
+        _tls = threading.local()
 
-        for idx, sec in enumerate(work, start=1):
+        def _router() -> RewriteModelRouter:
+            if getattr(_tls, "router", None) is None:
+                _tls.router = RewriteModelRouter()
+            return _tls.router
 
-            heading = sec["heading"]
-
-            user_prompt = build_section_user_prompt(
-
-                user_instruction=user_instruction,
-
-                heading=heading,
-
-                source_text=str(sec["text"])[:cap],
-
-            )
-
-            out = self.router.generate(
-
-                system_prompt=system,
-
+        def _generate(system_prompt: str, user_prompt: str) -> str:
+            out = _router().generate(
+                system_prompt=system_prompt,
                 user_prompt=user_prompt,
-
                 max_tokens=max_tokens,
-
             )
+            return out.get("text") or ""
 
-            text = (out.get("text") or "").strip()
-
-            if not text:
-
-                logger.warning("Empty rewrite for section %s: %s", idx, heading)
-
-                continue
-
-            rewritten[str(sec.get("section_id") or idx)] = text
+        rewritten = rewrite_sections_parallel(
+            work,
+            user_instruction=user_instruction,
+            system=system,
+            generate=_generate,
+            max_tokens=max_tokens,
+            max_source_chars=cap,
+            workers=workers,
+            overlap_chars=overlap,
+            on_progress=lambda done, total, heading: logger.info(
+                "Rewrite %s/%s: %s", done, total, heading[:60]
+            ),
+        )
 
         if chapter_hierarchy and chapter_hierarchy.get("chapters"):
 

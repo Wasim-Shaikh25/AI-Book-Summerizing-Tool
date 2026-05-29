@@ -226,9 +226,51 @@ CHAPTER_HIERARCHY_MIN_SECTIONS_PER_CHAPTER = _env_int(
     int(_cfg_get(_YAML, "chapter_hierarchy", "min_sections_per_chapter", default=6)),
 )
 
+# Stage 15f — heading cleanup (weak titles + duplicate chapters)
+_raw_heading_cleanup_llm = _env(
+    "HEADING_CLEANUP_LLM", str(_cfg_get(_YAML, "heading_cleanup", "llm", default=""))
+).strip().lower()
+HEADING_CLEANUP_LLM = (
+    _raw_heading_cleanup_llm if _raw_heading_cleanup_llm else _PROVIDER_TO_BACKEND.get(LLM_PROVIDER, "openai")
+)
+HEADING_CLEANUP_USE_LLM = _env(
+    "HEADING_CLEANUP_USE_LLM", str(_cfg_get(_YAML, "heading_cleanup", "use_llm", default="1"))
+).strip()
+HEADING_CLEANUP_BATCH_SIZE = _env_int(
+    "HEADING_CLEANUP_BATCH_SIZE", int(_cfg_get(_YAML, "heading_cleanup", "batch_size", default=20))
+)
+
 FULL_REWRITE_MAX_CHUNKS = _env_int(
     "FULL_REWRITE_MAX_CHUNKS", int(_cfg_get(_YAML, "rewrite", "full_rewrite_max_chunks", default=0))
 )
+REWRITE_PARALLEL_WORKERS = _env_int(
+    "REWRITE_PARALLEL_WORKERS", int(_cfg_get(_YAML, "rewrite", "parallel_workers", default=8))
+)
+REWRITE_CONTEXT_OVERLAP_CHARS = _env_int(
+    "REWRITE_CONTEXT_OVERLAP_CHARS", int(_cfg_get(_YAML, "rewrite", "context_overlap_chars", default=600))
+)
+REWRITE_AUTO_RETRY_MISSING = _env(
+    "REWRITE_AUTO_RETRY_MISSING", str(_cfg_get(_YAML, "rewrite", "auto_retry_missing", default="1"))
+).strip()
+REWRITE_MISSING_MAX_ROUNDS = _env_int(
+    "REWRITE_MISSING_MAX_ROUNDS", int(_cfg_get(_YAML, "rewrite", "missing_max_rounds", default=3))
+)
+COMPACT_EXAM = _env(
+    "COMPACT_EXAM", str(_cfg_get(_YAML, "rewrite", "compact_exam", default="0"))
+).strip()
+REWRITE_BUNDLE_SIZE = _env_int(
+    "REWRITE_BUNDLE_SIZE", int(_cfg_get(_YAML, "rewrite", "bundle_size", default=1))
+)
+REWRITE_BUNDLE_MAX_CHARS = _env_int(
+    "REWRITE_BUNDLE_MAX_CHARS", int(_cfg_get(_YAML, "rewrite", "bundle_max_chars", default=12000))
+)
+REWRITE_BUNDLE_EXPORT = _env(
+    "REWRITE_BUNDLE_EXPORT", str(_cfg_get(_YAML, "rewrite", "bundle_export", default="1"))
+).strip()
+REWRITE_CHAPTER_PAGE_BREAKS = _env(
+    "REWRITE_CHAPTER_PAGE_BREAKS",
+    str(_cfg_get(_YAML, "rewrite", "chapter_page_breaks", default="auto")),
+).strip()
 PIPELINE_MAX_PAGES = _env_int(
     "PIPELINE_MAX_PAGES", int(_cfg_get(_YAML, "system", "pipeline_max_pages", default=0))
 )

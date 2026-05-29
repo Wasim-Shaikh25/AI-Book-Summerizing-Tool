@@ -62,6 +62,10 @@ class WordExporter:
         cover: BookCoverMeta,
         hierarchy: dict,
         rewritten: dict[str, str],
+        bundle_size: int = 1,
+        bundle_export: bool = False,
+        compact_toc: bool = False,
+        chapter_page_breaks: Optional[bool] = None,
     ) -> str:
         """Export notes with cover, hierarchical TOC, and chapter page breaks (python-docx)."""
         output_path = os.path.join(self.output_folder, output_filename)
@@ -77,6 +81,10 @@ class WordExporter:
             hierarchy=hierarchy,
             rewritten=rewritten,
             reference_docx=REFERENCE_DOCX_PATH if os.path.exists(REFERENCE_DOCX_PATH) else None,
+            bundle_size=bundle_size,
+            bundle_export=bundle_export,
+            compact_toc=compact_toc,
+            chapter_page_breaks=chapter_page_breaks,
         )
 
     def structured_text_to_word(self, book_data: dict, output_filename: str, toc_depth: int = 3, include_toc: bool = True) -> str:

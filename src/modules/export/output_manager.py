@@ -39,6 +39,10 @@ class OutputManager:
         cover: Optional[BookCoverMeta] = None,
         hierarchy: Optional[Dict[str, Any]] = None,
         rewritten: Optional[Dict[str, str]] = None,
+        bundle_size: int = 1,
+        bundle_export: bool = False,
+        compact_toc: bool = False,
+        chapter_page_breaks: Optional[bool] = None,
     ) -> str:
         """
         Exports content to Word. Prefer structured export (cover, TOC, page breaks)
@@ -53,6 +57,10 @@ class OutputManager:
                     cover=cover,
                     hierarchy=hierarchy,
                     rewritten=rewritten,
+                    bundle_size=bundle_size,
+                    bundle_export=bundle_export,
+                    compact_toc=compact_toc,
+                    chapter_page_breaks=chapter_page_breaks,
                 )
             except Exception as e:
                 logger.error(f"Structured Word export failed, falling back to Pandoc: {e}")

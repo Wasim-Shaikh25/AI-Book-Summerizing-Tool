@@ -36,6 +36,15 @@ rewrite:
   llamacpp_model_path: ""
   llamacpp_model_urls: ""
   full_rewrite_max_chunks: 0
+  parallel_workers: 8            # concurrent section rewrites (1 = sequential)
+  context_overlap_chars: 600     # prev/next snippet chars for continuity
+  auto_retry_missing: true       # rerun failed/empty sections before export
+  missing_max_rounds: 3          # max auto-retry passes for missing sections
+  compact_exam: false            # true = 4-6 bullets/section, no Quick Revision block
+  bundle_size: 1                 # combine N sections per LLM call (6 when COMPACT_EXAM=1)
+  bundle_max_chars: 12000        # max combined source chars per bundle
+  bundle_export: true             # group bundled sections as ### under ## in Word
+  chapter_page_breaks: auto       # auto | true | false — new page before each chapter in Word/MD
 
 doubted:
   resolver_mode: revalidate_selected
@@ -51,6 +60,11 @@ chapter_hierarchy:
   batch_size: 25
   max_sections: 0               # 0 = all sections; set 10-20 for quick tests
   min_sections_per_chapter: 6   # merge tiny chapters for cleaner TOC
+
+heading_cleanup:
+  llm: openai                   # empty = derive from llm.provider
+  use_llm: true                 # stage 15f — fix weak PDF fragment titles + duplicate chapters
+  batch_size: 20
 
 ultimate:
   profile: auto                 # auto | large | medium | small

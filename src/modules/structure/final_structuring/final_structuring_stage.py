@@ -1,4 +1,4 @@
-"""Run stages 15a → 15c → 15d → 16 and write pipeline log artifacts."""
+"""Run stages 15a → 15d → 15e → 15f → 15c → 16 and write pipeline log artifacts."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from src.modules.structure.final_structuring.book_assembler import (
     build_ultimate_sections,
 )
 from src.modules.structure.final_structuring.chapter_hierarchy_builder import build_chapter_hierarchy
+from src.modules.structure.final_structuring.heading_cleanup import clean_heading_hierarchy
 from src.modules.structure.logging.pipeline_logger import PipelineLogger
 from src.shared.models import NormalizedLine
 
@@ -49,6 +50,9 @@ def run_final_structuring_stage(
         max_sections=max_15e,
     )
     logger.write_stage_payload("15e_chapter_hierarchy", chapter_hierarchy)
+
+    chapter_hierarchy = clean_heading_hierarchy(chapter_hierarchy)
+    logger.write_stage_payload("15f_heading_cleanup", chapter_hierarchy)
 
     final_book = assemble_final_book(
         book_title=book_title,

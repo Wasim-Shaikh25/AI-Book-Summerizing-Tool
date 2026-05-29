@@ -83,6 +83,7 @@ def _persist(ctx: PipelineContext, result: PipelineResult) -> None:
             "15c_final_book": "15c_final_book.json",
             "15d_ultimate_sections": "15d_ultimate_sections.json",
             "15e_chapter_hierarchy": "15e_chapter_hierarchy.json",
+            "15f_heading_cleanup": "15f_heading_cleanup.json",
             "16_rag_snapshot": "16_rag_snapshot.json",
             "decision_trace": "decision_trace.json",
         }
