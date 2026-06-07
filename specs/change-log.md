@@ -6,6 +6,14 @@
 
 ---
 
+## [2026-06-07] — Move ingestion/RAG strategy to ai-agent-workflow
+
+- **What:** Moved `ingestion-toc-rag-strategy.md` from `specs/` to `ai-agent-workflow/`. Added `ai-agent-workflow/.gitignore` for local agent scratch. Updated `specs/index.md` and `ai-agent-workflow/SDD.md` links.
+- **Why:** Strategy analysis is agent workflow material, not authoritative SDD.
+- **Impact:** `specs/` holds only committed design specs; TOC/RAG roadmap lives under `ai-agent-workflow/`.
+
+---
+
 ## [2026-06-07] — Ingestion / TOC / Advanced RAG strategy doc
 
 - **What:** Added `ingestion-toc-rag-strategy.md` — analysis of current structure-first pipeline (15a–15f), RAG gaps, Advanced RAG guide mapping, two-track architecture, phased roadmap.

@@ -2,7 +2,7 @@
 
 > **Role:** Architecture analysis — how your current pipeline works, what the Advanced RAG guide adds, and the recommended path forward.  
 > **Date:** 2026-06-07  
-> **Related:** [modules/ingestion.md](./modules/ingestion.md) · [modules/pipeline-core.md](./modules/pipeline-core.md) · [modules/structure-extraction.md](./modules/structure-extraction.md) · [modules/rag-retrieval.md](./modules/rag-retrieval.md)
+> **Related:** [modules/ingestion.md](../specs/modules/ingestion.md) · [modules/pipeline-core.md](../specs/modules/pipeline-core.md) · [modules/structure-extraction.md](../specs/modules/structure-extraction.md) · [modules/rag-retrieval.md](../specs/modules/rag-retrieval.md)
 
 ---
 
@@ -62,7 +62,7 @@ flowchart TD
 | Doubted sections (15b) | Resolve late TOC (page > 3) |
 | Finalize headings | Strip TOC/metadata rows |
 
-**Authoritative:** [modules/pipeline-core.md](./modules/pipeline-core.md) · [modules/structure-extraction.md](./modules/structure-extraction.md)
+**Authoritative:** [modules/pipeline-core.md](../specs/modules/pipeline-core.md) · [modules/structure-extraction.md](../specs/modules/structure-extraction.md)
 
 ### 2.4 Dynamic TOC & sections (stages 15a–15f)
 

@@ -13,7 +13,6 @@ Each topic has **one authoritative spec**. Other files link to it — they do no
 | **Navigation** | Where to go | `index.md` (this file) |
 | **Summary** | One-page intro | `overview.md` |
 | **Architecture** | Layers, ADRs, repo layout | `architecture.md` |
-| **Strategy** | TOC / sections / RAG roadmap | `ingestion-toc-rag-strategy.md` |
 | **Requirements** | WHAT (requirement IDs) | `requirements-web-platform.md`, `requirements-ocr-stage.md` |
 | **Engine modules** | HOW per module | `modules/*.md` |
 | **Web API** | REST endpoints, services | `backend-api.md` |
@@ -64,7 +63,7 @@ Each topic has **one authoritative spec**. Other files link to it — they do no
 | 10 | [parameters-config.md](./modules/parameters-config.md) | `config/`, `shared/config.py` |
 | 11 | [rag-retrieval.md](./modules/rag-retrieval.md) | `rag/` |
 
-Supplementary: [ingestion-toc-rag-strategy.md](./ingestion-toc-rag-strategy.md) · [requirements-ocr-stage.md](./requirements-ocr-stage.md)
+Supplementary: [requirements-ocr-stage.md](./requirements-ocr-stage.md)
 
 ---
 
@@ -102,7 +101,7 @@ Guide: [future-modifications.md](./future-modifications.md)
 | Change UI | [frontend.md](./frontend.md) §11 |
 | UI↔API contract | [ui-backend-integration.md](./ui-backend-integration.md) |
 | Pipeline stage | [modules/pipeline-core.md](./modules/pipeline-core.md) |
-| TOC / sections / RAG strategy | [ingestion-toc-rag-strategy.md](./ingestion-toc-rag-strategy.md) |
+| TOC / sections / RAG strategy (agent workflow) | [ingestion-toc-rag-strategy.md](../ai-agent-workflow/ingestion-toc-rag-strategy.md) |
 | Export policy | [modules/export.md](./modules/export.md) §3 |
 | Config / env | [modules/parameters-config.md](./modules/parameters-config.md) |
 | Tests | [testing.md](./testing.md) |
@@ -118,3 +117,16 @@ cd backend && pytest tests/unit
 ```
 
 Set `AUTH_ENABLED=false` in `.env` for local dev without OAuth.
+
+---
+
+## 7. Agent Workflow Docs
+
+Analysis and execution notes live in [`../ai-agent-workflow/`](../ai-agent-workflow/) (not part of authoritative SDD):
+
+| File | Purpose |
+|------|---------|
+| [SDD.md](../ai-agent-workflow/SDD.md) | Pointer to this index |
+| [requirements.md](../ai-agent-workflow/requirements.md) | MESO requirements summary |
+| [tasks.md](../ai-agent-workflow/tasks.md) | Stage checklist |
+| [ingestion-toc-rag-strategy.md](../ai-agent-workflow/ingestion-toc-rag-strategy.md) | TOC / sections / RAG roadmap analysis |
