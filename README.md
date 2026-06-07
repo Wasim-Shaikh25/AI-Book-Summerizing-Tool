@@ -1,58 +1,53 @@
-# AI Notes Creator Model
+# AI Notes Creator
 
-PDF book structure extraction and optional AI-assisted note generation.
+PDF book structure extraction, AI note generation, and web chat with Word export.
 
-> Engineered under the **MESO Universal Engineering Standard**.  
-> **Start here:** [`spec/index.md`](./spec/index.md)
+## Repository layout
 
----
+| Path | Purpose |
+|------|---------|
+| [`backend/`](./backend/README.md) | **All Python** — engine, API, CLI, tests, scripts |
+| [`frontend/`](./frontend/) | React web UI |
+| [`specs/`](./specs/) | Requirements and SDD |
+| `output/`, `models/`, `pdfs/` | Runtime data (gitignored) |
+| `.env` | Secrets (copy from `.env.example`) |
 
-## Quick Map
+## Quick start
 
-| Directory | Purpose |
-|-----------|---------|
-| [`spec/`](./spec/index.md) | Authoritative SDD (start every task here) |
-| [`config/`](./config/README.md) | Tunables — `default.yaml` (MESO Rule 12) |
-| [`src/shared/`](./src/shared/) | Config loader, domain models |
-| [`src/modules/`](./src/modules/) | Feature modules (mirror `spec/modules/`) |
-| [`docs/`](./docs/README.md) | Operator documentation |
-| [`tests/`](./tests/README.md) | Unit / integration tests |
-| [`ai-agent-workflow/`](./ai-agent-workflow/) | Requirements, tasks |
-| [`scripts/`](./scripts/) | Pipeline scripts |
-
-Legacy import paths (`src.ingestion.*`, `src.core.*`) remain as compat shims.
-
----
-
-## Entry Points
+### Backend (CLI)
 
 ```bash
-# Interactive CLI
+cd backend
+pip install -r requirements.txt
 python main.py
-
-# Debug pipeline trace (logs + DB)
-python -m src.modules.debug.run_toc_trace path/to/book.pdf
-
-# Canonical import
-from src.modules.pipeline import run_pipeline
-from src.book_pipeline import run_pipeline  # stable alias
 ```
 
----
+### Backend (API) + Frontend
 
-## Configuration
+```bash
+# Terminal 1
+cd backend
+uvicorn api.main:app --reload --port 8000
 
-1. Copy `.env.example` → `.env` for secrets and overrides.
-2. Defaults live in [`config/default.yaml`](./config/default.yaml).
-3. Loader: [`src/shared/config.py`](./src/shared/config.py).
+# Terminal 2
+cd frontend
+npm install && npm run dev
+```
 
-See [`spec/modules/parameters-config.md`](./spec/modules/parameters-config.md).
+Open http://localhost:5173 — configure OAuth in `.env` (see `.env.example`).
 
----
+### Docker
 
-## Contribution Discipline (MESO)
+```bash
+docker compose up --build
+```
 
-1. Read [`spec/index.md`](./spec/index.md)
-2. Update relevant spec module **first**
-3. Implement code under `src/modules/` or `src/shared/`
-4. Append [`spec/change-log.md`](./spec/change-log.md)
+### Tests
+
+```bash
+cd backend && pytest
+```
+
+## Specs
+
+Start at [`specs/index.md`](./specs/index.md) or [`specs/requirements-web-platform.md`](./specs/requirements-web-platform.md).

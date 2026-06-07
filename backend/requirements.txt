@@ -1,0 +1,24 @@
+# Engine + pipeline
+faiss-cpu
+sentence-transformers
+tensorflow_hub
+google-generativeai
+PyYAML
+pydantic
+pytest
+python-dotenv
+PyMuPDF
+python-docx
+pywin32; sys_platform == "win32"
+pytesseract
+Pillow
+llama-cpp-python==0.2.90
+
+# Web API
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9
+python-jose[cryptography]>=3.3.0
+httpx>=0.27.0
+pydantic-settings>=2.0.0
+PyJWT>=2.8.0

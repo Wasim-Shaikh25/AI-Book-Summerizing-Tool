@@ -15,6 +15,10 @@ venv/
 # VSCode
 .vscode/
 
+# Node.js
+node_modules/
+frontend/dist/
+
 # Local env files
 .env
 

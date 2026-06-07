@@ -1,12 +1,13 @@
 # Requirements — AI Notes Creator Model
 
-> MESO-aligned requirements document. Authoritative design: [`../spec/SDD.md`](../spec/SDD.md).
+> MESO-aligned requirements document. Authoritative design: [`../specs/index.md`](../specs/index.md).  
+> Web platform: [`../specs/requirements-web-platform.md`](../specs/requirements-web-platform.md).
 
 ---
 
 ## Problem Definition
 
-Legal/academic PDF books need automated structure extraction (headings, fragments, TOC) and optional AI-assisted note generation/export — without losing reproducibility or traceability.
+Legal/academic PDF books need automated structure extraction (headings, fragments, TOC) and optional AI-assisted note generation/export — without losing reproducibility or traceability. Users also need a web UI with OAuth login, per-user chat history, and smart Word export.
 
 ---
 
@@ -14,18 +15,20 @@ Legal/academic PDF books need automated structure extraction (headings, fragment
 
 **In scope:**
 
-- PDF ingestion with layout metadata
+- PDF ingestion with layout metadata and OCR
 - Deterministic heading/fragment/TOC pipeline
-- Optional SQLite persistence
-- Optional LLM doubted-section resolver and rewrite
+- SQLite persistence + RAG retrieval
+- LLM doubted-section resolver and rewrite
 - Word export and CLI interaction
-- Debug trace + visualization
+- **Web API** (`backend/`) and **React UI** (`frontend/`)
+- OAuth auth (Google, Apple, Facebook)
+- Per-user conversations and chat history
+- Smart Word export policy (rewrite always, Q&A threshold, explicit request)
 
 **Out of scope (current baseline):**
 
-- Web UI
-- Multi-user cloud deployment
-- Full RAG Q&A (stub only)
+- Multi-tenant cloud production deploy (Docker scaffold only)
+- PostgreSQL (SQLite default)
 
 ---
 
@@ -36,11 +39,15 @@ Legal/academic PDF books need automated structure extraction (headings, fragment
 | FR1 | Ingest PDF and produce normalized line stream with layout flags |
 | FR2 | Detect heading candidates, apply validity and continuity filters |
 | FR3 | Build fragments and clean TOC sections deterministically |
-| FR4 | Optionally persist book/TOC graph to SQLite |
-| FR5 | Optionally log whitelisted stage JSON for debugging |
+| FR4 | Persist book/TOC graph to SQLite |
+| FR5 | Log whitelisted stage JSON for debugging |
 | FR6 | Export structured content to Word `.docx` |
 | FR7 | Support multiple LLM providers via centralized config |
 | FR8 | Resolve doubted sections via optional Stage 15b local LLM |
+| FR9 | Web users sign in via Google/Apple/Facebook OAuth |
+| FR10 | Web chat with persistent conversation history per user |
+| FR11 | Full PDF rewrite always produces Word file in web + CLI |
+| FR12 | Q&A in chat; auto Word when answer exceeds char limit or user asks |
 
 ---
 
@@ -49,9 +56,10 @@ Legal/academic PDF books need automated structure extraction (headings, fragment
 | ID | Requirement |
 |----|-------------|
 | NFR1 | Deterministic core path must run without LLM |
-| NFR2 | All tunables in `src/config.py` / `.env` (MESO Rule 12) |
+| NFR2 | All tunables in `config/default.yaml` / `.env` |
 | NFR3 | Spec precedes code; changes logged in `spec/change-log.md` |
-| NFR4 | No duplicate business logic across modules (MESO Rule 13) |
+| NFR4 | No duplicate business logic across modules |
+| NFR5 | API rate limiting and upload size caps |
 
 ---
 
@@ -59,4 +67,5 @@ Legal/academic PDF books need automated structure extraction (headings, fragment
 
 - Input PDFs are text-based or OCR-fallback capable
 - Local GGUF models available under `models/` for llama.cpp path
-- Pandoc installed for Word export
+- Pandoc optional; primary export via `python-docx`
+- OAuth credentials configured in `.env` for web login
