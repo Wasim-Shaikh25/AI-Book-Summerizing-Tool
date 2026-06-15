@@ -1,0 +1,71 @@
+---
+description: Rules for data handling, provenance, state, datasets, and persistence
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Data, Provenance, and State Rules
+
+Any fetched, uploaded, extracted, generated, transformed, embedded, predicted, or exported data should preserve provenance where relevant.
+
+## Track Provenance Where Applicable
+
+Track:
+
+- source ID
+- source type
+- document ID
+- section/chunk/span ID
+- input artifact ID
+- transformation method
+- model/tool name
+- model/tool version
+- prompt/config version if applicable
+- timestamp
+- confidence/quality score
+- license/access status
+- review status
+- transformation history
+
+## Raw vs Curated Data
+
+Raw data is not training-ready or production-trusted.
+
+Before using data for training/evaluation/analytics, apply:
+
+- validation
+- deduplication
+- normalization
+- license/access checks
+- quality scoring
+- review status
+- dataset versioning
+
+## State Management
+
+For persistent state:
+
+- use proper database/storage abstractions
+- avoid hidden local files unless explicitly intended
+- avoid storing secrets
+- include timestamps
+- include status fields
+- make background processes idempotent
+
+## Dataset Rules
+
+If dataset-building exists:
+
+- keep raw and curated data separate
+- preserve original source
+- version datasets
+- mark review status
+- mark license status
+- do not train directly on raw data
+
+## Generated Output Rules
+
+Generated output must be distinguishable from source data.
+
+Do not overwrite source material with generated interpretations.

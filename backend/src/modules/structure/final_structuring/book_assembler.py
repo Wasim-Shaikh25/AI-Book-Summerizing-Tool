@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from src.shared import config
 from src.shared.models import NormalizedLine
+from src.shared.text_grounding import is_contents_listing
 from src.modules.structure.final_structuring.models.mini_lm_encoder import get_mini_lm_encoder
 
 _CHAPTER_RE = re.compile(r"^\s*chapter\s+\d+", re.IGNORECASE)
@@ -40,6 +41,19 @@ def _pattern_level(text: str) -> Optional[Tuple[int, str]]:
     if letters.isupper() and len(letters) >= 8 and len(t.split()) >= 2:
         return 1, "pattern"
     return None
+
+
+def _heading_body_coherence(heading: str, body: str) -> float:
+    """MiniLM cosine similarity between heading and body (1.0 if encoder unavailable)."""
+    h = _norm(heading)
+    b = _norm(body)[:600]
+    if not h or not b:
+        return 1.0
+    enc = get_mini_lm_encoder()
+    embs = enc.encode([h[:200], b])
+    if embs is None or len(embs) < 2:
+        return 1.0
+    return float(np.dot(embs[0], embs[1]))
 
 
 def _looks_like_parent_heading(text: str) -> bool:
@@ -166,6 +180,102 @@ def _fragment_span_by_heading(
     return out
 
 
+def _page_count_from_lines(lines: Sequence[NormalizedLine]) -> int:
+    pages = [
+        int(getattr(ln, "page_number"))
+        for ln in lines
+        if isinstance(getattr(ln, "page_number", None), int) and int(getattr(ln, "page_number")) > 0
+    ]
+    return max(pages) if pages else 0
+
+
+def _section_body_chars(sec: Dict[str, Any]) -> int:
+    total = int((sec.get("fragment") or {}).get("chars") or 0)
+    for sub in sec.get("subheadings") or []:
+        total += int((sub.get("fragment") or {}).get("chars") or 0)
+    return total
+
+
+def _merge_two_sections(primary: Dict[str, Any], secondary: Dict[str, Any]) -> Dict[str, Any]:
+    """Fold secondary into primary — secondary heading becomes a subheading."""
+    out = dict(primary)
+    subs: List[Dict[str, Any]] = list(out.get("subheadings") or [])
+    if secondary.get("heading"):
+        subs.append(
+            {
+                "heading": secondary.get("heading"),
+                "line_id": secondary.get("line_id"),
+                "page_number": secondary.get("page_number"),
+                "fragment": dict(secondary.get("fragment") or {}),
+            }
+        )
+    subs.extend(secondary.get("subheadings") or [])
+    out["subheadings"] = subs
+    frag = dict(out.get("fragment") or {})
+    sec_frag = dict(secondary.get("fragment") or {})
+    frag["chars"] = int(frag.get("chars") or 0) + int(sec_frag.get("chars") or 0)
+    if frag.get("end_line") is None or (
+        sec_frag.get("end_line") is not None and int(sec_frag["end_line"]) > int(frag.get("end_line") or 0)
+    ):
+        frag["end_line"] = sec_frag.get("end_line")
+    out["fragment"] = frag
+    if out.get("page_number") is None:
+        out["page_number"] = secondary.get("page_number")
+    return out
+
+
+def _merge_pair_score(left: Dict[str, Any], right: Dict[str, Any]) -> float:
+    """Lower score = better merge candidate (prefer same-page, smaller sections)."""
+    score = 0.0
+    left_page = left.get("page_number")
+    right_page = right.get("page_number")
+    if left_page is not None and right_page is not None and int(left_page) != int(right_page):
+        score += 50.0 + abs(int(right_page) - int(left_page))
+    score += (len(left.get("subheadings") or []) + len(right.get("subheadings") or [])) * 2.0
+    score += (_section_body_chars(left) + _section_body_chars(right)) / 800.0
+    if _looks_like_structural_heading(str(left.get("heading") or "")):
+        score += 20.0
+    if _looks_like_structural_heading(str(right.get("heading") or "")):
+        score += 10.0
+    return score
+
+
+def _compress_sections_to_target(sections: List[Dict[str, Any]], target: int) -> Tuple[List[Dict[str, Any]], int]:
+    """Merge adjacent sections until count <= target. Returns (sections, merges_performed)."""
+    if target <= 0 or len(sections) <= target:
+        return sections, 0
+    work = [{**sec, "subheadings": list(sec.get("subheadings") or [])} for sec in sections]
+    merges = 0
+    while len(work) > target:
+        best_idx = 0
+        best_score = float("inf")
+        for i in range(len(work) - 1):
+            score = _merge_pair_score(work[i], work[i + 1])
+            if score < best_score:
+                best_score = score
+                best_idx = i
+        work[best_idx] = _merge_two_sections(work[best_idx], work[best_idx + 1])
+        del work[best_idx + 1]
+        merges += 1
+    for i, sec in enumerate(work, start=1):
+        sec["section_id"] = f"S{i}"
+    return work, merges
+
+
+def _resolve_section_budget(*, page_count: int, kept_heading_count: int) -> int:
+    ratio = float(getattr(config, "ULTIMATE_MAX_SECTIONS_PAGE_RATIO", 0.45) or 0.45)
+    floor = int(getattr(config, "ULTIMATE_MIN_SECTION_COUNT", 16) or 16)
+    cap = int(getattr(config, "ULTIMATE_MAX_SECTION_COUNT", 0) or 0)
+    if page_count <= 0:
+        return 0
+    budget = max(floor, int(page_count * ratio))
+    if cap > 0:
+        budget = min(budget, cap)
+    if kept_heading_count > 0:
+        budget = min(budget, kept_heading_count)
+    return budget
+
+
 def build_ultimate_sections(
     *,
     headings: Sequence[Dict[str, Any]],
@@ -174,6 +284,7 @@ def build_ultimate_sections(
     fragments: Sequence[Dict[str, Any]],
     metadata_line_ids: Set[int],
     toc_seed_ids: Set[int],
+    document_profile: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Stage 15d — parent-first sections with optional one-level children."""
     level_by_id = {int(h["line_id"]): int(h.get("level") or 2) for h in hierarchy if isinstance(h.get("line_id"), int)}
@@ -191,7 +302,10 @@ def build_ultimate_sections(
     thresholds = config.resolve_ultimate_thresholds()
     min_parent_chars = int(thresholds["min_parent_fragment_chars"])
     min_nested_chars = int(thresholds["min_section_chars_for_nesting"])
-    min_heading_fragment_chars = int(thresholds["min_heading_fragment_chars"])
+    if document_profile is not None and getattr(document_profile, "min_section_body_chars", None):
+        min_heading_fragment_chars = int(document_profile.min_section_body_chars)
+    else:
+        min_heading_fragment_chars = int(thresholds["min_heading_fragment_chars"])
     max_rewrite_section_chars = int(thresholds["max_rewrite_section_chars"])
     profile = str(thresholds.get("profile") or "medium")
 
@@ -228,7 +342,23 @@ def build_ultimate_sections(
             return False
         return False
 
-    kept_rows = [r for r in headings_with_levels if _is_high_probability_row(r)]
+    drop_low_grounding = bool(getattr(config, "PARTITION_DROP_LOW_GROUNDING", True))
+    grounding_min_chars = int(getattr(config, "REWRITE_MIN_GROUNDING_CHARS", 160))
+    kept_rows: List[Dict[str, Any]] = []
+    low_grounding_dropped = 0
+    for r in headings_with_levels:
+        if not _is_high_probability_row(r):
+            continue
+        if drop_low_grounding and is_contents_listing(
+            str(r.get("body") or ""),
+            min_real_chars=min(grounding_min_chars, 40),
+        ):
+            # Body is an index/contents listing — emitting it would feed the
+            # rewrite an ungrounded source. Drop it; the real (prose) occurrence
+            # of this heading elsewhere in the document is kept on its own.
+            low_grounding_dropped += 1
+            continue
+        kept_rows.append(r)
     dropped_count = len(headings_with_levels) - len(kept_rows)
 
     sections: List[Dict[str, Any]] = []
@@ -253,16 +383,40 @@ def build_ultimate_sections(
             sections.append(current)
             current = None
 
+    semantic_threshold = 0.38
+    low_coherence_folds = 0
+    page_count = _page_count_from_lines(lines)
+    headings_per_page = len(kept_rows) / max(page_count, 1)
+    dense_book = headings_per_page > 1.15
+    effective_min_parent = min_parent_chars
+    if dense_book:
+        # When headings are frequent (~2+ per page), require more body text before splitting.
+        scale = min(2.8, 1.0 + (headings_per_page - 1.0) * 0.85)
+        effective_min_parent = int(min_parent_chars * scale)
+
     for row in kept_rows:
         level = int(row.get("level") or 2)
         body_chars = int(row.get("body_chars") or 0)
         text = str(row.get("text") or "")
+        body = str(row.get("body") or "")
+        coherence = _heading_body_coherence(text, body)
         structural = _looks_like_structural_heading(text) or level == 1
         as_section = (
             current is None
             or (structural and body_chars >= min_heading_fragment_chars)
-            or body_chars >= min_parent_chars
+            or body_chars >= effective_min_parent
         )
+        if dense_book and current is not None and as_section and not structural and level > 1:
+            as_section = body_chars >= effective_min_parent
+        if (
+            current is not None
+            and as_section
+            and body_chars < min_parent_chars
+            and coherence < semantic_threshold
+            and not (structural and level == 1)
+        ):
+            as_section = False
+            low_coherence_folds += 1
         if as_section:
             _flush_section()
             sec_no += 1
@@ -307,6 +461,12 @@ def build_ultimate_sections(
             )
     _flush_section()
 
+    sections_before_compress = len(sections)
+    section_budget = _resolve_section_budget(page_count=page_count, kept_heading_count=len(kept_rows))
+    compress_merges = 0
+    if section_budget > 0 and len(sections) > section_budget:
+        sections, compress_merges = _compress_sections_to_target(sections, section_budget)
+
     sub_count = sum(len(s.get("subheadings") or []) for s in sections)
     return {
         "meta": {
@@ -314,17 +474,27 @@ def build_ultimate_sections(
             "threshold_profile": profile,
             "thresholds": {
                 "min_parent_fragment_chars": min_parent_chars,
+                "effective_min_parent_fragment_chars": effective_min_parent,
                 "min_section_chars_for_nesting": min_nested_chars,
                 "min_heading_fragment_chars": min_heading_fragment_chars,
                 "max_rewrite_section_chars": max_rewrite_section_chars,
             },
+            "page_count": page_count,
+            "headings_per_page": round(headings_per_page, 2),
+            "dense_book_merge": dense_book,
+            "section_budget": section_budget,
+            "sections_before_compress": sections_before_compress,
+            "sections_compressed_merges": compress_merges,
             "input_heading_count": len(headings),
             "kept_heading_count": len(kept_rows),
             "dropped_heading_count": dropped_count,
+            "low_grounding_dropped": low_grounding_dropped,
             "total_sections": len(sections),
             "total_subheadings": sub_count,
             "metadata_line_count": len(metadata_line_ids),
             "toc_seed_count": len(toc_seed_ids),
+            "semantic_boundary_threshold": semantic_threshold,
+            "semantic_low_coherence_folds": low_coherence_folds,
         },
         "toc": {"seed_headings": []},
         "metadata": {"line_ids": sorted(metadata_line_ids)},

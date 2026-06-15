@@ -14,14 +14,15 @@ logger = logging.getLogger(__name__)
 
 _CHAPTER_RE = re.compile(r"^\s*chapter\s+\d+", re.IGNORECASE)
 _PART_RE = re.compile(r"^\s*part\s+[IVXLC\d]+", re.IGNORECASE)
+_MODULE_UNIT_RE = re.compile(r"^\s*(module|unit)\s+\d+", re.IGNORECASE)
 _ROMAN_MAJOR_RE = re.compile(r"^\s*[IVXLC]+\.\s+[A-Z]")
 _ARTICLES_RANGE_RE = re.compile(r"\(\s*(?:arts?\.?|articles?)\.?\s+\d+", re.IGNORECASE)
 _MAJOR_CAPS_RE = re.compile(r"^[A-Z][A-Z\s\-–—,&()0-9]{12,}$")
 
-_HIERARCHY_SYSTEM = """You organize law textbook sections into a clear chapter hierarchy.
+_HIERARCHY_SYSTEM = """You organize academic textbook sections into a clear chapter hierarchy.
 Rules:
 1) Group related consecutive sections under one chapter title.
-2) Start a new chapter at major topic shifts (e.g. Preamble, Fundamental Rights, Directive Principles, Union, States).
+2) Start a new chapter at major topic shifts (new unit, part, or thematic break in section headings).
 3) Do NOT invent content; use concise chapter titles derived from section headings.
 4) Every section_id must appear exactly once.
 5) Preserve section order.
@@ -38,7 +39,7 @@ def _looks_like_chapter_heading(text: str) -> bool:
     t = _norm(text)
     if not t:
         return False
-    if _CHAPTER_RE.match(t) or _PART_RE.match(t) or _ROMAN_MAJOR_RE.match(t):
+    if _CHAPTER_RE.match(t) or _PART_RE.match(t) or _MODULE_UNIT_RE.match(t) or _ROMAN_MAJOR_RE.match(t):
         return True
     if _ARTICLES_RANGE_RE.search(t) and len(t) >= 20:
         return True
@@ -115,49 +116,6 @@ def _parse_assignments_json(raw: str) -> Optional[List[Dict[str, Any]]]:
     return out or None
 
 
-def _bigbird_refine_assignments(
-    sections: Sequence[Dict[str, Any]],
-    assignments: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    """Use BigBird embeddings to split chapters when heading similarity drops."""
-    try:
-        from src.modules.structure.final_structuring.models.bigbird_encoder import get_bigbird_encoder
-
-        enc = get_bigbird_encoder()
-    except Exception:
-        return assignments
-
-    by_id = {str(a["section_id"]): a for a in assignments}
-    anchor_emb = None
-    anchor_title = ""
-    refined: List[Dict[str, Any]] = []
-
-    for sec in sections:
-        sid = str(sec.get("section_id") or "")
-        heading = _norm(str(sec.get("heading") or ""))
-        row = dict(by_id.get(sid) or {"section_id": sid, "chapter_title": heading, "is_chapter_start": False, "method": "rule"})
-        emb = enc.encode(heading)
-        split = False
-        if anchor_emb is not None and emb is not None:
-            sim = float((anchor_emb * emb).sum())
-            if sim < 0.52 and _looks_like_chapter_heading(heading):
-                split = True
-        if split or (anchor_emb is None and not refined):
-            row["is_chapter_start"] = True
-            row["chapter_title"] = heading[:120] or row.get("chapter_title") or "Section"
-            row["method"] = "bigbird"
-            anchor_emb = emb
-            anchor_title = row["chapter_title"]
-        else:
-            row["is_chapter_start"] = False
-            row["chapter_title"] = anchor_title or row.get("chapter_title") or heading[:120]
-            if emb is not None and anchor_emb is None:
-                anchor_emb = emb
-                anchor_title = row["chapter_title"]
-        refined.append(row)
-    return refined
-
-
 def _llm_assignments_for_batch(
     client: Any,
     batch: Sequence[Dict[str, Any]],
@@ -176,7 +134,9 @@ def _llm_assignments_for_batch(
         for s in batch
     ]
     user = json.dumps({"prior_chapters": prior_chapters[-8:], "sections": compact}, ensure_ascii=False)
-    provider = normalize_chat_provider(config.CHAPTER_HIERARCHY_LLM or config.LLM_PROVIDER or "openai")
+    from src.shared.llm_provider import resolve_stage_provider
+
+    provider = resolve_stage_provider(config.CHAPTER_HIERARCHY_LLM or "")
     raw = client.chat_with_provider(provider, system=_HIERARCHY_SYSTEM, user=user, max_tokens=2048)
     parsed = _parse_assignments_json(raw or "")
     if not parsed:
@@ -199,8 +159,12 @@ def _llm_assignments(
     if not sections:
         return []
     client = LlmChatClient.from_config(temperature=0.1)
-    provider = normalize_chat_provider(config.CHAPTER_HIERARCHY_LLM or config.LLM_PROVIDER or "openai")
-    if provider not in {"openai", "gemini", "ollama", "llamacpp"}:
+    from src.shared.llm_provider import resolve_stage_provider
+
+    provider = resolve_stage_provider(config.CHAPTER_HIERARCHY_LLM or "")
+    from src.shared.llm_provider import is_chat_provider
+
+    if not is_chat_provider(provider):
         return None
 
     merged: List[Dict[str, Any]] = []
@@ -317,29 +281,20 @@ def build_chapter_hierarchy(
         "no",
         "n",
     }
-    use_bigbird = str(getattr(config, "CHAPTER_HIERARCHY_USE_BIGBIRD", "1")).strip().lower() not in {
-        "0",
-        "false",
-        "no",
-        "n",
-    }
     batch_size = int(getattr(config, "CHAPTER_HIERARCHY_BATCH_SIZE", 25) or 25)
+    hierarchy_openai = getattr(config, "HIERARCHY_OPENAI_ENABLED", True)
 
     method = "rule"
     assignments = _rule_based_assignments(sections)
 
-    if use_llm and sections:
+    # Skip 15e LLM when 15j will regroup — saves redundant API calls.
+    if use_llm and sections and not hierarchy_openai:
         llm_rows = _llm_assignments(sections, batch_size=batch_size)
         if llm_rows:
             assignments = llm_rows
             method = "llm"
         else:
             logger.info("15e LLM assignment failed; using rule-based fallback")
-
-    if use_bigbird and method != "llm":
-        assignments = _bigbird_refine_assignments(sections, assignments)
-        if any(a.get("method") == "bigbird" for a in assignments):
-            method = "bigbird" if method == "rule" else f"{method}+bigbird"
 
     chapters = _assignments_to_chapters(sections, assignments)
     min_per = int(getattr(config, "CHAPTER_HIERARCHY_MIN_SECTIONS_PER_CHAPTER", 6) or 6)

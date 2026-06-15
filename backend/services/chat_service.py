@@ -9,8 +9,16 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src import config
+from src.shared.paths import resolve_project_path
 from src.modules.export.word_exporter import WordExporter
-from src.modules.interaction.command_parser import CommandParser, IntentResult
+from src.modules.pipeline.stage_registry import (
+    STAGE_15D,
+    STAGE_15E,
+    STAGE_15F,
+    resolve_existing_artifact,
+)
+from src.modules.interaction.command_parser import IntentResult, effective_user_instruction
+from src.modules.interaction.intent_router import IntentRouter
 from src.modules.interaction.handlers.ask_handler import AskHandler
 from src.modules.interaction.handlers.rewrite_handler import RewriteHandler
 from src.modules.storage.knowledge_store import KnowledgeStore
@@ -31,7 +39,7 @@ logger = logging.getLogger(__name__)
 class ChatService:
     def __init__(self) -> None:
         self.store = KnowledgeStore()
-        self.parser = CommandParser()
+        self.parser = IntentRouter()
         self.conversations = ConversationRepository()
         self.messages = MessageRepository()
         self.user_books = UserBookRepository()
@@ -48,15 +56,17 @@ class ChatService:
         row = cur.fetchone()
         conn.close()
         title = row[0] if row else "Book"
+        file_path = resolve_project_path(ub["file_path"])
+        log_dir = resolve_project_path(ub.get("log_dir"))
         return {
             "book_id": book_id,
             "title": title,
-            "file_path": ub["file_path"],
-            "log_dir": ub.get("log_dir"),
+            "file_path": str(file_path) if file_path else ub["file_path"],
+            "log_dir": str(log_dir) if log_dir else ub.get("log_dir"),
         }
 
     def _export_answer_docx(self, user_id: str, content: str, title: str) -> tuple[str, str]:
-        export_dir = Path("output/exports") / user_id
+        export_dir = Path(getattr(config, "EXPORTS_FOLDER", Path(config.OUTPUT_FOLDER) / "exports")) / user_id
         export_dir.mkdir(parents=True, exist_ok=True)
         safe_title = re.sub(r"[^\w\s-]", "", title).strip().replace(" ", "_") or "Notes"
         file_name = f"{safe_title}.docx"
@@ -71,11 +81,6 @@ class ChatService:
 
     def _run_rewrite(self, ctx: dict[str, Any], intent: IntentResult) -> dict[str, Any]:
         import os as _os
-
-        exam = intent.format_type == "exam_oriented" or intent.task_type in ("study_notes", "revision_notes")
-        _os.environ["EXAM_ORIENTED"] = "1" if exam else "0"
-        compact = intent.depth == "very_short" or intent.task_type == "revision_notes"
-        _os.environ["COMPACT_EXAM"] = "1" if compact else "0"
 
         handler = RewriteHandler(
             self.store,
@@ -97,18 +102,19 @@ class ChatService:
             lines, _, _ = extract_pdf(ctx["file_path"])
         if ctx.get("log_dir"):
             log_dir = Path(ctx["log_dir"])
-            ultimate_path = log_dir / "15d_ultimate_sections.json"
-            h15f = log_dir / "15f_heading_cleanup.json"
-            h15e = log_dir / "15e_chapter_hierarchy.json"
-            hierarchy_path = h15f if h15f.exists() else h15e
+            ultimate_path = resolve_existing_artifact(log_dir, STAGE_15D)
+            hierarchy_path = resolve_existing_artifact(log_dir, STAGE_15F) or resolve_existing_artifact(
+                log_dir, STAGE_15E
+            )
 
         results = handler.engine.run(
-            user_instruction=intent.normalized_query,
+            user_instruction=effective_user_instruction(intent, intent.original_user_input),
             export_to_word=True,
             pdf_path=ctx.get("file_path"),
             ultimate_sections_path=ultimate_path,
-            chapter_hierarchy_path=hierarchy_path if hierarchy_path and hierarchy_path.exists() else None,
+            chapter_hierarchy_path=hierarchy_path,
             lines=lines,
+            intent=intent,
         )
         if "error" in results:
             return {"content": f"Rewrite failed: {results['error']}", "docx_path": None}
@@ -118,17 +124,13 @@ class ChatService:
         return {"content": content, "docx_path": docx_path, "task": "rewrite"}
 
     def _run_qa(self, ctx: dict[str, Any], intent: IntentResult) -> dict[str, Any]:
-        subject = ctx["title"]
-        if "tort" in subject.lower():
-            subject = "Law of Torts, negligence, liability, and consumer protection"
-
         answer = AskHandler(
             self.store,
             book_id=ctx["book_id"],
             book_title=ctx["title"],
             pdf_path=ctx.get("file_path"),
             ultimate_log_dir=ctx.get("log_dir"),
-            subject_hint=subject,
+            subject_hint=ctx["title"],
         ).handle_intent(intent)
 
         return {"content": answer or "I could not generate an answer.", "task": "qa"}
@@ -210,11 +212,34 @@ class ChatService:
         if not isinstance(intent, IntentResult):
             raise ValueError("Could not parse intent")
 
+        if intent.task_type == "clarify":
+            clarify = (
+                intent.clarification_message.strip()
+                or "Could you clarify what you'd like — rewrite the full book, or ask a specific question?"
+            )
+            assistant = self.messages.add(conversation_id, "assistant", clarify, metadata={"task_type": "clarify"})
+            self.conversations.touch(conversation_id)
+            status("done")
+            return {
+                "assistant_message": self._msg_to_dict(assistant),
+                "docx_available": False,
+                "docx_download_url": None,
+                "char_limit": get_auth_settings().chat_docx_char_limit,
+                "is_rewrite": False,
+            }
+
+        if intent.task_type == "export":
+            status("exporting_word")
+            result = self._handle_word_only_request(user_id, conversation_id, ctx)
+            self.conversations.touch(conversation_id)
+            status("done")
+            return result
+
         if is_rewrite := intent.task_type in ("rewrite_book", "summarize_book", "study_notes", "revision_notes"):
-            status("rewriting_book", {"task_type": intent.task_type})
+            status("rewriting_book", {"task_type": intent.task_type, "routing": intent.routing_method})
             engine_result = self._run_rewrite(ctx, intent)
         else:
-            status("answering_question")
+            status("answering_question", {"routing": intent.routing_method})
             engine_result = self._run_qa(ctx, intent)
 
         content = engine_result.get("content") or ""
@@ -251,6 +276,7 @@ class ChatService:
 
         meta = {
             "task_type": intent.task_type,
+            "routing_method": intent.routing_method,
             "export_reason": reason,
             "docx_available": bool(export_id),
             "docx_download_url": download_url,

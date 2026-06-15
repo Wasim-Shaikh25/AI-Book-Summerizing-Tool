@@ -4,7 +4,8 @@ from typing import Any, Optional
 
 from src import config
 from src.modules.export.word_exporter import WordExporter
-from src.modules.interaction.command_parser import CommandParser, IntentResult
+from src.modules.interaction.intent_router import IntentRouter
+from src.modules.interaction.command_parser import IntentResult
 from src.modules.interaction.handlers.export_handler import ExportHandler
 from src.modules.interaction.handlers.rewrite_handler import RewriteHandler
 from src.modules.pipeline import run_pipeline
@@ -20,7 +21,7 @@ class CommandLoop:
     """Interactive CLI for ingestion, rewrite, and export."""
 
     def __init__(self) -> None:
-        self.parser = CommandParser()
+        self.parser = IntentRouter()
         self.store = KnowledgeStore()
         self.book_repo = BookRepository(self.store)
         self.toc_repo = TocRepository(self.store)
@@ -82,7 +83,15 @@ class CommandLoop:
         if not self._require_book():
             return
 
-        print(f"[*] Processing {intent.task_type}...")
+        if intent.task_type == "clarify":
+            msg = (
+                intent.clarification_message.strip()
+                or "Could you clarify — rewrite the full book, or ask a specific question?"
+            )
+            print(msg)
+            return
+
+        print(f"[*] Processing {intent.task_type} (via {intent.routing_method})...")
         book_id = self.current_book_id or ""
         title = self.current_book_title or "Book"
 
@@ -98,19 +107,16 @@ class CommandLoop:
                 self.last_generated_response = md
             return
 
-        if intent.task_type == "question_answer":
+        if intent.task_type in ("question_answer", "explain_section"):
             from src.modules.interaction.handlers.ask_handler import AskHandler
 
-            subject = title
-            if "tort" in title.lower():
-                subject = "Law of Torts, negligence, liability, and consumer protection"
             ans = AskHandler(
                 self.store,
                 book_id=book_id,
                 book_title=title,
                 pdf_path=self.current_file_path,
                 ultimate_log_dir=self.last_log_dir,
-                subject_hint=subject,
+                subject_hint=title,
             ).handle_intent(intent)
             if ans:
                 self.last_generated_response = ans
@@ -150,21 +156,15 @@ class CommandLoop:
     def _handle_ingestion(self, file_path: str) -> None:
         print(f"[*] Ingesting file: {file_path}")
         try:
-            from src.modules.ingestion.pdf_extractor import extract_pdf
-
-            lines, book_title, _visual = extract_pdf(file_path)
-            pages = {ln.page_number for ln in lines if getattr(ln, "page_number", None) is not None}
-            total_pages = max(pages) if pages else 0
-            title = book_title or os.path.splitext(os.path.basename(file_path))[0]
+            result, logger = run_pipeline(file_path, enable_logs=True, persist_to_db=False)
+            title = result.book_title or os.path.splitext(os.path.basename(file_path))[0]
 
             book = BookMetadata(
                 title=title,
                 source_file_name=os.path.basename(file_path),
-                total_pages=total_pages,
+                total_pages=result.total_pages,
             )
             self.book_repo.save_book(book)
-
-            result, logger = run_pipeline(file_path, enable_logs=True, persist_to_db=False)
             self.last_log_dir = str(logger.run_dir) if logger else None
             self.toc_repo.save_full_toc(
                 book_id=book.book_id,
@@ -191,20 +191,30 @@ class CommandLoop:
                     from pathlib import Path
 
                     from src.modules.generation.toc_sections import load_rewrite_sections
-                    from src.modules.ingestion.pdf_extractor import extract_pdf
                     from src.modules.rag.service import RagService
 
-                    lines, _, _ = extract_pdf(file_path)
+                    lines = result.lines
                     log_dir = Path(self.last_log_dir) if self.last_log_dir else None
-                    h15f = log_dir / "15f_heading_cleanup.json" if log_dir else None
-                    h15e = log_dir / "15e_chapter_hierarchy.json" if log_dir else None
-                    hierarchy_path = h15f if h15f and h15f.exists() else h15e
+                    from src.modules.pipeline.stage_registry import (
+                        STAGE_15D,
+                        STAGE_15E,
+                        STAGE_15F,
+                        resolve_existing_artifact,
+                    )
+
+                    hierarchy_path = None
+                    ultimate_sections_path = None
+                    if log_dir:
+                        hierarchy_path = resolve_existing_artifact(log_dir, STAGE_15F) or resolve_existing_artifact(
+                            log_dir, STAGE_15E
+                        )
+                        ultimate_sections_path = resolve_existing_artifact(log_dir, STAGE_15D)
                     sections = load_rewrite_sections(
                         self.store,
                         book_id=book.book_id,
                         pdf_path=file_path,
-                        ultimate_sections_path=(log_dir / "15d_ultimate_sections.json") if log_dir else None,
-                        chapter_hierarchy_path=hierarchy_path if hierarchy_path and hierarchy_path.exists() else None,
+                        ultimate_sections_path=ultimate_sections_path,
+                        chapter_hierarchy_path=hierarchy_path,
                         lines=lines,
                         prefer_15e=True,
                         prefer_15d=True,
@@ -227,6 +237,6 @@ class CommandLoop:
         print("\nEXAMPLES (after ingestion):")
         print("  rewrite the book in short simple English, no extra details")
         print("  create exam oriented study notes")
-        print("  explain the difference between tort and crime")
+        print("  explain the main ideas in chapter 1")
         print("  export book")
         print()

@@ -9,6 +9,10 @@ from src.modules.ingestion.pdf_extractor import extract_pdf
 from src.modules.ingestion.text_normalizer import normalize_text
 from src.modules.pipeline.context import PipelineContext
 from src.modules.pipeline.stage_15b import run_stage_15b_if_doubted
+from src.modules.pipeline.stage_registry import (
+    STAGE_RESOLVE_DOUBTED_REVALIDATION,
+    STAGE_RESOLVE_DOUBTED_TOC,
+)
 from src.modules.structure.final_structuring.final_structuring_stage import run_final_structuring_stage
 from src.modules.structure.candidate_scoring import collect_candidates_scored
 from src.modules.structure.continuity_filter import apply_continuity_filter, parse_line_id_from_heading_id
@@ -42,20 +46,20 @@ def _final_headings_without_toc_and_metadata(
     return out
 
 
-def stage_extract(ctx: PipelineContext) -> None:
+def stage_ingest_pdf(ctx: PipelineContext) -> None:
     enriched, title, visual = extract_pdf(ctx.pdf_path)
     ctx.lines = normalize_text((enriched, title))
     ctx.book_title = title
     ctx.visual_elements = visual
 
 
-def stage_layout_log(ctx: PipelineContext) -> None:
+def stage_log_layout(ctx: PipelineContext) -> None:
     ctx.layout_payload = lines_to_log(ctx.lines)
     ctx.logger.write_stage("layout_lines", ctx.layout_payload)
     ctx.logger.write_stage("visual_elements", ctx.visual_elements)
 
 
-def stage_noise(ctx: PipelineContext) -> None:
+def stage_filter_noise(ctx: PipelineContext) -> None:
     ctx.lines, noise_log = mark_noise(ctx.lines)
     ctx.logger.write_stage("noise_filter", noise_log)
     ctx.layout_by_line_id = {
@@ -65,23 +69,25 @@ def stage_noise(ctx: PipelineContext) -> None:
     }
 
 
-def stage_candidates(ctx: PipelineContext) -> None:
+def stage_score_heading_candidates(ctx: PipelineContext) -> None:
     ctx.candidates, scoring_log = collect_candidates_scored(ctx.lines)
     ctx.logger.write_stage("candidate_scoring", scoring_log)
 
 
-def stage_heading_gate(ctx: PipelineContext) -> None:
+def stage_gate_heading_candidates(ctx: PipelineContext) -> None:
     ctx.candidates, gate_log = gate_heading_validity_candidates(ctx.candidates, lines=ctx.lines)
+    ctx.dropped_heading_registry.extend_from_gate_log(gate_log)
     ctx.logger.write_stage("heading_validity_gate", gate_log)
 
 
-def stage_continuity(ctx: PipelineContext) -> None:
+def stage_filter_continuity(ctx: PipelineContext) -> None:
     ctx.headings, dropped = apply_continuity_filter(ctx.candidates, ctx.layout_by_line_id)
+    ctx.dropped_heading_registry.extend_from_continuity_log(dropped)
     if dropped:
         ctx.logger.write_stage("continuity_filter", dropped)
 
 
-def stage_fragments(ctx: PipelineContext) -> None:
+def stage_build_fragments(ctx: PipelineContext) -> None:
     ctx.fragments_result, fragments_log = build_fragments(ctx.lines, ctx.headings)
     ctx.fragments_log = fragments_log
     ctx.logger.write_stage("fragments", fragments_log)
@@ -92,23 +98,44 @@ def stage_fragments(ctx: PipelineContext) -> None:
             h.fragment_id = heading_to_fragment_id[hid]
 
 
-def stage_toc_clean(ctx: PipelineContext) -> None:
+def stage_clean_toc(ctx: PipelineContext) -> None:
     frags = getattr(ctx.fragments_result, "fragments", []) or []
     ctx.toc_out = clean_toc(list(ctx.headings), fragments=frags)
 
 
-def stage_deterministic_toc(ctx: PipelineContext) -> None:
+def stage_detect_toc(ctx: PipelineContext) -> None:
     ctx.toc_seed_ids, det_seed_log = detect_deterministic_toc(ctx.lines, ctx.toc_out)
+
+    from src.modules.ingestion.pdf_outline import supplement_toc_from_pdf_outline
+
+    ctx.toc_seed_ids, outline_log = supplement_toc_from_pdf_outline(
+        ctx.pdf_path,
+        ctx.lines,
+        ctx.toc_out,
+        ctx.toc_seed_ids,
+    )
+
     for h in ctx.toc_out:
         lid = getattr(h, "line_id", None)
         h.is_toc = bool(isinstance(lid, int) and lid in ctx.toc_seed_ids)
 
     ctx.toc_section_line_ids, det_section_log = build_toc_sections_from_repeated_headings(ctx.lines, ctx.toc_out)
+
+    from src.shared import config as _cfg
+
+    if getattr(_cfg, "CONTENTS_REGION_DETECTION", True):
+        from src.modules.structure.contents_region import detect_contents_regions
+
+        region_ids, region_log = detect_contents_regions(ctx.lines)
+        if region_ids:
+            ctx.toc_section_line_ids = set(ctx.toc_section_line_ids) | region_ids
+            det_section_log = list(det_section_log) + region_log
+
     for h in ctx.toc_out:
         lid = getattr(h, "line_id", None)
         h.in_toc_section = bool(isinstance(lid, int) and lid in ctx.toc_section_line_ids)
 
-    ctx.det_toc_log_items = det_seed_log + det_section_log
+    ctx.det_toc_log_items = det_seed_log + outline_log + det_section_log
 
     ctx.book_metadata_line_ids, ctx.book_meta_log = book_metadata_from_first_toc_section(
         ctx.lines,
@@ -118,7 +145,7 @@ def stage_deterministic_toc(ctx: PipelineContext) -> None:
     )
 
 
-def stage_doubted_sections(ctx: PipelineContext) -> None:
+def stage_flag_doubted_toc(ctx: PipelineContext) -> None:
     ctx.first_toc_page = 0
     for sr in ctx.det_toc_log_items:
         if sr.get("kind") == "toc_section_span":
@@ -149,9 +176,9 @@ def stage_doubted_sections(ctx: PipelineContext) -> None:
     ctx.logger.write_stage("doubted_sections", [doubted_log])
 
 
-def stage_15b_resolver(ctx: PipelineContext) -> None:
+def stage_resolve_doubted_toc(ctx: PipelineContext) -> None:
     if ctx.first_toc_page <= 3 or not (ctx.doubted_body_ids or ctx.doubted_toc_ids):
-        ctx.logger.write_stage("doubted_resolved", [])
+        ctx.logger.write_stage(STAGE_RESOLVE_DOUBTED_TOC, [])
         return
     segments, audits, metadata_ids = run_stage_15b_if_doubted(
         lines=ctx.lines,
@@ -167,12 +194,12 @@ def stage_15b_resolver(ctx: PipelineContext) -> None:
     ctx.stage_15b_audits = audits
     ctx.book_metadata_line_ids = metadata_ids
     if segments:
-        ctx.logger.write_stage("doubted_resolved", segments)
+        ctx.logger.write_stage(STAGE_RESOLVE_DOUBTED_TOC, segments)
     if audits:
-        ctx.logger.write_stage("revalidation", audits)
+        ctx.logger.write_stage(STAGE_RESOLVE_DOUBTED_REVALIDATION, audits)
 
 
-def stage_finalize_headings(ctx: PipelineContext) -> None:
+def stage_finalize_heading_list(ctx: PipelineContext) -> None:
     items: List[Dict[str, Any]] = []
     for h in ctx.toc_out:
         hid = getattr(h, "id", None)
@@ -207,7 +234,39 @@ def stage_finalize_headings(ctx: PipelineContext) -> None:
     ctx.logger.write_stage("book_metadata", ctx.book_meta_log)
 
 
-def stage_final_structuring(ctx: PipelineContext) -> None:
+def stage_validate_early_titles(ctx: PipelineContext) -> None:
+    """Stage s13 — rules-based title validation before 15a hierarchy and 15d section division."""
+    from src import config as cfg
+    from src.modules.structure.heading_title_validation import filter_validated_headings
+
+    if not ctx.final_headings_2_items:
+        return
+    if not getattr(cfg, "TITLE_VALIDATION_ENABLED", True):
+        ctx.logger.write_stage("heading_title_validation", [])
+        return
+
+    kept, dropped, stats = filter_validated_headings(
+        ctx.final_headings_2_items,
+        lines=ctx.lines,
+        registry=ctx.dropped_heading_registry,
+    )
+    ctx.dropped_heading_registry.extend_from_title_validation_log(dropped)
+    ctx.final_headings_2_items = kept
+    ctx.logger.write_stage("heading_title_validation", dropped)
+    ctx.logger.write_stage("validated_headings", kept)
+
+
+def stage_compute_document_profile(ctx: PipelineContext) -> None:
+    """Measure document shape and persist tuning knobs for downstream stages."""
+    from src.modules.ingestion.document_profile import compute_document_profile
+    from src.modules.pipeline.stage_registry import STAGE_DOCUMENT_PROFILE
+
+    profile = compute_document_profile(ctx.lines, ctx.final_headings_2_items)
+    ctx.document_profile = profile
+    ctx.logger.write_stage_payload(STAGE_DOCUMENT_PROFILE, profile.to_dict())
+
+
+def stage_build_book_structure(ctx: PipelineContext) -> None:
     if not ctx.final_headings_2_items:
         return
     run_final_structuring_stage(
@@ -221,21 +280,27 @@ def stage_final_structuring(ctx: PipelineContext) -> None:
         first_toc_page=ctx.first_toc_page,
         is_doubted=ctx.first_toc_page > 3,
         doubted_segments=ctx.stage_15b_segments or None,
+        dropped_registry=ctx.dropped_heading_registry,
+        document_profile=ctx.document_profile,
     )
 
 
-STAGES = [
-    stage_extract,
-    stage_layout_log,
-    stage_noise,
-    stage_candidates,
-    stage_heading_gate,
-    stage_continuity,
-    stage_fragments,
-    stage_toc_clean,
-    stage_deterministic_toc,
-    stage_doubted_sections,
-    stage_15b_resolver,
-    stage_finalize_headings,
-    stage_final_structuring,
-]
+# Deprecated aliases (pre-2026-06 rename) — keep for external imports and old docs.
+stage_extract = stage_ingest_pdf
+stage_layout_log = stage_log_layout
+stage_noise = stage_filter_noise
+stage_candidates = stage_score_heading_candidates
+stage_heading_gate = stage_gate_heading_candidates
+stage_continuity = stage_filter_continuity
+stage_fragments = stage_build_fragments
+stage_toc_clean = stage_clean_toc
+stage_deterministic_toc = stage_detect_toc
+stage_doubted_sections = stage_flag_doubted_toc
+stage_15b_resolver = stage_resolve_doubted_toc
+stage_finalize_headings = stage_finalize_heading_list
+stage_heading_title_validation = stage_validate_early_titles
+stage_final_structuring = stage_build_book_structure
+
+from src.modules.pipeline.stage_registry import get_pipeline_stages
+
+STAGES = get_pipeline_stages()

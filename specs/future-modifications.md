@@ -97,26 +97,25 @@ if _matches_any(lowered, FLASHCARD_PATTERNS):
 
 ```
 1. specs/modules/pipeline-core.md — document stage order
-2. backend/src/modules/pipeline/stages.py — add stage function
-3. Add to STAGES list in correct position
+2. backend/src/modules/pipeline/stage_registry.py — add log key + canonical filename
+3. backend/src/modules/pipeline/stages.py — add stage function + STAGES entry
 4. backend/src/modules/pipeline/context.py — add context fields if needed
 5. backend/tests/integration/test_logging_contract.py — add expected JSON file
 6. specs/modules/logging-debug.md — document log artifact name
 ```
 
 ```python
+# stage_registry.py — register before writing logs
+STAGE_LOG_FILES["my_new_stage"] = "s13_my_new_stage.json"  # next free sNN
+
 # stages.py
 def stage_my_new_stage(ctx: PipelineContext) -> None:
     result = my_processing(ctx.lines)
     ctx.my_result = result
     ctx.logger.write_stage("my_new_stage", result)
-
-STAGES = [
-    ...
-    stage_my_new_stage,  # Insert at correct position
-    ...
-]
 ```
+
+**Reading artifacts in services:** use `resolve_existing_artifact(log_dir, "my_new_stage")` — never hardcode paths.
 
 ### 3.4 Add a New OAuth Provider
 

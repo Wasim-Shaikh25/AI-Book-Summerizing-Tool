@@ -16,6 +16,8 @@ class UploadJob:
     filename: str
     status: str = "queued"
     message: str = "Waiting to start..."
+    stage: str | None = None
+    percent: int | None = None
     result: dict[str, Any] | None = None
     error: str | None = None
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -41,7 +43,14 @@ def get_job(job_id: str, user_id: str) -> UploadJob | None:
     return job
 
 
-def update_job(job_id: str, *, status: str | None = None, message: str | None = None) -> None:
+def update_job(
+    job_id: str,
+    *,
+    status: str | None = None,
+    message: str | None = None,
+    stage: str | None = None,
+    percent: int | None = None,
+) -> None:
     with _lock:
         job = _jobs.get(job_id)
         if not job:
@@ -50,6 +59,10 @@ def update_job(job_id: str, *, status: str | None = None, message: str | None = 
             job.status = status
         if message is not None:
             job.message = message
+        if stage is not None:
+            job.stage = stage
+        if percent is not None:
+            job.percent = percent
         job.updated_at = datetime.now(timezone.utc).isoformat()
 
 

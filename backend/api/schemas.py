@@ -33,6 +33,8 @@ class UploadStatusResponse(BaseModel):
     job_id: str
     status: str
     message: str
+    stage: str | None = None
+    percent: int | None = None
     book: BookSummary | None = None
     error: str | None = None
 
@@ -71,3 +73,11 @@ class ChatReplyResponse(BaseModel):
 
 class AuthConfigResponse(BaseModel):
     auth_enabled: bool
+    allow_guest: bool = True
+
+
+class GuestSessionResponse(BaseModel):
+    """Guest profile plus a session token (issued when OAuth auth is enabled)."""
+
+    user: UserProfile
+    token: str | None = None

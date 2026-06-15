@@ -76,12 +76,12 @@ flowchart TD
 | Component | File | Responsibility |
 |-----------|------|----------------|
 | `AuthProvider` | `auth/AuthProvider.tsx` | Bootstrap auth, expose `useAuth()` hook |
-| `LoginPage` | `auth/LoginPage.tsx` | OAuth links, guest mode, backend-down error |
+| `LoginPage` | `auth/LoginPage.tsx` | OAuth links, "Continue as guest" (when `allowGuest`), backend-down error |
 | `AuthCallbackPage` | `auth/AuthCallbackPage.tsx` | Parse `?token=` from OAuth redirect |
 | `ChatApp` | `src/App.tsx` | Books, conversations, messages, upload, send |
 | `Sidebar` | `src/components/Sidebar.tsx` | Nav: upload, new chat, conversation list |
 | `WelcomePanel` | `src/components/Sidebar.tsx` | Empty-state onboarding with drag-drop |
-| `MessageBubble` | `src/components/MessageBubble.tsx` | Markdown render + Word download link |
+| `MessageBubble` | `src/components/MessageBubble.tsx` | Markdown render + authenticated Word download button |
 
 ---
 
@@ -109,10 +109,16 @@ All state is **local React state** + one **React Context** for auth. No Redux, Z
 | `user` | `UserProfile \| null` | Current user |
 | `loading` | `boolean` | Initial auth bootstrap |
 | `authEnabled` | `boolean` | From `/api/auth/config` |
+| `allowGuest` | `boolean` | From `/api/auth/config` — controls "Continue as guest" button |
 | `backendOk` | `boolean` | Backend reachable |
 | `skipAuth` | `boolean` | User chose guest mode |
 
 **Exposed methods:** `loginWithToken`, `enterWithoutAuth`, `logout`, `refreshUser`, `setSkipAuth`
+
+`enterWithoutAuth` calls `POST /api/auth/guest`; if the response includes a `token`
+(when `AUTH_ENABLED=true`), it is stored as the Bearer JWT so the guest gets an
+isolated, persisted session. When auth is disabled, the response has no token and
+the shared dev identity is used.
 
 ### ChatApp Local State
 
@@ -162,6 +168,10 @@ export async function uploadBookWithProgress(
   file: File,
   onProgress: (message: string) => void
 ): Promise<BookSummary>
+
+// Authenticated blob download (sends Bearer token, then triggers browser save).
+// Used by MessageBubble for DOCX exports — a plain <a href> cannot send the JWT.
+export async function downloadFile(path: string, suggestedName?: string): Promise<void>
 ```
 
 ### Endpoints Called
@@ -280,7 +290,9 @@ sequenceDiagram
 No separate export UI. Driven entirely by backend chat intent:
 
 1. Backend sets `assistant_message.metadata.docx_download_url`
-2. `MessageBubble` renders download link when URL present
+2. `MessageBubble` renders a download button when URL present; clicking calls
+   `downloadFile` (authenticated blob fetch + save), surfacing `.download-error`
+   text on failure — works for OAuth users and token-authed guests alike
 3. Link points to `GET /api/exports/{export_id}` (authenticated)
 
 ---

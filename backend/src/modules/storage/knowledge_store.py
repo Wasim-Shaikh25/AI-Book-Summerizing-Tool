@@ -17,7 +17,11 @@ class KnowledgeStore:
       with vector extensions for semantic retrieval.
     - Persistent and portable.
     """
-    def __init__(self, db_path: str = "output/knowledge_base.db"):
+    def __init__(self, db_path: str | None = None):
+        if db_path is None:
+            from src import config
+
+            db_path = getattr(config, "KNOWLEDGE_DB_PATH", "output/knowledge_base.db")
         self.db_path = db_path
         self._initialize_db()
 

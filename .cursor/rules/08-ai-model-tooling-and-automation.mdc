@@ -1,0 +1,85 @@
+---
+alwaysApply: true
+---
+# AI, Model, Tooling, and Automation Rules
+
+Do not hardcode model behavior, tool behavior, domain behavior, or workflow behavior unless explicitly required.
+
+Prefer capability-based routing:
+
+```text
+task need
+→ required capability
+→ available model/tool/connector
+→ policy check
+→ execution
+→ result validation
+→ provenance logging
+```
+
+## Model Call Rules
+
+For model calls, track where applicable:
+
+- model/provider
+- model version
+- input references
+- output references
+- prompt/config version
+- cost/usage
+- confidence/quality
+- limitations
+
+Do not present model output as verified truth.
+
+## Embedding Rules
+
+When creating embeddings, store:
+
+- embedding model
+- embedding model version
+- embedding dimension
+- content hash
+- source/object ID
+- chunking strategy
+- created timestamp
+- index name
+
+Do not re-embed unchanged content.
+
+Support reindexing when model changes.
+
+## Prediction Rules
+
+Predictions must:
+
+- be tied to an evidence gap or task objective
+- identify model/tool used
+- include model/tool version
+- include input provenance
+- include uncertainty/confidence when possible
+- include limitations
+- not be presented as proof
+
+Never label a generic LLM guess as a specialized model prediction.
+
+## Tool Execution Rules
+
+Never auto-run:
+
+- unknown tools
+- unknown scripts
+- unknown packages
+- unknown GitHub repositories
+- unverified binaries
+- arbitrary remote code
+
+Use approved tool registries and explicit policy checks.
+
+Log:
+- inputs
+- outputs
+- artifacts
+- errors
+- tool version
+- execution environment

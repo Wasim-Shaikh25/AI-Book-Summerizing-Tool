@@ -29,18 +29,23 @@ export function setSkipAuthPreference(skip: boolean): void {
 
 export async function fetchAuthConfig(): Promise<{
   auth_enabled: boolean;
+  allow_guest: boolean;
   backend_ok: boolean;
 }> {
   try {
     const res = await fetch(`${API_BASE}/api/auth/config`);
     if (!res.ok) {
-      return { auth_enabled: true, backend_ok: false };
+      return { auth_enabled: true, allow_guest: true, backend_ok: false };
     }
-    const data = (await res.json()) as { auth_enabled: boolean };
+    const data = (await res.json()) as { auth_enabled: boolean; allow_guest?: boolean };
     authEnabledCache = data.auth_enabled;
-    return { auth_enabled: data.auth_enabled, backend_ok: true };
+    return {
+      auth_enabled: data.auth_enabled,
+      allow_guest: data.allow_guest !== false,
+      backend_ok: true,
+    };
   } catch {
-    return { auth_enabled: true, backend_ok: false };
+    return { auth_enabled: true, allow_guest: true, backend_ok: false };
   }
 }
 
@@ -80,6 +85,30 @@ export function oauthLoginUrl(provider: "google" | "apple" | "facebook"): string
   return `${API_BASE}/api/auth/${provider}/login`;
 }
 
+/**
+ * Download an authenticated file (e.g. DOCX export). A plain <a href> cannot
+ * send the Bearer token, so we fetch the blob with the auth header and save it.
+ */
+export async function downloadFile(path: string, suggestedName?: string): Promise<void> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, { headers });
+  if (!res.ok) {
+    throw new Error("Download failed");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = suggestedName || path.split("/").pop() || "download";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export interface UserProfile {
   user_id: string;
   email: string;
@@ -104,6 +133,8 @@ export interface UploadStatusResponse {
   job_id: string;
   status: string;
   message: string;
+  stage?: string;
+  percent?: number;
   book?: BookSummary;
   error?: string;
 }
@@ -138,7 +169,11 @@ export async function uploadBookWithProgress(
   for (let i = 0; i < 600; i += 1) {
     await sleep(2000);
     const status = await apiFetch<UploadStatusResponse>(`/api/books/upload/${started.job_id}`);
-    onProgress(status.message || status.status);
+    const label =
+      status.percent != null && status.percent > 0
+        ? `${status.message || status.status} (${status.percent}%)`
+        : status.message || status.status;
+    onProgress(label);
 
     if (status.status === "done" && status.book) {
       return status.book;

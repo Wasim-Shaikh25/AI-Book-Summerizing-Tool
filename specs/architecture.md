@@ -31,6 +31,7 @@ flowchart TB
         RAG["rag/ — FAISS retrieval"]
         EXP["export/ — Word .docx"]
         INT["interaction/ — CLI loop, intent parser"]
+        QLT["quality/ — Post-export audit"]
     end
 
     subgraph data["Data Layer"]
@@ -46,6 +47,8 @@ flowchart TB
     INT --> GEN & EXP & PIPE
     PIPE --> ING & STR
     GEN --> RAG
+    GEN --> QLT
+    EXP --> QLT
     SVC --> PLAT & KB
     PIPE --> KB & FS
 ```
@@ -79,7 +82,7 @@ flowchart TB
 │  └─────────────────────┘  └─────────────────────────────────────────┘ │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  Modules (mirror /spec/modules/)                                        │
-│  ingestion │ structure │ pipeline │ generation │ rag │ export │ storage │
+│  ingestion │ structure │ pipeline │ generation │ rag │ export │ quality │
 │  interaction │ debug                                                 │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -111,9 +114,11 @@ AI Notes Creater Model/
 │   ├── auth/                    # API client, AuthProvider, login pages
 │   └── src/                     # App.tsx, components, styles
 ├── specs/                       # Authoritative SDD (this folder)
+├── ai-agent-workflow/           # Agent plans & strategy (not authoritative SDD)
+├── logs/                        # Runtime: pipeline stage JSON (LOGS_FOLDER)
 ├── output/                      # Runtime: DB, uploads, exports, RAG indexes
 ├── models/                      # Local GGUF weights (gitignored)
-├── pdfs/                        # Input PDFs
+├── pdfs/                        # Input PDFs (gitignored)
 ├── .env                         # Secrets (gitignored)
 ├── .env.example                 # Env template
 └── docker-compose.yml           # Backend + frontend containers
@@ -123,11 +128,16 @@ AI Notes Creater Model/
 
 ## 4. Pipeline (summary)
 
-PDF → `run_pipeline()` → 13 plugin stages → `PipelineResult`.
+PDF → `run_pipeline()` → plugin stages → `PipelineResult` → optional `RewriteEngine` → export → optional `run_quality_audit()`.
 
-**Authoritative detail:** [modules/pipeline-core.md](./modules/pipeline-core.md) (stage order, log artifacts)  
-**Structure stages:** [modules/structure-extraction.md](./modules/structure-extraction.md)  
-**Debug logs:** [modules/logging-debug.md](./modules/logging-debug.md)
+**Final structuring:** `partition_tree` → `partition_sections` → `group_chapters` → `place_chapters` → `clean_titles` → `refine_titles` → `cloud_hierarchy` → `validate_titles` → `assemble_book` → `rag_snapshot`.  
+`enforce_chapter_structure()` runs after title/placement phases and at rewrite load.
+
+**Authoritative detail:**
+- [modules/stage-catalog.md](./modules/stage-catalog.md) — semantic names + legacy 15x mapping
+- [modules/pipeline-core.md](./modules/pipeline-core.md) — stage order, registry
+- [modules/structure-extraction.md](./modules/structure-extraction.md) — structure modules
+- [code-reference/index.md](./code-reference/index.md) — full file/symbol reference with rationale
 
 ---
 
@@ -145,10 +155,19 @@ Frontend → FastAPI routes → services → engine modules. Auth, upload, chat,
 
 ## 6. Storage (summary)
 
-Single SQLite file: `output/knowledge_base.db` (knowledge + platform tables).  
-Files: `output/uploads/`, `output/exports/`, `output/rag_index/`, `logs/run_*/`.
+All paths resolve under **`PROJECT_ROOT`** (repo root; Docker `PROJECT_ROOT=/workspace`, `working_dir=/workspace/backend`).
 
-**Authoritative detail:** [data-models.md](./data-models.md) (schemas) · [modules/storage.md](./modules/storage.md) (repositories)
+| Constant | Path | Contents |
+|----------|------|----------|
+| `KNOWLEDGE_DB_PATH` | `output/knowledge_base.db` | SQLite (knowledge + platform) |
+| `UPLOADS_FOLDER` | `output/uploads/{user_id}/` | Uploaded PDFs |
+| `EXPORTS_FOLDER` | `output/exports/{user_id}/` | Generated Word files |
+| `RAG_INDEX_DIR` | `output/rag_index/{book_id}/` | FAISS + chunk meta |
+| `LOGS_FOLDER` | `logs/run_{timestamp}/` | Stage JSON (`s01`–`s16`) |
+
+**Do not use** `backend/logs/` or `backend/output/` — legacy cwd artifacts; gitignored.
+
+**Authoritative detail:** [data-models.md](./data-models.md) §6 · [modules/parameters-config.md](./modules/parameters-config.md) §2 · [modules/storage.md](./modules/storage.md)
 
 ---
 
@@ -160,7 +179,9 @@ Files: `output/uploads/`, `output/exports/`, `output/rag_index/`, `logs/run_*/`.
 | ADR-002 | `book_pipeline` re-export | Stable import path for scripts and tests |
 | ADR-003 | `shared/models.py` canonical | Single runtime model module |
 | ADR-004 | SQLite persistence | Local knowledge store; single file for knowledge + platform |
-| ADR-005 | Stage JSON logging | Whitelisted artifacts under `logs/run_<timestamp>/` |
+| ADR-005 | Stage JSON logging | Canonical artifacts `s01`–`s16` under `{LOGS_FOLDER}/run_<timestamp>/` |
+| ADR-014 | PROJECT_ROOT runtime paths | `logs/` + `output/` at repo root; config constants not cwd-relative |
+| ADR-015 | `stage_registry.py` | Single map of log keys → filenames; legacy read fallback |
 | ADR-006 | MESO module layout | `src/modules/*` mirrors `/spec/modules/*` |
 | ADR-007 | Config in `/config` | `default.yaml` + env overlay via `shared/config.py` |
 | ADR-008 | Plugin pipeline shell | `stages.py` + `PipelineContext`; runner has no business rules |
@@ -168,7 +189,12 @@ Files: `output/uploads/`, `output/exports/`, `output/rag_index/`, `logs/run_*/`.
 | ADR-010 | Shared engine CLI + Web | `main.py` and FastAPI both use `src/modules/` |
 | ADR-011 | Deterministic intent routing | `CommandParser` keyword-based; no LLM for classification |
 | ADR-012 | In-memory upload jobs | Simple for dev; production needs Redis/DB (backlog) |
-| ADR-013 | SSE for chat status | Progress feedback without token streaming complexity |
+| ADR-016 | `enforce_chapter_structure` after 15j | 15j OpenAI regroup collapsed syllabus books to 1 chapter; statute prose leaked to export |
+| ADR-017 | `specs/code-reference/` symbol docs | Every public file/function documented with purpose + why (rule 13) |
+| ADR-018 | Env-driven CORS (`AuthSettings.cors_origins`) | Hardcoded localhost blocked prod; origins now from `FRONTEND_URL` + `CORS_EXTRA_ORIGINS` |
+| ADR-019 | Guest mode with isolated session JWT | Let users try the app without OAuth; `ALLOW_GUEST` mints a per-session persisted guest + token |
+| ADR-020 | Rewrite disk cache + 15j names-pass skip gate | Cut LLM cost on re-runs / clean docs; bounded retries (`OPENAI_MAX_RETRIES`) for transient errors |
+| ADR-021 | Multi-stage prod images (nginx + non-root backend) | Dev compose = hot reload; prod compose = nginx static + `/api` proxy, named volumes, healthchecks (see [deployment.md](./deployment.md)) |
 
 ---
 
@@ -178,7 +204,8 @@ Files: `output/uploads/`, `output/exports/`, `output/rag_index/`, `logs/run_*/`.
 |-----------------------|----------------------------|
 | `from src.modules.pipeline import run_pipeline` | `from src.core.pipeline import run_pipeline` |
 | `from src.shared.models import NormalizedLine` | `from src.core.models import …` |
-| `from src.shared.config import OUTPUT_FOLDER` | `from src.config import …` (shim still works) |
+| `from src.shared.config import OUTPUT_FOLDER, LOGS_FOLDER` | `from src.config import …` (shim still works) |
+| `from src.modules.pipeline.stage_registry import resolve_existing_artifact` | Hardcoded `15d_ultimate_sections.json` paths |
 | `from src.modules.ingestion.pdf_extractor import extract_pdf` | `from src.ingestion.pdf_extractor import …` |
 
 **Web layer imports:**
@@ -204,7 +231,7 @@ from storage.user_repository import ConversationRepository
 | Database | SQLite |
 | Frontend | React 18, TypeScript, Vite 5 |
 | Styling | Plain CSS (dark theme) |
-| Deploy | Docker Compose |
+| Deploy | Docker Compose (dev hot-reload + prod nginx/uvicorn); see [deployment.md](./deployment.md) |
 
 ---
 
@@ -216,6 +243,8 @@ from storage.user_repository import ConversationRepository
 | Frontend details | [frontend.md](./frontend.md) |
 | UI↔Backend contracts | [ui-backend-integration.md](./ui-backend-integration.md) |
 | Pipeline stages | [modules/pipeline-core.md](./modules/pipeline-core.md) |
+| File/symbol reference | [code-reference/index.md](./code-reference/index.md) |
 | Data models | [data-models.md](./data-models.md) |
 | Tests | [testing.md](./testing.md) |
+| Deployment (Docker/env/storage) | [deployment.md](./deployment.md) |
 | How to modify | [future-modifications.md](./future-modifications.md) |

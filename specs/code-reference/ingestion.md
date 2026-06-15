@@ -1,0 +1,95 @@
+# Code Reference — Ingestion
+
+> **Package:** `backend/src/modules/ingestion/`  
+> **Module spec:** [../modules/ingestion.md](../modules/ingestion.md)
+
+---
+
+## Files
+
+| File | Purpose | Why |
+|------|---------|-----|
+| `pdf_extractor.py` | PyMuPDF extract + visual elements | Single PDF entry point |
+| `layout_enrichment.py` | Bbox, bold, links on lines | Heading detection uses layout signals |
+| `ocr_stage.py` | Scanned page detection + Tesseract | Many legal PDFs are scans |
+| `text_normalizer.py` | Raw extract → `NormalizedLine` list | Canonical line model for pipeline |
+| `pdf_outline.py` | PDF bookmark/outline supplement | When repeated-TOC detection misses syllabus TOC |
+| `profile.py` | `fast_local` / `quality_cloud` / `debug` overrides | Performance vs quality tradeoff |
+| `document_profile.py` | Measured document shape → tuning knobs | Subject-agnostic adaptation for structure + rewrite |
+
+---
+
+## `document_profile.py`
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `DocumentCharacterProfile` | Measured signals + derived knobs | Universal per-document tuning | `compute_document_profile` |
+| `compute_document_profile(lines, headings)` | Measure density, brevity, prose/clause ratios | No subject keywords | `stage_compute_document_profile` |
+| `load_document_profile(run_dir)` | Read `s00_document_profile.json` | Rewrite reuses pipeline profile | `RewriteEngine.run` |
+| `resolve_document_profile_settings()` | YAML/env base constants | Deployment tuning | `compute_document_profile` |
+
+---
+
+## `pdf_extractor.py`
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `extract_pdf(pdf_path)` | Full PDF → lines, title, visuals | **Only** call site for extract in pipeline | `stage_extract` |
+| `extract_visual_elements(pages)` | Tables, images metadata | Debug + future figure handling | `extract_pdf` |
+
+**Why single extract:** Double `extract_pdf` before pipeline wasted minutes on large PDFs.
+
+---
+
+## `layout_enrichment.py`
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `enrich_layout_from_pymupdf_pages(pages)` | Add geometry/font to lines | Bold/size help heading gate | `extract_pdf` |
+| `lines_to_log(lines)` | Serialize for `s01` artifact | Debug visualizer | `stage_layout_log` |
+
+---
+
+## `ocr_stage.py`
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `is_scanned_page(page_text)` | Chars < `OCR_MIN_TEXT_CHARS` | Avoid OCR on digital PDFs | `apply_ocr_to_pages` |
+| `apply_ocr_to_pages(pages, config)` | Tesseract on scan pages | Recover text from scanned books | `extract_pdf` |
+| `split_page_regions(page)` | Two-up left/right crop | Scanned textbooks often two pages per image | OCR path |
+| `virtual_page_number(pdf_page, half)` | Virtual page indexing | Fragment page refs stay monotonic | Normalizer |
+
+---
+
+## `text_normalizer.py`
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `normalize_text(extract_result)` | Build `list[NormalizedLine]` | Stable `line_id` for entire pipeline | `extract_pdf` |
+
+---
+
+## `pdf_outline.py`
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `extract_pdf_outline(pdf_path)` | Read PDF bookmarks | Syllabus PDFs have usable outline | TOC supplement |
+| `supplement_toc_from_pdf_outline(headings, outline)` | Merge outline into TOC detection | When repeat-detection fails | `stage_deterministic_toc` |
+
+---
+
+## `profile.py`
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `ingestion_profile_context(profile)` | Context manager applying overrides | Temporarily set config for upload | `IngestionService` |
+| `profile_overrides(profile)` | Dict of config overrides | `fast_local` uses BigBird, skips cloud 15f LLM | Profile switch |
+| `upload_skip_rag_default(profile)` | Profile-specific RAG default | Fast upload path | `IngestionService` |
+
+**Profiles (why):**
+
+| Profile | Why |
+|---------|-----|
+| `fast_local` | Local models, lazy RAG — dev and batch speed |
+| `quality_cloud` | Cloud LLM for 15e/15f/15j — best structure quality |
+| `debug` | Verbose logs, smaller page limits | Development |

@@ -6,23 +6,20 @@ Segregates doubted lines into: real_content | toc | metadata | uncertain
 Decision chain per segment:
   0. Structural rules (before first chapter, scattered TOC seeds, syllabus block)
   1. Strong deterministic signals → classify immediately
-  2. Optional local LLM (Ollama / llama.cpp GGUF) or legacy BigBird embeddings
+  2. Optional cloud LLM (OpenAI / OpenRouter) when inline classification is enabled
   3. all-MiniLM heading similarity vs. confirmed headings (chapter body only)
   4. ms-marco (heading, body) coherence for remaining uncertain
 
 Configure via ``.env``:
   - ``DOUBTED_RESOLVER_MODE``: fast | revalidate_selected (default)
-  - ``DOUBTED_RESOLVER_LLM``: off | bigbird | or auto from ``LLM_PROVIDER``
+  - ``DOUBTED_RESOLVER_LLM``: off | openai | openrouter | or auto from ``LLM_PROVIDER``
 """
 from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import numpy as np
-
-from .signal_extractor import compute_line_signals
-from .models.bigbird_encoder import get_bigbird_encoder
+from .signal_extractor import CITATION_RE, compute_line_signals
 from .models.mini_lm_encoder import get_mini_lm_encoder
 from .models.cross_encoder_model import get_cross_encoder
 from .models.segment_llm_classifier import get_segment_llm_classifier
@@ -30,40 +27,9 @@ from .revalidation import apply_revalidation
 
 _CHAPTER_START_RE = re.compile(r"^Chapter\s+\d+\s*$", re.I)
 _CONTENTS_RE = re.compile(r"^CONTENTS\s*$", re.I)
-_LEGAL_CITATION_RE = re.compile(
-    r"\bv\.\s+[A-Z][a-z]|\bAIR\s+\d{4}\b|\bSCC\b|\bAll\s+ER\b|\bSC\b|\bHC\b"
-    r"|\b\(\d{4}\)\s+\d+\s+[A-Z]+|\bILR\b|\bWLR\b"
-)
 _MINILM_THRESHOLD = 0.75
 _MAX_LINE_GAP = 1
 _MAX_PAGE_GAP = 2
-
-
-def _cosine(a: np.ndarray, b: np.ndarray) -> float:
-    na, nb = np.linalg.norm(a), np.linalg.norm(b)
-    if na < 1e-9 or nb < 1e-9:
-        return 0.0
-    return float(np.dot(a, b) / (na * nb))
-
-
-def _build_reference_text(lines_text: List[str], label: str) -> str:
-    """Format reference lines as annotated block for BigBird input."""
-    tag = f"[{label.upper()}]"
-    return "\n".join(f"{tag} {t}" for t in lines_text[:80] if t.strip())
-
-
-def _format_segment_for_bigbird(
-    segment_lines: List[Dict[str, Any]],
-    signals_map: Dict[int, Dict[str, Any]],
-) -> str:
-    parts = []
-    for line in segment_lines:
-        lid = line.get("line_id")
-        sig = signals_map.get(lid, {})
-        ann = sig.get("annotation", "")
-        text = (line.get("text") or "").strip()
-        parts.append(f"{ann} {text}")
-    return "\n".join(parts)
 
 
 def _find_first_chapter_line_id(doubted_lines: List[Dict[str, Any]]) -> Optional[int]:
@@ -82,9 +48,9 @@ def _is_structural_boundary(text: str) -> bool:
     return bool(_CHAPTER_START_RE.match(t) or _CONTENTS_RE.match(t))
 
 
-def _segment_has_legal_citation(lines: List[Dict[str, Any]]) -> bool:
+def _segment_has_citation(lines: List[Dict[str, Any]]) -> bool:
     for line in lines:
-        if _LEGAL_CITATION_RE.search((line.get("text") or "")):
+        if CITATION_RE.search((line.get("text") or "")):
             return True
     return False
 
@@ -95,13 +61,13 @@ def _looks_like_syllabus_block(
     *,
     first_toc_page: int,
 ) -> bool:
-    """Duplicate chapter opener at the detected first-TOC page (no case citations)."""
+    """Duplicate chapter opener at the detected first-TOC page (no subject-matter citations)."""
     if first_toc_page <= 0:
         return False
     pages = [int(l.get("page_number") or 0) for l in body_lines]
     if not pages or min(pages) < first_toc_page:
         return False
-    if _segment_has_legal_citation(body_lines):
+    if _segment_has_citation(body_lines):
         return False
     combined = f"{heading_text} " + " ".join(
         (l.get("text") or "").strip() for l in body_lines
@@ -240,39 +206,10 @@ def resolve_doubted_section(
 
     llm_classifier = get_segment_llm_classifier()
     resolver_mode = (config.DOUBTED_RESOLVER_MODE or "revalidate_selected").strip().lower()
-    use_bigbird = (config.DOUBTED_RESOLVER_LLM or "off").strip().lower() == "bigbird"
     use_inline_llm = llm_classifier.enabled and resolver_mode != "revalidate_selected"
 
     mini_lm = get_mini_lm_encoder()
     cross_enc = get_cross_encoder()
-
-    ref_content_bb = None
-    ref_toc_bb = None
-    ref_metadata_bb = None
-    bigbird = None
-    if use_bigbird:
-        bigbird = get_bigbird_encoder()
-        ref_content_texts = [
-            (line_by_id[lid].get("text") or "").strip()
-            for lid in list(confirmed_content_line_ids)[:80]
-            if lid in line_by_id
-        ]
-        ref_toc_texts = [
-            (line_by_id[lid].get("text") or "").strip()
-            for lid in list(confirmed_toc_line_ids)[:40]
-            if lid in line_by_id
-        ]
-        ref_content_bb = bigbird.encode(_build_reference_text(ref_content_texts, "real_content"))
-        ref_toc_bb = bigbird.encode(_build_reference_text(ref_toc_texts, "toc"))
-        ref_metadata_text = (
-            "[METADATA] ISBN 978-93-5107-000-0\n"
-            "[METADATA] © 2018 Publisher\n"
-            "[METADATA] All rights reserved. No part of this publication...\n"
-            "[METADATA] Published by: Legal Publishers\n"
-            "[METADATA] THE PUBLISHERS\n"
-            "[METADATA] BOOKS RECOMMENDED FOR FURTHER READING\n"
-        )
-        ref_metadata_bb = bigbird.encode(ref_metadata_text)
 
     confirmed_heading_list = sorted(confirmed_heading_texts)
     conf_h_embs = mini_lm.encode(confirmed_heading_list) if confirmed_heading_list else None
@@ -378,33 +315,6 @@ def resolve_doubted_section(
             })
             continue
 
-        bb_sims: Dict[str, float] = {}
-
-        if use_bigbird and bigbird is not None:
-            seg_formatted = _format_segment_for_bigbird(all_seg_lines, signals_map)
-            seg_bb = bigbird.encode(seg_formatted)
-            if seg_bb is not None and ref_content_bb is not None:
-                bb_sims["real_content"] = _cosine(seg_bb, ref_content_bb)
-            if seg_bb is not None and ref_toc_bb is not None:
-                bb_sims["toc"] = _cosine(seg_bb, ref_toc_bb)
-            if seg_bb is not None and ref_metadata_bb is not None:
-                bb_sims["metadata"] = _cosine(seg_bb, ref_metadata_bb)
-            if bb_sims:
-                bb_top = max(bb_sims, key=bb_sims.get)
-                bb_top_score = bb_sims[bb_top]
-                bb_sorted = sorted(bb_sims.values(), reverse=True)
-                bb_gap = bb_sorted[0] - bb_sorted[1] if len(bb_sorted) >= 2 else 0.0
-                if bb_top_score >= 0.68 and bb_gap >= 0.10:
-                    results.append({
-                        **base_result,
-                        "resolved_as": bb_top,
-                        "method": "bigbird",
-                        "confidence": round(bb_top_score, 3),
-                        "bigbird_sims": {k: round(v, 3) for k, v in bb_sims.items()},
-                        "bigbird_gap": round(bb_gap, 4),
-                    })
-                    continue
-
         # MiniLM only for chapter-body segments (at/after first Chapter N)
         in_chapter_body = (
             first_body_line_id is None
@@ -465,13 +375,11 @@ def resolve_doubted_section(
             fallback_cat = "toc"
         else:
             fallback_cat = "metadata"
-        bb_conf = round(bb_sims.get(fallback_cat, 0.5), 3) if bb_sims else 0.5
         results.append({
             **base_result,
             "resolved_as": fallback_cat,
             "method": "page_position_fallback",
-            "confidence": bb_conf,
-            "bigbird_sims": {k: round(v, 3) for k, v in bb_sims.items()} if bb_sims else {},
+            "confidence": 0.5,
         })
 
     audits: List[Dict[str, Any]] = []

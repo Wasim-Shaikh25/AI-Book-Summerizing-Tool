@@ -1,0 +1,96 @@
+---
+description: Require file-level and function-level spec documentation with purpose and rationale
+globs:
+  - "**/*.py"
+  - "**/*.md"
+  - "specs/**/*"
+  - "ai-agent-workflow/**/*"
+alwaysApply: true
+---
+
+# Comprehensive Spec Documentation Rules
+
+Every meaningful code change MUST keep specs accurate at **file** and **public symbol** level.
+
+## Authority
+
+| Layer | Location | Content |
+|-------|----------|---------|
+| Navigation | `specs/index.md` | Where to find topics |
+| Architecture | `specs/architecture.md` | Layers, ADRs, data flow |
+| Module overview | `specs/modules/*.md` | Purpose, flows, config, tests |
+| **Symbol reference** | `specs/code-reference/*.md` | Every file, public class/function, **why it exists** |
+
+**Rule:** Module specs summarize; `specs/code-reference/` is the exhaustive inventory. Do not duplicate full symbol tables in two places — link from module spec to code-reference.
+
+## When to Update (mandatory)
+
+After any change that adds, removes, or renames:
+
+- a module file
+- a public class or function
+- a pipeline stage or log artifact
+- an env var or config key
+- export/audit behavior
+
+Update in this order:
+
+1. Relevant `specs/code-reference/<package>.md` (file + symbol tables)
+2. Authoritative `specs/modules/<module>.md` (if flow/config changed)
+3. `specs/architecture.md` (if layers, ADRs, or cross-package flow changed)
+4. `specs/modules/parameters-config.md` (if new env/YAML keys)
+5. `specs/change-log.md` (append entry)
+6. `ai-agent-workflow/tasks.md` (status if task-scoped)
+
+## Required Fields Per Public Symbol
+
+For each **public** class or function documented in code-reference:
+
+| Field | Required | Example |
+|-------|----------|---------|
+| **Symbol** | yes | `enforce_chapter_structure` |
+| **File** | yes | `chapter_placement.py` |
+| **Purpose** | yes | Split mega-chapters after 15j regroup |
+| **Why** | yes | 15j OpenAI regroup collapsed 22 syllabus sections into 1 chapter |
+| **Called by** | yes | `run_hierarchy_openai_refinement`, `validate_chapter_hierarchy`, `RewriteEngine.run` |
+| **Inputs / outputs** | when non-obvious | `Dict hierarchy` → `(hierarchy, stats)` |
+| **Status** | when not stable | `Implemented` \| `Partial` \| `Planned` \| `Deprecated` |
+
+Private `_` helpers: document only when they encode non-obvious business rules.
+
+## Required Fields Per File
+
+| Field | Required |
+|-------|----------|
+| File path | yes |
+| Package / stage | yes |
+| One-line purpose | yes |
+| Why this file exists (not inlined elsewhere) | yes |
+| Key public symbols (link or table) | yes |
+
+## Pipeline Stages
+
+Document in `specs/modules/pipeline-core.md` and `specs/code-reference/pipeline.md`:
+
+- stage function name
+- log artifact key → filename
+- order in `final_structuring_stage.py`
+- **why** the stage runs at that position
+
+## Do Not
+
+- Describe planned features as implemented
+- Leave code-reference stale after merging implementation
+- Invent requirements or rationale not grounded in code/comments/tasks
+- Duplicate the same symbol table in `architecture.md` and code-reference
+
+## Agent Completion Checklist
+
+Before marking implementation done:
+
+- [ ] code-reference updated for touched packages
+- [ ] module spec updated if behavior/config changed
+- [ ] parameters-config updated for new env keys
+- [ ] change-log entry appended
+- [ ] tasks.md status updated
+- [ ] tests listed in `specs/testing.md` if new test files

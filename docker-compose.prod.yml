@@ -1,0 +1,48 @@
+# Production stack: built images, no source mounts, named volumes for durable data.
+# Run:  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Storage strategy:
+#   notes_output  -> /workspace/output  (knowledge_base.db, exports/, uploads/, rag_index/)
+#   notes_logs    -> /workspace/logs    (pipeline stage artifacts + app logs)
+#   notes_models  -> /workspace/models  (downloaded transformer/cross-encoder weights)
+#   hf_cache      -> /app/.cache/huggingface (HuggingFace download cache)
+# All four survive container recreation; back them up to retain user data.
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PROJECT_ROOT: /workspace
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
+    volumes:
+      - notes_output:/workspace/output
+      - notes_logs:/workspace/logs
+      - notes_models:/workspace/models
+      - hf_cache:/app/.cache/huggingface
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: prod
+      args:
+        # Empty = same-origin; nginx proxies /api to the backend service.
+        VITE_API_BASE: ""
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  notes_output:
+  notes_logs:
+  notes_models:
+  hf_cache:

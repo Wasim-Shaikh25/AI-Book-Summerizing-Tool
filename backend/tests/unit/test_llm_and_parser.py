@@ -4,8 +4,7 @@ from src.modules.structure.final_structuring.signal_extractor import compute_lin
 
 def test_normalize_chat_provider_aliases() -> None:
     assert normalize_chat_provider("CHATGPT") == "openai"
-    assert normalize_chat_provider("LOCAL") == "llamacpp"
-    assert normalize_chat_provider("google") == "gemini"
+    assert normalize_chat_provider("openrouter") == "openrouter"
 
 
 def test_signal_extractor_metadata_vs_content() -> None:

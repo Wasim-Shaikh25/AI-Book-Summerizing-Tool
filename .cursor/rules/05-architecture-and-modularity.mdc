@@ -1,0 +1,69 @@
+---
+description: Universal architecture and modularity rules
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Architecture and Modularity Rules
+
+Respect the current architecture.
+
+Keep concerns separated.
+
+## Common Boundaries
+
+Where applicable, separate:
+
+- API/routes/controllers
+- services/business logic
+- schemas/types/DTOs
+- persistence/database/repositories
+- background jobs/workers
+- external connectors/integrations
+- UI components
+- state management
+- utilities
+- tests
+- infrastructure/deployment
+- documentation
+
+## Prefer
+
+- small modules
+- explicit interfaces
+- typed schemas
+- reusable services
+- clear dependency direction
+- idempotent jobs
+- structured logging
+- environment-based configuration
+- testable functions
+- predictable error handling
+
+## Avoid
+
+- circular dependencies
+- hidden global state
+- giant files
+- giant functions
+- duplicated business logic
+- hardcoded paths
+- hardcoded credentials
+- hardcoded business/domain rules
+- direct external API calls from random modules
+- mixing UI, API, persistence, and business logic
+
+## Adding New Capabilities
+
+When adding a capability:
+
+1. Define schema/types first.
+2. Define service boundary.
+3. Define persistence if required.
+4. Define API/UI boundary if required.
+5. Add tests.
+6. Add docs.
+7. Wire into existing system minimally.
+
+Do not introduce major architecture changes unless requested.

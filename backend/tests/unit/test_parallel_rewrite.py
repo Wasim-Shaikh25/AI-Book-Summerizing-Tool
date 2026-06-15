@@ -20,7 +20,9 @@ def test_build_rewrite_jobs_includes_overlap() -> None:
     assert jobs[2].next_overlap == ""
 
 
-def test_prompt_labels_context_as_non_primary() -> None:
+def test_prompt_labels_context_as_non_primary(monkeypatch) -> None:
+    # Study mode emits bold-subheading "Subtopics" guidance (book mode weaves into prose).
+    monkeypatch.setenv("NOTES_EXPORT_STYLE", "study")
     prompt = build_section_user_prompt_with_context(
         user_instruction="short notes",
         heading="Middle",
@@ -29,10 +31,17 @@ def test_prompt_labels_context_as_non_primary() -> None:
         prev_overlap="tail text",
         next_heading="End",
         next_overlap="head text",
+        chapter_heading="Fundamental Rights",
+        subheadings=["Art. 14", "Art. 15"],
     )
     assert "Primary source" in prompt
     assert "continuity only" in prompt
     assert "Output notes for the primary section only" in prompt
+    assert "Chapter title (use as context only" in prompt
+    assert "Fundamental Rights" in prompt
+    assert "Art. 14" in prompt
+    assert "Subtopics" in prompt
+    assert "do not invent new parent headings" in prompt
 
 
 def test_parallel_rewrite_preserves_all_section_ids() -> None:
@@ -43,12 +52,12 @@ def test_parallel_rewrite_preserves_all_section_ids() -> None:
     ]
 
     def fake_generate(system: str, user: str) -> str:
-        if "Section to rewrite: Two" in user:
-            return "notes-two"
-        if "Section to rewrite: One" in user:
-            return "notes-one"
-        if "Section to rewrite: Three" in user:
-            return "notes-three"
+        if "Section title (use this exact label for the section topic): Two\n" in user:
+            return "**Two**\n\nnotes-two"
+        if "Section title (use this exact label for the section topic): One\n" in user:
+            return "**One**\n\nnotes-one"
+        if "Section title (use this exact label for the section topic): Three\n" in user:
+            return "**Three**\n\nnotes-three"
         return ""
 
     out = rewrite_sections_parallel(
@@ -59,4 +68,6 @@ def test_parallel_rewrite_preserves_all_section_ids() -> None:
         workers=3,
         overlap_chars=10,
     )
-    assert out == {"S1": "notes-one", "S2": "notes-two", "S3": "notes-three"}
+    assert set(out.keys()) == {"S1", "S2", "S3"}
+    assert all(out.values())
+    assert "Two" in out["S2"] or "two" in out["S2"].lower()

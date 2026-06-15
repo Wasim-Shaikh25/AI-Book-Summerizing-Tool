@@ -10,26 +10,46 @@ from pathlib import Path
 
 from src.shared.models import PipelineResult
 from src.modules.pipeline.context import PipelineContext
+from src.modules.pipeline.stage_registry import STAGE_LOG_FILES, stage_progress_for
 from src.modules.pipeline.stages import STAGES
 from src.modules.structure.logging.pipeline_logger import PipelineLogger
 
 
-def run_pipeline(pdf_path: str, *, enable_logs: bool = False, persist_to_db: bool = False):
+def _total_pages(lines) -> int:
+    pages = {ln.page_number for ln in lines if getattr(ln, "page_number", None) is not None}
+    return max(pages) if pages else 0
+
+
+def run_pipeline(
+    pdf_path: str,
+    *,
+    enable_logs: bool = False,
+    persist_to_db: bool = False,
+    on_progress=None,
+):
     logger = PipelineLogger.create(pdf_file=Path(pdf_path).name, enabled=enable_logs)
     ctx = PipelineContext(
         pdf_path=pdf_path,
         enable_logs=enable_logs,
         persist_to_db=persist_to_db,
         logger=logger,
+        on_progress=on_progress,
     )
 
     for stage in STAGES:
+        progress = stage_progress_for(stage.__name__)
+        if progress and ctx.on_progress:
+            stage_id, message, percent = progress
+            ctx.on_progress(stage_id, message, percent)
         stage(ctx)
 
     result = PipelineResult(
         final_headings=ctx.toc_out,
         fragments=getattr(ctx.fragments_result, "fragments", []) or [],
         heading_to_fragment_id=getattr(ctx.fragments_result, "heading_to_fragment_id", {}) or {},
+        lines=list(ctx.lines),
+        book_title=ctx.book_title or Path(ctx.pdf_path).stem,
+        total_pages=_total_pages(ctx.lines),
     )
 
     if persist_to_db:
@@ -49,10 +69,10 @@ def _persist(ctx: PipelineContext, result: PipelineResult) -> None:
     repo = TocRepository(store)
 
     book = BookMetadata(
-        title=Path(ctx.pdf_path).stem,
+        title=result.book_title or Path(ctx.pdf_path).stem,
         subject="unknown",
         source_file_name=Path(ctx.pdf_path).name,
-        total_pages=0,
+        total_pages=result.total_pages,
     )
     book_repo.save_book(book)
     repo.save_full_toc(
@@ -64,30 +84,7 @@ def _persist(ctx: PipelineContext, result: PipelineResult) -> None:
     )
 
     if ctx.enable_logs and ctx.logger is not None:
-        stage_files = {
-            "layout_lines": "01_layout_lines.json",
-            "noise_filter": "02_noise_filter.json",
-            "candidate_scoring": "03_candidate_scoring.json",
-            "heading_validity_gate": "03b_heading_validity_gate.json",
-            "fragments": "07_fragments.json",
-            "continuity_filter": "08b_continuity_filter.json",
-            "final_headings": "09_final_headings.json",
-            "deterministic_toc": "10_deterministic_toc.json",
-            "book_metadata": "11_book_metadata.json",
-            "final_headings_2": "12_final_headings_2.json",
-            "visual_elements": "13_visual_elements.json",
-            "doubted_sections": "14_doubted_sections.json",
-            "doubted_resolved": "15b_doubted_resolved.json",
-            "revalidation": "15b_revalidation.json",
-            "15a_heading_hierarchy": "15a_heading_hierarchy.json",
-            "15c_final_book": "15c_final_book.json",
-            "15d_ultimate_sections": "15d_ultimate_sections.json",
-            "15e_chapter_hierarchy": "15e_chapter_hierarchy.json",
-            "15f_heading_cleanup": "15f_heading_cleanup.json",
-            "16_rag_snapshot": "16_rag_snapshot.json",
-            "decision_trace": "decision_trace.json",
-        }
-        for stage_name, filename in stage_files.items():
+        for stage_name, filename in STAGE_LOG_FILES.items():
             path = ctx.logger.run_dir / filename
             if not path.exists():
                 continue

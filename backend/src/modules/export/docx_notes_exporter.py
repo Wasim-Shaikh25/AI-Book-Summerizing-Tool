@@ -14,10 +14,31 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 
 from src.modules.export.document_formatter import BookCoverMeta
+from src.modules.export.docx_theme import (
+    add_callout_paragraph,
+    add_cover_header_band,
+    apply_study_notes_theme,
+    resolve_docx_theme,
+    callout_label_text,
+    finalize_word_document,
+    format_metadata_table,
+    insert_word_field,
+    is_callout_label,
+    refresh_word_fields,
+    style_body_paragraph,
+    style_chapter_heading,
+    style_cover_subtitle,
+    style_cover_title,
+    style_section_heading,
+    style_toc_entry,
+    style_toc_title,
+)
 from src.modules.generation.rewrite_validation import (
     SECTION_ID_TAG,
     heading_similarity,
     normalize_heading,
+    strip_redundant_section_heading,
+    strip_section_id_tags,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,29 +53,6 @@ def _add_page_break(doc: Document) -> None:
     p = doc.add_paragraph()
     run = p.add_run()
     run.add_break(WD_BREAK.PAGE)
-
-
-def _insert_field(paragraph, field_code: str, *, placeholder: str = "") -> None:
-    """Insert a Word field (PAGE, PAGEREF, etc.) into a paragraph."""
-    run = paragraph.add_run()
-    r = run._r
-    fld_begin = OxmlElement("w:fldChar")
-    fld_begin.set(qn("w:fldCharType"), "begin")
-    instr = OxmlElement("w:instrText")
-    instr.set(qn("xml:space"), "preserve")
-    instr.text = f" {field_code} "
-    fld_sep = OxmlElement("w:fldChar")
-    fld_sep.set(qn("w:fldCharType"), "separate")
-    fld_end = OxmlElement("w:fldChar")
-    fld_end.set(qn("w:fldCharType"), "end")
-    r.append(fld_begin)
-    r.append(instr)
-    r.append(fld_sep)
-    if placeholder:
-        text_el = OxmlElement("w:t")
-        text_el.text = placeholder
-        r.append(text_el)
-    r.append(fld_end)
 
 
 class _BookmarkIds:
@@ -88,28 +86,6 @@ def _sanitize_bookmark_name(raw: str) -> str:
     return name
 
 
-def _enable_update_fields_on_open(doc: Document) -> None:
-    """Ask Word to refresh TOC/page fields when the document is opened."""
-    settings = doc.settings.element
-    upd = OxmlElement("w:updateFields")
-    upd.set(qn("w:val"), "true")
-    settings.append(upd)
-
-
-def _add_page_number_footer(doc: Document) -> None:
-    """Centered 'Page X of Y' footer on every page."""
-    for section in doc.sections:
-        section.footer.is_linked_to_previous = False
-        footer = section.footer
-        p = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
-        p.text = ""
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.add_run("Page ")
-        _insert_field(p, "PAGE", placeholder="1")
-        p.add_run(" of ")
-        _insert_field(p, "NUMPAGES", placeholder="1")
-
-
 def _add_toc_line(doc: Document, *, level: int, title: str, bookmark: str) -> None:
     """One TOC row: title ........ page (PAGEREF to heading bookmark)."""
     p = doc.add_paragraph()
@@ -121,16 +97,16 @@ def _add_toc_line(doc: Document, *, level: int, title: str, bookmark: str) -> No
     if level == 1:
         label.bold = True
     p.add_run("\t")
-    _insert_field(p, f"PAGEREF {bookmark} \\h")
+    insert_word_field(p, f"PAGEREF {bookmark} \\h")
+    style_toc_entry(p, level=level)
 
 
 def _add_toc_block(doc: Document, toc_rows: Sequence[tuple[int, str, str]]) -> None:
     """Add TOC page (title + PAGEREF lines + page break) at the current document end."""
     title = doc.add_paragraph()
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     tr = title.add_run("Table of Contents")
     tr.bold = True
-    tr.font.size = Pt(16)
+    style_toc_title(title)
 
     doc.add_paragraph()
 
@@ -168,79 +144,39 @@ def _add_inline_runs(paragraph, text: str) -> None:
         run.italic = is_i
 
 
-def append_markdown_body(doc: Document, text: str, *, compact: bool = False) -> None:
-    """Render common markdown (headings, bullets, paragraphs) into the document."""
+def append_markdown_body(
+    doc: Document,
+    text: str,
+    *,
+    compact: bool = False,
+    assets_dir: Optional[Path] = None,
+    user_instruction: str = "",
+) -> None:
+    """Render note body markdown (bullets, subtopics, lists) into the document."""
+    from src.modules.export.note_body_docx import append_note_body_markdown
+
     if not (text or "").strip():
         return
-    space_after = Pt(2) if compact else None
-    blocks = re.split(r"\n\s*\n", text.strip())
-    for block in blocks:
-        lines = [ln.rstrip() for ln in block.split("\n") if ln.strip()]
-        if not lines:
-            continue
-        first = lines[0].strip()
-        if first.startswith("### "):
-            h = doc.add_heading(first[4:].strip(), level=3)
-            if compact:
-                h.paragraph_format.space_after = space_after
-            for ln in lines[1:]:
-                _append_line(doc, ln, compact=compact)
-            continue
-        if first.startswith("## "):
-            h = doc.add_heading(first[3:].strip(), level=2)
-            if compact:
-                h.paragraph_format.space_after = space_after
-            for ln in lines[1:]:
-                _append_line(doc, ln, compact=compact)
-            continue
-        if all(ln.lstrip().startswith(("- ", "* ")) for ln in lines):
-            for ln in lines:
-                item = re.sub(r"^[\-*]\s+", "", ln.lstrip())
-                p = doc.add_paragraph(style="List Bullet")
-                if compact:
-                    p.paragraph_format.space_after = space_after
-                _add_inline_runs(p, item)
-            continue
-        p = doc.add_paragraph()
-        if compact:
-            p.paragraph_format.space_after = space_after
-        _add_inline_runs(p, " ".join(lines))
-
-
-def _append_line(doc: Document, line: str, *, compact: bool = False) -> None:
-    s = line.strip()
-    if not s:
-        return
-    space_after = Pt(2) if compact else None
-    if s.startswith(("- ", "* ")):
-        p = doc.add_paragraph(style="List Bullet")
-        if compact:
-            p.paragraph_format.space_after = space_after
-        _add_inline_runs(p, s[2:].strip())
-        return
-    if s.startswith("### "):
-        h = doc.add_heading(s[4:].strip(), level=3)
-        if compact:
-            h.paragraph_format.space_after = space_after
-        return
-    p = doc.add_paragraph()
-    if compact:
-        p.paragraph_format.space_after = space_after
-    _add_inline_runs(p, s)
+    append_note_body_markdown(
+        doc,
+        text,
+        compact=compact,
+        user_instruction=user_instruction,
+    )
 
 
 def _add_cover_page(doc: Document, cover: BookCoverMeta) -> None:
     title = (cover.title or "Study Notes").strip()
+    add_cover_header_band(doc)
+
     t = doc.add_paragraph()
-    t.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = t.add_run(title)
     run.bold = True
-    run.font.size = Pt(24)
+    style_cover_title(t)
 
     sub = doc.add_paragraph()
-    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
     sub_run = sub.add_run(cover.subtitle or "Study Notes")
-    sub_run.font.size = Pt(14)
+    style_cover_subtitle(sub)
 
     doc.add_paragraph()
     rows = [
@@ -252,7 +188,6 @@ def _add_cover_page(doc: Document, cover: BookCoverMeta) -> None:
         ("Notes style", cover.user_instruction),
     ]
     table = doc.add_table(rows=1, cols=2)
-    table.style = "Table Grid"
     hdr = table.rows[0].cells
     hdr[0].text = "Field"
     hdr[1].text = "Value"
@@ -262,10 +197,7 @@ def _add_cover_page(doc: Document, cover: BookCoverMeta) -> None:
         row = table.add_row().cells
         row[0].text = label
         row[1].text = str(val)
-    for row in table.rows:
-        for cell in row.cells:
-            for para in cell.paragraphs:
-                para.paragraph_format.space_after = Pt(2)
+    format_metadata_table(table)
     doc.add_paragraph()
 
 
@@ -339,7 +271,7 @@ def _collect_chapter_export_plan(
                             "bookmark": sec_bm,
                             "heading": sec_heading,
                             "level": 3,
-                            "text": body,
+                            "text": strip_redundant_section_heading(body, sec_heading),
                             "compact": True,
                         }
                     )
@@ -365,7 +297,10 @@ def _collect_chapter_export_plan(
                         "bookmark": sec_bm,
                         "heading": sec_heading,
                         "level": 2,
-                        "text": str(row.get("text") or ""),
+                        "text": strip_redundant_section_heading(
+                            str(row.get("text") or ""),
+                            sec_heading,
+                        ),
                         "compact": compact_toc,
                     }
                 )
@@ -387,28 +322,46 @@ def _append_chapter_blocks(
     *,
     bookmark_ids: _BookmarkIds,
     chapter_page_breaks: bool,
+    assets_dir: Optional[Path] = None,
+    user_instruction: str = "",
 ) -> None:
     for chapter_index, block in enumerate(chapter_blocks):
         if chapter_index > 0 and chapter_page_breaks:
             _add_page_break(doc)
 
         h1 = doc.add_heading(str(block.get("heading") or ""), level=1)
+        style_chapter_heading(h1)
         _add_bookmark(h1, str(block["bookmark"]), bookmark_ids)
 
         for entry in block.get("sections") or []:
             if entry.get("kind") == "bundle":
                 h2 = doc.add_heading(str(entry.get("heading") or "")[:200], level=2)
+                style_section_heading(h2, level=2)
                 _add_bookmark(h2, str(entry["bookmark"]), bookmark_ids)
                 for sec in entry.get("sections") or []:
                     h3 = doc.add_heading(str(sec.get("heading") or "")[:200], level=3)
+                    style_section_heading(h3, level=3)
                     _add_bookmark(h3, str(sec["bookmark"]), bookmark_ids)
-                    append_markdown_body(doc, str(sec.get("text") or ""), compact=True)
+                    append_markdown_body(
+                        doc,
+                        str(sec.get("text") or ""),
+                        compact=True,
+                        assets_dir=assets_dir,
+                        user_instruction=user_instruction,
+                    )
                 continue
 
             level = int(entry.get("level") or 2)
             heading = doc.add_heading(str(entry.get("heading") or "")[:200], level=level)
+            style_section_heading(heading, level=level)
             _add_bookmark(heading, str(entry["bookmark"]), bookmark_ids)
-            append_markdown_body(doc, str(entry.get("text") or ""), compact=bool(entry.get("compact")))
+            append_markdown_body(
+                doc,
+                str(entry.get("text") or ""),
+                compact=bool(entry.get("compact")),
+                assets_dir=assets_dir,
+                user_instruction=user_instruction,
+            )
 
 
 class DocxNotesExporter:
@@ -448,8 +401,17 @@ class DocxNotesExporter:
         if not chapter_blocks:
             raise ValueError("No chapter content available for Word export")
 
-        doc = Document()
+        if reference_docx and Path(reference_docx).exists():
+            doc = Document(reference_docx)
+        else:
+            doc = Document()
+        apply_study_notes_theme(
+            doc,
+            doc_title=(cover.title or "Study Notes").strip(),
+            theme=resolve_docx_theme(),
+        )
         bookmark_ids = _BookmarkIds()
+        assets_dir = out.parent / f"{out.stem}_diagrams"
 
         # Final order: cover -> TOC -> chapters. Avoid prepending TOC after body build,
         # which leaves stale PAGEREF page numbers until Word refreshes all fields.
@@ -462,64 +424,15 @@ class DocxNotesExporter:
             chapter_blocks,
             bookmark_ids=bookmark_ids,
             chapter_page_breaks=chapter_page_breaks,
+            assets_dir=assets_dir,
+            user_instruction=(cover.user_instruction or "").strip(),
         )
 
-        _add_page_number_footer(doc)
-        _enable_update_fields_on_open(doc)
+        finalize_word_document(doc)
         doc.save(str(out))
-        _refresh_word_fields(str(out))
+        refresh_word_fields(str(out))
         logger.info("Saved formatted Word document: %s", out)
         return str(out)
-
-
-def _refresh_word_fields(docx_path: str) -> None:
-    """Update PAGE/PAGEREF fields via Word on Windows so TOC shows real page numbers."""
-    try:
-        import win32com.client  # type: ignore[import-untyped]
-    except ImportError:
-        logger.warning(
-            "pywin32 not installed — TOC page numbers may be wrong until Word "
-            "updates fields (Ctrl+A, F9). Install with: pip install --user pywin32"
-        )
-        return
-
-    resolved = str(Path(docx_path).resolve())
-    word = None
-    doc = None
-    wd_print_view = 3
-    wd_field_page_ref = 37
-    try:
-        word = win32com.client.Dispatch("Word.Application")
-        try:
-            word.Visible = False
-        except AttributeError:
-            pass
-        word.DisplayAlerts = 0
-        doc = word.Documents.Open(resolved)
-        doc.ActiveWindow.View.Type = wd_print_view
-        doc.Repaginate()
-        for field in doc.Fields:
-            try:
-                if field.Type == wd_field_page_ref:
-                    field.Update()
-                else:
-                    field.Update()
-            except Exception:
-                continue
-        doc.Fields.Update()
-        story = doc.StoryRanges(1)
-        while story is not None:
-            story.Fields.Update()
-            story = story.NextStoryRange
-        doc.Save()
-        logger.info("Updated Word fields (TOC page numbers): %s", docx_path)
-    except Exception as exc:
-        logger.warning("Could not auto-update Word fields: %s", exc)
-    finally:
-        if doc is not None:
-            doc.Close(SaveChanges=True)
-        if word is not None:
-            word.Quit()
 
 
 def parse_markdown_sections(md_text: str) -> Tuple[Dict[str, str], Dict[str, str]]:
@@ -568,6 +481,13 @@ def parse_markdown_sections(md_text: str) -> Tuple[Dict[str, str], Dict[str, str
             current_sid = sid_m.group(1) if sid_m else ""
             current_heading = SECTION_ID_TAG.sub("", raw).strip()
             continue
+        if line.startswith("### ") and not line.startswith("#### "):
+            flush()
+            raw = line[4:].strip()
+            sid_m = SECTION_ID_TAG.search(raw)
+            current_sid = sid_m.group(1) if sid_m else ""
+            current_heading = SECTION_ID_TAG.sub("", raw).strip()
+            continue
         if current_heading or current_sid:
             buf.append(line)
     flush()
@@ -598,11 +518,13 @@ def _match_body_for_section(
     if heading in by_heading and heading not in used_headings:
         used_headings.add(heading)
         return by_heading[heading]
-    nh = _norm_heading(heading)
+    from src.modules.structure.final_structuring.heading_cleanup import canonical_heading_for_match
+
+    nh = canonical_heading_for_match(heading)
     for key, val in by_heading.items():
         if key in used_headings:
             continue
-        if _norm_heading(key) == nh:
+        if canonical_heading_for_match(key) == nh:
             used_headings.add(key)
             return val
     best_key = ""
@@ -610,7 +532,7 @@ def _match_body_for_section(
     for key, val in by_heading.items():
         if key in used_headings:
             continue
-        score = heading_similarity(key, heading)
+        score = heading_similarity(canonical_heading_for_match(key), nh)
         if score > best_score:
             best_score = score
             best_key = key

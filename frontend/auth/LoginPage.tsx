@@ -9,8 +9,17 @@ const providers = [
 ];
 
 export function LoginPage() {
-  const { authEnabled, backendOk, skipAuth, setSkipAuth, enterWithoutAuth } = useAuth();
+  const { authEnabled, allowGuest, backendOk, skipAuth, setSkipAuth, enterWithoutAuth } = useAuth();
   const [busy, setBusy] = useState(false);
+
+  const handleGuest = async () => {
+    setBusy(true);
+    try {
+      await enterWithoutAuth();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const skipLogin = !authEnabled || skipAuth;
 
@@ -98,6 +107,16 @@ export function LoginPage() {
               ))}
             </div>
             <p className="login-footnote">Sign in to save chat history and download Word files.</p>
+            {allowGuest && (
+              <button
+                type="button"
+                className="primary-btn enter-app-btn guest-btn"
+                disabled={busy}
+                onClick={() => void handleGuest()}
+              >
+                {busy ? "Loading..." : "Continue as guest"}
+              </button>
+            )}
           </>
         )}
 

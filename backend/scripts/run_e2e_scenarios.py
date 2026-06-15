@@ -16,6 +16,7 @@ sys.path.insert(0, str(BACKEND_ROOT))
 load_dotenv(PROJECT_ROOT / ".env")
 
 from src import config
+from src.modules.pipeline.stage_registry import STAGE_15D, STAGE_15E, STAGE_15F, resolve_existing_artifact
 from src.modules.generation.qa_engine import retrieve_sections
 from src.modules.generation.rewrite import RewriteEngine
 from src.modules.generation.qa_engine import BookQaEngine
@@ -47,20 +48,20 @@ def _book_context():
         raise RuntimeError("No book in DB — run structure pipeline first.")
     book_id, title = row[0], row[1]
     lines, _, _ = extract_pdf(PDF)
-    h15f = LOG_DIR / "15f_heading_cleanup.json"
-    h15e = LOG_DIR / "15e_chapter_hierarchy.json"
-    hierarchy_path = h15f if h15f.exists() else h15e
+    hierarchy_path = resolve_existing_artifact(LOG_DIR, STAGE_15F) or resolve_existing_artifact(
+        LOG_DIR, STAGE_15E
+    )
     sections = load_rewrite_sections(
         store,
         book_id=book_id,
         pdf_path=PDF,
-        ultimate_sections_path=LOG_DIR / "15d_ultimate_sections.json",
-        chapter_hierarchy_path=hierarchy_path if hierarchy_path.exists() else None,
+        ultimate_sections_path=resolve_existing_artifact(LOG_DIR, STAGE_15D),
+        chapter_hierarchy_path=hierarchy_path,
         lines=lines,
         prefer_15e=True,
         prefer_15d=True,
     )
-    hierarchy = load_chapter_hierarchy_json(hierarchy_path) if hierarchy_path.exists() else {}
+    hierarchy = load_chapter_hierarchy_json(hierarchy_path) if hierarchy_path else {}
     return store, book_id, title, sections, hierarchy, hierarchy_path
 
 
@@ -90,17 +91,17 @@ def _run_rewrite(
 ) -> dict:
     os.environ["EXAM_ORIENTED"] = "1" if exam_oriented else "0"
     os.environ["COMPACT_EXAM"] = "1" if compact else "0"
-    hierarchy_path = LOG_DIR / "15f_heading_cleanup.json"
-    if not hierarchy_path.exists():
-        hierarchy_path = LOG_DIR / "15e_chapter_hierarchy.json"
+    hierarchy_path = resolve_existing_artifact(LOG_DIR, STAGE_15F) or resolve_existing_artifact(
+        LOG_DIR, STAGE_15E
+    )
     lines, _, _ = extract_pdf(PDF)
     result = engine.run(
         user_instruction=instruction,
         export_to_word=False,
         max_sections=MAX_SECTIONS,
         pdf_path=PDF,
-        ultimate_sections_path=LOG_DIR / "15d_ultimate_sections.json",
-        chapter_hierarchy_path=hierarchy_path if hierarchy_path.exists() else None,
+        ultimate_sections_path=resolve_existing_artifact(LOG_DIR, STAGE_15D),
+        chapter_hierarchy_path=hierarchy_path,
         lines=lines,
     )
     if "error" in result:

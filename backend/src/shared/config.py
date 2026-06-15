@@ -22,12 +22,10 @@ _PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(_BACKEND_ROOT.parent)))
 _CONFIG_DIR = _BACKEND_ROOT / "config"
 _DEFAULT_YAML = _CONFIG_DIR / "default.yaml"
 
-_PROVIDER_ALIASES = {"CHATGPT": "OPENAI", "GOOGLE": "GEMINI", "LOCAL": "LLAMACPP"}
+_PROVIDER_ALIASES = {"CHATGPT": "OPENAI"}
 _PROVIDER_TO_BACKEND = {
     "OPENAI": "openai",
-    "GEMINI": "gemini",
-    "LLAMACPP": "llamacpp",
-    "OLLAMA": "ollama",
+    "OPENROUTER": "openrouter",
 }
 
 
@@ -92,7 +90,7 @@ def _env_int(key: str, default: int) -> int:
 
 
 def _normalize_llm_provider(raw: str) -> str:
-    p = (raw or "LLAMACPP").strip().upper()
+    p = (raw or "OPENAI").strip().upper()
     return _PROVIDER_ALIASES.get(p, p)
 
 
@@ -113,10 +111,15 @@ _YAML = _load_yaml(_DEFAULT_YAML)
 BASE_DIR = str(_PROJECT_ROOT)
 PDF_FOLDER = str(_PROJECT_ROOT / _cfg_get(_YAML, "paths", "pdf_folder", default="pdfs"))
 OUTPUT_FOLDER = str(_PROJECT_ROOT / _cfg_get(_YAML, "paths", "output_folder", default="output"))
+LOGS_FOLDER = str(_PROJECT_ROOT / _cfg_get(_YAML, "paths", "logs_folder", default="logs"))
 REFERENCE_DOCX_PATH = str(_PROJECT_ROOT / _cfg_get(_YAML, "paths", "reference_docx", default="reference.docx"))
 MODELS_DIR = str(_PROJECT_ROOT / _cfg_get(_YAML, "paths", "models_dir", default="models"))
+KNOWLEDGE_DB_PATH = str(Path(OUTPUT_FOLDER) / "knowledge_base.db")
+EXPORTS_FOLDER = str(Path(OUTPUT_FOLDER) / "exports")
+UPLOADS_FOLDER = str(Path(OUTPUT_FOLDER) / "uploads")
 
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+os.makedirs(LOGS_FOLDER, exist_ok=True)
 
 # Chunking
 CHUNK_SIZE_WORDS = _env_int("CHUNK_SIZE_WORDS", int(_cfg_get(_YAML, "chunking", "chunk_size_words", default=1500)))
@@ -126,10 +129,20 @@ CHUNK_OVERLAP_WORDS = _env_int(
 
 # System
 DEBUG_STRUCTURE = _env_bool("DEBUG_STRUCTURE", bool(_cfg_get(_YAML, "system", "debug_structure", default=True)))
+ENGLISH_ONLY = _env_bool("ENGLISH_ONLY", bool(_cfg_get(_YAML, "system", "english_only", default=True)))
+DOCX_THEME = _env("DOCX_THEME", str(_cfg_get(_YAML, "export", "docx_theme", default="color"))).strip().lower()
+DOCX_FONT_FAMILY = _env(
+    "DOCX_FONT_FAMILY",
+    str(_cfg_get(_YAML, "export", "font_family", default="Times New Roman")),
+).strip()
+NOTES_EXPORT_STYLE = _env(
+    "NOTES_EXPORT_STYLE",
+    str(_cfg_get(_YAML, "export", "notes_style", default="book")),
+).strip().lower()
 
 # LLM generic
 LLM_PROVIDER = _normalize_llm_provider(
-    _env("LLM_PROVIDER", str(_cfg_get(_YAML, "llm", "provider", default="LLAMACPP")))
+    _env("LLM_PROVIDER", str(_cfg_get(_YAML, "llm", "provider", default="OPENAI")))
 )
 LLM_MODEL = _env("LLM_MODEL", str(_cfg_get(_YAML, "llm", "model", default="")))
 LLM_BASE_URL = _env("LLM_BASE_URL", str(_cfg_get(_YAML, "llm", "base_url", default="")))
@@ -155,32 +168,36 @@ OPENAI_BASE_URL = (
     or LLM_BASE_URL
 )
 OPENAI_TIMEOUT_S = _env_float("OPENAI_TIMEOUT_S", LLM_TIMEOUT_S)
+OPENAI_MAX_RETRIES = _env_int("OPENAI_MAX_RETRIES", 2)
+OPENAI_RETRY_BACKOFF_S = _env_float("OPENAI_RETRY_BACKOFF_S", 1.5)
 
-OLLAMA_BASE_URL = (
-    _env("OLLAMA_BASE_URL", str(_cfg_get(_YAML, "ollama", "base_url", default="http://localhost:11434")))
-    or LLM_BASE_URL
+OPENROUTER_API_KEY = _env("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = _env(
+    "OPENROUTER_MODEL",
+    str(_cfg_get(_YAML, "openrouter", "model", default="openrouter/free")),
 )
-OLLAMA_MODEL = _env("OLLAMA_MODEL", str(_cfg_get(_YAML, "ollama", "model", default="llama3.2:3b"))) or LLM_MODEL
-OLLAMA_TIMEOUT_S = _env_float("OLLAMA_TIMEOUT_S", LLM_TIMEOUT_S)
+OPENROUTER_BASE_URL = (
+    _env(
+        "OPENROUTER_BASE_URL",
+        str(_cfg_get(_YAML, "openrouter", "base_url", default="https://openrouter.ai/api/v1")),
+    ).strip()
+    or "https://openrouter.ai/api/v1"
+)
+OPENROUTER_TIMEOUT_S = _env_float("OPENROUTER_TIMEOUT_S", LLM_TIMEOUT_S)
+OPENROUTER_HTTP_REFERER = _env(
+    "OPENROUTER_HTTP_REFERER",
+    str(_cfg_get(_YAML, "openrouter", "http_referer", default="")),
+).strip()
+OPENROUTER_APP_TITLE = _env(
+    "OPENROUTER_APP_TITLE",
+    str(_cfg_get(_YAML, "openrouter", "app_title", default="AI Notes Creator")),
+).strip()
 
 # Rewrite
 REWRITE_MAX_TOKENS = _env_int("REWRITE_MAX_TOKENS", int(_cfg_get(_YAML, "rewrite", "max_tokens", default=15000)))
 _raw_rewrite_provider_order = _env("REWRITE_PROVIDER_ORDER", str(_cfg_get(_YAML, "rewrite", "provider_order", default=""))).strip().lower()
 REWRITE_PROVIDER_ORDER = (
-    _raw_rewrite_provider_order if _raw_rewrite_provider_order else _PROVIDER_TO_BACKEND.get(LLM_PROVIDER, "llamacpp")
-)
-REWRITE_LLAMACPP_MODEL_PATH = _env(
-    "REWRITE_LLAMACPP_MODEL_PATH", str(_cfg_get(_YAML, "rewrite", "llamacpp_model_path", default=""))
-).strip()
-REWRITE_LLAMACPP_MODEL_URLS = _env(
-    "REWRITE_LLAMACPP_MODEL_URLS", str(_cfg_get(_YAML, "rewrite", "llamacpp_model_urls", default=""))
-).strip()
-
-# llama.cpp
-LLAMACPP_MODEL_PATH = _env("LLAMACPP_MODEL_PATH", str(_cfg_get(_YAML, "llamacpp", "model_path", default="")))
-LLAMACPP_N_CTX = _env_int("LLAMACPP_N_CTX", int(_cfg_get(_YAML, "llamacpp", "n_ctx", default=2048)))
-LLAMACPP_N_GPU_LAYERS = _env_int(
-    "LLAMACPP_N_GPU_LAYERS", int(_cfg_get(_YAML, "llamacpp", "n_gpu_layers", default=0))
+    _raw_rewrite_provider_order if _raw_rewrite_provider_order else _PROVIDER_TO_BACKEND.get(LLM_PROVIDER, "openai")
 )
 
 # Doubted resolver
@@ -188,7 +205,7 @@ _raw_doubted_resolver_llm = _env(
     "DOUBTED_RESOLVER_LLM", str(_cfg_get(_YAML, "doubted", "resolver_llm", default=""))
 ).strip().lower()
 DOUBTED_RESOLVER_LLM = (
-    _raw_doubted_resolver_llm if _raw_doubted_resolver_llm else _PROVIDER_TO_BACKEND.get(LLM_PROVIDER, "llamacpp")
+    _raw_doubted_resolver_llm if _raw_doubted_resolver_llm else _PROVIDER_TO_BACKEND.get(LLM_PROVIDER, "openai")
 )
 DOUBTED_RESOLVER_MODE = _env(
     "DOUBTED_RESOLVER_MODE", str(_cfg_get(_YAML, "doubted", "resolver_mode", default="revalidate_selected"))
@@ -203,7 +220,7 @@ DOUBTED_REVALIDATION_MAX = _env_int(
     "DOUBTED_REVALIDATION_MAX", int(_cfg_get(_YAML, "doubted", "revalidation_max", default=40))
 )
 
-# Stage 15e — chapter hierarchy (LLM + optional BigBird fallback)
+# Stage 15e — chapter hierarchy (LLM or rules; 15j regroups when enabled)
 _raw_chapter_hierarchy_llm = _env(
     "CHAPTER_HIERARCHY_LLM", str(_cfg_get(_YAML, "chapter_hierarchy", "llm", default=""))
 ).strip().lower()
@@ -212,9 +229,6 @@ CHAPTER_HIERARCHY_LLM = (
 )
 CHAPTER_HIERARCHY_USE_LLM = _env(
     "CHAPTER_HIERARCHY_USE_LLM", str(_cfg_get(_YAML, "chapter_hierarchy", "use_llm", default="1"))
-).strip()
-CHAPTER_HIERARCHY_USE_BIGBIRD = _env(
-    "CHAPTER_HIERARCHY_USE_BIGBIRD", str(_cfg_get(_YAML, "chapter_hierarchy", "use_bigbird", default="1"))
 ).strip()
 CHAPTER_HIERARCHY_BATCH_SIZE = _env_int(
     "CHAPTER_HIERARCHY_BATCH_SIZE", int(_cfg_get(_YAML, "chapter_hierarchy", "batch_size", default=25))
@@ -240,6 +254,190 @@ HEADING_CLEANUP_USE_LLM = _env(
 HEADING_CLEANUP_BATCH_SIZE = _env_int(
     "HEADING_CLEANUP_BATCH_SIZE", int(_cfg_get(_YAML, "heading_cleanup", "batch_size", default=20))
 )
+HEADING_CLEANUP_BACKEND = _env(
+    "HEADING_CLEANUP_BACKEND", str(_cfg_get(_YAML, "heading_cleanup", "backend", default=""))
+).strip().lower() or _PROVIDER_TO_BACKEND.get(LLM_PROVIDER, "openai")
+HEADING_CLEANUP_MINILM_PICK_THRESHOLD = _env_float(
+    "HEADING_CLEANUP_MINILM_PICK_THRESHOLD",
+    float(_cfg_get(_YAML, "heading_cleanup", "minilm_pick_threshold", default=0.82)),
+)
+TITLE_VALIDATION_ENABLED = _env_bool(
+    "TITLE_VALIDATION_ENABLED",
+    bool(_cfg_get(_YAML, "title_validation", "enabled", default=True)),
+)
+# Stage 15h — chapter placement (MODULE splits, MiniLM reassignment, chapter titles)
+CHAPTER_PLACEMENT_ENABLED = _env_bool(
+    "CHAPTER_PLACEMENT_ENABLED",
+    bool(_cfg_get(_YAML, "chapter_placement", "enabled", default=True)),
+)
+CHAPTER_PLACEMENT_REASSIGN = _env_bool(
+    "CHAPTER_PLACEMENT_REASSIGN",
+    bool(_cfg_get(_YAML, "chapter_placement", "reassign_sections", default=True)),
+)
+CHAPTER_PLACEMENT_RENAME_CHAPTERS = _env_bool(
+    "CHAPTER_PLACEMENT_RENAME_CHAPTERS",
+    bool(_cfg_get(_YAML, "chapter_placement", "rename_chapters", default=True)),
+)
+CHAPTER_PLACEMENT_MIN_SECTIONS_FOR_RENAME = _env_int(
+    "CHAPTER_PLACEMENT_MIN_SECTIONS_FOR_RENAME",
+    int(_cfg_get(_YAML, "chapter_placement", "min_sections_for_rename", default=5)),
+)
+CHAPTER_PLACEMENT_COHESION_THRESHOLD = _env_float(
+    "CHAPTER_PLACEMENT_COHESION_THRESHOLD",
+    float(_cfg_get(_YAML, "chapter_placement", "cohesion_threshold", default=0.48)),
+)
+CHAPTER_PLACEMENT_REASSIGN_MARGIN = _env_float(
+    "CHAPTER_PLACEMENT_REASSIGN_MARGIN",
+    float(_cfg_get(_YAML, "chapter_placement", "reassign_margin", default=0.06)),
+)
+CHAPTER_PLACEMENT_PAGE_MARGIN = _env_int(
+    "CHAPTER_PLACEMENT_PAGE_MARGIN",
+    int(_cfg_get(_YAML, "chapter_placement", "page_margin", default=8)),
+)
+CHAPTER_PLACEMENT_MAX_SECTIONS_PER_CHAPTER = _env_int(
+    "CHAPTER_PLACEMENT_MAX_SECTIONS_PER_CHAPTER",
+    int(_cfg_get(_YAML, "chapter_placement", "max_sections_per_chapter", default=10)),
+)
+CHAPTER_PLACEMENT_PAGE_GAP_SPLIT = _env_int(
+    "CHAPTER_PLACEMENT_PAGE_GAP_SPLIT",
+    int(_cfg_get(_YAML, "chapter_placement", "page_gap_split", default=12)),
+)
+
+# Stage 15i — chapter, section, and subheading title refinement (before rewrite)
+HEADING_REFINEMENT_ENABLED = _env_bool(
+    "HEADING_REFINEMENT_ENABLED",
+    bool(_cfg_get(_YAML, "heading_refinement", "enabled", default=True)),
+)
+HEADING_REFINEMENT_USE_TRANSFORMERS = _env_bool(
+    "HEADING_REFINEMENT_USE_TRANSFORMERS",
+    bool(_cfg_get(_YAML, "heading_refinement", "use_transformers", default=True)),
+)
+HEADING_REFINEMENT_DEDUPE = _env_bool(
+    "HEADING_REFINEMENT_DEDUPE",
+    bool(_cfg_get(_YAML, "heading_refinement", "dedupe", default=True)),
+)
+HEADING_REFINEMENT_DROP_EMPTY = _env_bool(
+    "HEADING_REFINEMENT_DROP_EMPTY",
+    bool(_cfg_get(_YAML, "heading_refinement", "drop_empty", default=True)),
+)
+HEADING_REFINEMENT_MINILM_THRESHOLD = _env_float(
+    "HEADING_REFINEMENT_MINILM_THRESHOLD",
+    float(_cfg_get(_YAML, "heading_refinement", "minilm_threshold", default=0.8)),
+)
+HEADING_REFINEMENT_OPENAI_FALLBACK = _env_bool(
+    "HEADING_REFINEMENT_OPENAI_FALLBACK",
+    bool(_cfg_get(_YAML, "heading_refinement", "openai_fallback", default=False)),
+)
+
+# Stage 15j — OpenAI hierarchy regroup + title correction (2 calls)
+HIERARCHY_OPENAI_ENABLED = _env_bool(
+    "HIERARCHY_OPENAI_ENABLED",
+    bool(_cfg_get(_YAML, "hierarchy_openai", "enabled", default=False)),
+)
+HIERARCHY_OPENAI_AUTO_SKIP = _env_bool(
+    "HIERARCHY_OPENAI_AUTO_SKIP",
+    bool(_cfg_get(_YAML, "hierarchy_openai", "auto_skip", default=True)),
+)
+HIERARCHY_OPENAI_PROVIDER = _env(
+    "HIERARCHY_OPENAI_PROVIDER",
+    str(_cfg_get(_YAML, "hierarchy_openai", "provider", default="")),
+).strip() or _PROVIDER_TO_BACKEND.get(LLM_PROVIDER, "openai")
+HIERARCHY_OPENAI_TARGET_MAX_CHAPTERS = _env_int(
+    "HIERARCHY_OPENAI_TARGET_MAX_CHAPTERS",
+    int(_cfg_get(_YAML, "hierarchy_openai", "target_max_chapters", default=8)),
+)
+HIERARCHY_OPENAI_MIN_SECTIONS_PER_CHAPTER = _env_int(
+    "HIERARCHY_OPENAI_MIN_SECTIONS_PER_CHAPTER",
+    int(_cfg_get(_YAML, "hierarchy_openai", "min_sections_per_chapter", default=3)),
+)
+CHAPTER_COHESION_MIN_SECTIONS = _env_int(
+    "CHAPTER_COHESION_MIN_SECTIONS",
+    int(_cfg_get(_YAML, "chapter_cohesion", "min_sections_per_chapter", default=3)),
+)
+CHAPTER_COHESION_MIN_CHARS = _env_int(
+    "CHAPTER_COHESION_MIN_CHARS",
+    int(_cfg_get(_YAML, "chapter_cohesion", "min_chars", default=400)),
+)
+CHAPTER_COHESION_MAX_SECTIONS = _env_int(
+    "CHAPTER_COHESION_MAX_SECTIONS",
+    int(_cfg_get(_YAML, "chapter_cohesion", "max_sections_per_chapter", default=12)),
+)
+CHAPTER_COHESION_THRESHOLD = _env_float(
+    "CHAPTER_COHESION_THRESHOLD",
+    float(_cfg_get(_YAML, "chapter_cohesion", "merge_threshold", default=0.52)),
+)
+HIERARCHY_OPENAI_MIN_CHAPTER_CHARS = _env_int(
+    "HIERARCHY_OPENAI_MIN_CHAPTER_CHARS",
+    int(_cfg_get(_YAML, "hierarchy_openai", "min_chapter_chars", default=400)),
+)
+HIERARCHY_OPENAI_REGROUP_BATCH_SIZE = _env_int(
+    "HIERARCHY_OPENAI_REGROUP_BATCH_SIZE",
+    int(_cfg_get(_YAML, "hierarchy_openai", "regroup_batch_size", default=22)),
+)
+CHAPTER_PLACEMENT_MIN_SECTIONS_PER_CHAPTER = _env_int(
+    "CHAPTER_PLACEMENT_MIN_SECTIONS_PER_CHAPTER",
+    int(_cfg_get(_YAML, "chapter_placement", "min_sections_per_chapter", default=3)),
+)
+CHAPTER_PLACEMENT_MIN_CHAPTER_CHARS = _env_int(
+    "CHAPTER_PLACEMENT_MIN_CHAPTER_CHARS",
+    int(_cfg_get(_YAML, "chapter_placement", "min_chapter_chars", default=400)),
+)
+EXPORT_APPEND_SUBTOPIC_CHECKLIST = _env_bool(
+    "EXPORT_APPEND_SUBTOPIC_CHECKLIST",
+    bool(_cfg_get(_YAML, "export", "append_subtopic_checklist", default=False)),
+)
+EXPORT_MISSING_BODY_MODE = _env(
+    "EXPORT_MISSING_BODY_MODE",
+    str(_cfg_get(_YAML, "export", "missing_body_mode", default="placeholder")),
+).strip().lower()
+NOTES_STRUCTURE_FIX_ENABLED = _env_bool(
+    "NOTES_STRUCTURE_FIX_ENABLED",
+    bool(_cfg_get(_YAML, "export", "structure_fix_enabled", default=True)),
+)
+NOTES_STRUCTURE_FIX_ENGINE = _env(
+    "NOTES_STRUCTURE_FIX_ENGINE",
+    str(_cfg_get(_YAML, "export", "structure_fix_engine", default="hybrid")),
+).strip().lower()
+NOTES_STRUCTURE_FIX_MERGE_DUPLICATES = _env_bool(
+    "NOTES_STRUCTURE_FIX_MERGE_DUPLICATES",
+    bool(_cfg_get(_YAML, "export", "structure_fix_merge_duplicates", default=False)),
+)
+NOTES_STRUCTURE_FIX_DROP_LOW_GROUNDING = _env_bool(
+    "NOTES_STRUCTURE_FIX_DROP_LOW_GROUNDING",
+    bool(_cfg_get(_YAML, "export", "structure_fix_drop_low_grounding", default=False)),
+)
+
+DOCUMENT_PROFILE_SHORT_BODY_CHARS = _env_int(
+    "DOCUMENT_PROFILE_SHORT_BODY_CHARS",
+    int(_cfg_get(_YAML, "document_profile", "short_body_chars", default=400)),
+)
+DOCUMENT_PROFILE_BASE_MIN_SECTION_BODY_CHARS = _env_int(
+    "DOCUMENT_PROFILE_BASE_MIN_SECTION_BODY_CHARS",
+    int(_cfg_get(_YAML, "document_profile", "base_min_section_body_chars", default=200)),
+)
+DOCUMENT_PROFILE_BASE_REWRITE_OVERLAP_CHARS = _env_int(
+    "DOCUMENT_PROFILE_BASE_REWRITE_OVERLAP_CHARS",
+    int(_cfg_get(_YAML, "document_profile", "base_rewrite_overlap_chars", default=600)),
+)
+DOCUMENT_PROFILE_BASE_REWRITE_MAX_TOKENS = _env_int(
+    "DOCUMENT_PROFILE_BASE_REWRITE_MAX_TOKENS",
+    int(_cfg_get(_YAML, "document_profile", "base_rewrite_max_tokens", default=1800)),
+)
+DOCUMENT_PROFILE_BASE_MEDIAN_SECTION_BODY_CHARS = _env_int(
+    "DOCUMENT_PROFILE_BASE_MEDIAN_SECTION_BODY_CHARS",
+    int(_cfg_get(_YAML, "document_profile", "base_median_section_body_chars", default=1200)),
+)
+
+# Ingestion profiles (web upload)
+INGESTION_PROFILE = _env(
+    "INGESTION_PROFILE", str(_cfg_get(_YAML, "ingestion", "profile", default="fast_local"))
+).strip().lower()
+_ingestion_profiles_raw = _cfg_get(_YAML, "ingestion", "profiles", default={}) or {}
+INGESTION_PROFILES: dict[str, dict[str, Any]] = (
+    dict(_ingestion_profiles_raw) if isinstance(_ingestion_profiles_raw, dict) else {}
+)
+_fast_local_skip = _cfg_get(_YAML, "ingestion", "profiles", "fast_local", "upload_skip_rag", default=True)
+UPLOAD_SKIP_RAG_DEFAULT = "true" if bool(_fast_local_skip) else "false"
 
 FULL_REWRITE_MAX_CHUNKS = _env_int(
     "FULL_REWRITE_MAX_CHUNKS", int(_cfg_get(_YAML, "rewrite", "full_rewrite_max_chunks", default=0))
@@ -249,6 +447,44 @@ REWRITE_PARALLEL_WORKERS = _env_int(
 )
 REWRITE_CONTEXT_OVERLAP_CHARS = _env_int(
     "REWRITE_CONTEXT_OVERLAP_CHARS", int(_cfg_get(_YAML, "rewrite", "context_overlap_chars", default=600))
+)
+REWRITE_AUTO_RETRY_ENABLED = _env(
+    "REWRITE_AUTO_RETRY_ENABLED",
+    str(_cfg_get(_YAML, "rewrite", "auto_retry_enabled", default="true")),
+).strip()
+REWRITE_AUTO_RETRY_MAX_PASSES = _env_int(
+    "REWRITE_AUTO_RETRY_MAX_PASSES",
+    int(_cfg_get(_YAML, "rewrite", "auto_retry_max_passes", default=1)),
+)
+REWRITE_AUTO_RETRY_MIN_COVERAGE = _env_float(
+    "REWRITE_AUTO_RETRY_MIN_COVERAGE",
+    float(_cfg_get(_YAML, "rewrite", "auto_retry_min_coverage", default=0.95)),
+)
+REWRITE_FIDELITY_MIN_OVERLAP = _env_float(
+    "REWRITE_FIDELITY_MIN_OVERLAP",
+    float(_cfg_get(_YAML, "rewrite", "fidelity_min_overlap", default=0.30)),
+)
+REWRITE_FIDELITY_REGENERATE_TEMPERATURE = _env_float(
+    "REWRITE_FIDELITY_REGENERATE_TEMPERATURE",
+    float(_cfg_get(_YAML, "rewrite", "fidelity_regenerate_temperature", default=0.1)),
+)
+REWRITE_MIN_GROUNDING_CHARS = _env_int(
+    "REWRITE_MIN_GROUNDING_CHARS",
+    int(_cfg_get(_YAML, "rewrite", "min_grounding_chars", default=160)),
+)
+# Partition grounding gate: drop sections whose reconstructed body is an
+# index/contents listing (enumeration-dominated or near-empty of prose) so the
+# rewrite never receives an ungrounded source. Disable to keep legacy behavior.
+PARTITION_DROP_LOW_GROUNDING = _env_bool(
+    "PARTITION_DROP_LOW_GROUNDING",
+    bool(_cfg_get(_YAML, "structure", "partition_drop_low_grounding", default=True)),
+)
+# Document-wide contents/index page detection: flag enumeration-dominated pages
+# so their headings are excluded from section partitioning (not just the
+# front-matter TOC). Disable to keep legacy behavior.
+CONTENTS_REGION_DETECTION = _env_bool(
+    "CONTENTS_REGION_DETECTION",
+    bool(_cfg_get(_YAML, "structure", "contents_region_detection", default=True)),
 )
 REWRITE_AUTO_RETRY_MISSING = _env(
     "REWRITE_AUTO_RETRY_MISSING", str(_cfg_get(_YAML, "rewrite", "auto_retry_missing", default="1"))
@@ -291,6 +527,30 @@ ULTIMATE_MAX_REWRITE_SECTION_CHARS = _env_int(
     "ULTIMATE_MAX_REWRITE_SECTION_CHARS",
     int(_cfg_get(_YAML, "ultimate", "max_rewrite_section_chars", default=2200)),
 )
+ULTIMATE_MAX_SECTIONS_PAGE_RATIO = _env_float(
+    "ULTIMATE_MAX_SECTIONS_PAGE_RATIO",
+    float(_cfg_get(_YAML, "ultimate", "max_sections_page_ratio", default=0.45)),
+)
+ULTIMATE_MIN_SECTION_COUNT = _env_int(
+    "ULTIMATE_MIN_SECTION_COUNT",
+    int(_cfg_get(_YAML, "ultimate", "min_section_count", default=16)),
+)
+ULTIMATE_MAX_SECTION_COUNT = _env_int(
+    "ULTIMATE_MAX_SECTION_COUNT",
+    int(_cfg_get(_YAML, "ultimate", "max_section_count", default=0)),
+)
+SECTION_CONSOLIDATION_ENABLED = _env_bool(
+    "SECTION_CONSOLIDATION_ENABLED",
+    bool(_cfg_get(_YAML, "section_consolidation", "enabled", default=True)),
+)
+SECTION_CONSOLIDATION_MIN_CHARS = _env_int(
+    "SECTION_CONSOLIDATION_MIN_CHARS",
+    int(_cfg_get(_YAML, "section_consolidation", "min_chars", default=200)),
+)
+SECTION_CONSOLIDATION_MAX_CHARS = _env_int(
+    "SECTION_CONSOLIDATION_MAX_CHARS",
+    int(_cfg_get(_YAML, "section_consolidation", "max_merged_chars", default=12000)),
+)
 
 _ULTIMATE_PROFILES: dict[str, dict[str, int]] = {
     # Large-context cloud models: fewer rewrite calls, bigger source windows
@@ -318,15 +578,13 @@ _ULTIMATE_PROFILES: dict[str, dict[str, int]] = {
 
 
 def _rewrite_backend_for_ultimate() -> str:
-    order = (REWRITE_PROVIDER_ORDER or LLM_PROVIDER or "openai").strip().lower()
-    backend = order.split(",")[0].strip()
-    if backend in {"openai", "gemini"}:
+    from src.shared.llm_provider import active_chat_provider, rewrite_provider_order
+
+    order = rewrite_provider_order()
+    backend = order[0] if order else active_chat_provider()
+    if backend in {"openai", "openrouter"}:
         return "large"
-    if backend in {"ollama"}:
-        return "medium"
-    if backend in {"llamacpp", "local"}:
-        return "small"
-    return "medium"
+    return "large"
 
 
 def resolve_ultimate_thresholds() -> dict[str, int | str]:
@@ -371,6 +629,17 @@ RAG_CHUNK_OVERLAP_WORDS = _env_int(
     "RAG_CHUNK_OVERLAP_WORDS", int(_cfg_get(_YAML, "rag", "chunk_overlap_words", default=80))
 )
 RAG_MIN_CHUNK_CHARS = _env_int("RAG_MIN_CHUNK_CHARS", int(_cfg_get(_YAML, "rag", "min_chunk_chars", default=40)))
+RAG_RERANK_ENABLED = _env_bool("RAG_RERANK_ENABLED", bool(_cfg_get(_YAML, "rag", "rerank_enabled", default=True)))
+RAG_RERANK_MODEL = _env(
+    "RAG_RERANK_MODEL",
+    str(_cfg_get(_YAML, "rag", "rerank_model", default="cross-encoder/ms-marco-MiniLM-L-6-v2")),
+).strip()
+RAG_RERANK_CANDIDATES = _env_int(
+    "RAG_RERANK_CANDIDATES", int(_cfg_get(_YAML, "rag", "rerank_candidates", default=50))
+)
+RAG_CONTEXT_MAX_CHARS = _env_int(
+    "RAG_CONTEXT_MAX_CHARS", int(_cfg_get(_YAML, "rag", "context_max_chars", default=12000))
+)
 
 # Page-level OCR (scanned / two-up PDFs)
 OCR_ENABLED = _env_bool("OCR_ENABLED", bool(_cfg_get(_YAML, "ocr", "enabled", default=True)))

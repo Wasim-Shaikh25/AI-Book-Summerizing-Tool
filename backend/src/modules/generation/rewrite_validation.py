@@ -47,10 +47,90 @@ class RewriteValidationReport:
 _SECTION_ID_TAG = re.compile(r"<!--\s*sid:([A-Za-z0-9_]+)\s*-->")
 SECTION_ID_TAG = _SECTION_ID_TAG
 
+
+def strip_section_id_tags(text: str) -> str:
+    """Remove internal <!-- sid:SXX --> markers from user-facing export text."""
+    if not text:
+        return text
+    cleaned = _SECTION_ID_TAG.sub("", text)
+    return "\n".join(line.rstrip() for line in cleaned.splitlines())
+
+
+_LEADING_HEADING_RE = re.compile(r"^(#{1,3})\s+(.+)$")
+
+
+def strip_redundant_section_heading(
+    body: str,
+    expected_heading: str,
+    *,
+    threshold: float = 0.88,
+) -> str:
+    """Remove leading ##/### lines that repeat the section title (LLM echo)."""
+    if not (body or "").strip() or not (expected_heading or "").strip():
+        return body
+    lines = body.splitlines()
+    idx = 0
+    stripped = False
+    while idx < len(lines):
+        while idx < len(lines) and not lines[idx].strip():
+            idx += 1
+        if idx >= len(lines):
+            break
+        match = _LEADING_HEADING_RE.match(lines[idx].strip())
+        if not match:
+            break
+        heading_text = _SECTION_ID_TAG.sub("", match.group(2)).strip()
+        if heading_similarity(heading_text, expected_heading) < threshold:
+            break
+        idx += 1
+        stripped = True
+    if not stripped:
+        return body
+    return "\n".join(lines[idx:]).strip()
+
+
+def dedupe_consecutive_section_headings(md_text: str, *, threshold: float = 0.88) -> str:
+    """Drop back-to-back ##/### titles that differ only by case or punctuation."""
+    if not (md_text or "").strip():
+        return md_text
+    lines = md_text.splitlines()
+    out: List[str] = []
+    pending_heading = ""
+    blank_run = 0
+    for line in lines:
+        stripped = line.strip()
+        match = _LEADING_HEADING_RE.match(stripped) if stripped else None
+        if match and len(match.group(1)) >= 2:
+            heading_text = _SECTION_ID_TAG.sub("", match.group(2)).strip()
+            if (
+                pending_heading
+                and blank_run <= 2
+                and heading_similarity(heading_text, pending_heading) >= threshold
+            ):
+                blank_run = 0
+                continue
+            pending_heading = heading_text
+            blank_run = 0
+            out.append(line)
+            continue
+        if not stripped:
+            blank_run += 1
+        else:
+            blank_run = 0
+            if not stripped.startswith("#"):
+                pending_heading = ""
+        out.append(line)
+    return "\n".join(out)
+
+
 _WEAK_HEADING = re.compile(
     r"^(\(\w+\)|\d+\.|$|\(Art\.\s*\d+\)|\d{4}\.\s*\(Art\.)",
     re.I,
 )
+_BULLET_HEADING = re.compile(r"^[•\-\*·]\s+")
+_NOTE_HEADING = re.compile(r"^note\s*:?\s*$", re.I)
+_SUBCLAUSE_ONLY = re.compile(r"^\d+\([a-z]\)\s*$", re.I)
+_GENERIC_ONE_WORD = frozenset({"major", "minor", "note", "exception", "definition"})
 
 
 def normalize_heading(text: str) -> str:
@@ -78,7 +158,21 @@ def is_weak_section_heading(heading: str) -> bool:
         return True
     if _WEAK_HEADING.match(h):
         return True
+    from src.modules.structure.dropped_heading_registry import is_incomplete_pdf_heading
+
+    if is_incomplete_pdf_heading(h):
+        return True
     if h.startswith("(") and h.endswith(")") and len(h) < 20:
+        return True
+    if _BULLET_HEADING.match(h):
+        return True
+    if _NOTE_HEADING.match(h):
+        return True
+    if _SUBCLAUSE_ONLY.match(h):
+        return True
+    if normalize_heading(h) in _GENERIC_ONE_WORD:
+        return True
+    if "(" in h and (h.rstrip().endswith("(") or h.count("(") > h.count(")")):
         return True
     return False
 

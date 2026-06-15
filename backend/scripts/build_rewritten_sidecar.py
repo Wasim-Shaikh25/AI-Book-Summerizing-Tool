@@ -35,8 +35,10 @@ def main() -> int:
         print(f"[!] Missing {md_path}")
         return 1
 
-    ultimate = json.loads((log_dir / "15d_ultimate_sections.json").read_text(encoding="utf-8"))["items"]
-    hierarchy_rows = json.loads((log_dir / "15a_heading_hierarchy.json").read_text(encoding="utf-8")).get("items") or []
+    from src.modules.pipeline.stage_registry import STAGE_PARTITION_SECTIONS, STAGE_PARTITION_TREE, require_artifact
+
+    ultimate = json.loads(require_artifact(log_dir, STAGE_PARTITION_SECTIONS).read_text(encoding="utf-8"))["items"]
+    hierarchy_rows = json.loads(require_artifact(log_dir, STAGE_PARTITION_TREE).read_text(encoding="utf-8")).get("items") or []
     hierarchy = build_chapter_hierarchy(
         ultimate_sections=ultimate,
         hierarchy=hierarchy_rows,

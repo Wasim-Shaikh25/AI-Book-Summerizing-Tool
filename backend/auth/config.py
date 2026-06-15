@@ -26,6 +26,29 @@ class AuthSettings(BaseSettings):
 
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
     api_base_url: str = os.getenv("API_BASE_URL", "http://localhost:8000")
+    # Comma-separated extra origins allowed by CORS (e.g. a prod domain behind a proxy).
+    cors_extra_origins: str = os.getenv("CORS_EXTRA_ORIGINS", "")
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Allowed CORS origins: localhost dev hosts + FRONTEND_URL + extras."""
+        origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+        if self.frontend_url:
+            origins.append(self.frontend_url.rstrip("/"))
+        for extra in self.cors_extra_origins.split(","):
+            extra = extra.strip().rstrip("/")
+            if extra:
+                origins.append(extra)
+        seen: set[str] = set()
+        unique: list[str] = []
+        for origin in origins:
+            if origin not in seen:
+                seen.add(origin)
+                unique.append(origin)
+        return unique
 
     chat_docx_char_limit: int = int(os.getenv("CHAT_DOCX_CHAR_LIMIT", "4000"))
     max_upload_mb: int = int(os.getenv("MAX_UPLOAD_MB", "100"))
@@ -33,6 +56,9 @@ class AuthSettings(BaseSettings):
     rate_limit_window_seconds: int = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
 
     auth_enabled: bool = True
+    # Allow anonymous "Continue as guest" access even when OAuth auth is enabled.
+    # Each guest gets an isolated, persisted guest user + short-lived JWT.
+    allow_guest: bool = os.getenv("ALLOW_GUEST", "true").strip().lower() in {"1", "true", "yes", "on"}
 
     google_client_id: str = ""
     google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")

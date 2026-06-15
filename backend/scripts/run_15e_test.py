@@ -61,20 +61,22 @@ def main() -> int:
     run_rewrite = os.environ.get("RUN_REWRITE", "1").strip().lower() not in {"0", "false", "no", "n"}
 
     log_path = Path(log_dir)
-    ultimate_path = log_path / "15d_ultimate_sections.json"
-    hierarchy_path = log_path / "15e_chapter_hierarchy.json"
+    from src.modules.pipeline.stage_registry import STAGE_GROUP_CHAPTERS, STAGE_PARTITION_SECTIONS, require_artifact
 
-    if not ultimate_path.exists():
-        print(f"[!] Missing {ultimate_path}")
+    try:
+        ultimate_path = require_artifact(log_path, STAGE_PARTITION_SECTIONS)
+        hierarchy_path = require_artifact(log_path, STAGE_GROUP_CHAPTERS)
+    except FileNotFoundError as exc:
+        print(f"[!] {exc}")
         return 1
     if not os.path.exists(pdf_path):
         print(f"[!] PDF not found: {pdf_path}")
         return 1
 
     print("=" * 60)
-    print("STAGE 15e — CHAPTER HIERARCHY TEST")
+    print("GROUP CHAPTERS — chapter hierarchy test")
     print(f"  log_dir        = {log_path}")
-    print(f"  15e provider   = {_provider_label()}")
+    print(f"  LLM provider   = {_provider_label()}")
     print(f"  max_sections   = {max_sections}")
     print(f"  max_rewrite    = {max_rewrite}")
     print("=" * 60)
@@ -102,7 +104,7 @@ def main() -> int:
 
     envelope = {
         "run_id": log_path.name.replace("run_", ""),
-        "stage": "15e_chapter_hierarchy",
+        "stage": STAGE_GROUP_CHAPTERS,
         "pdf_file": Path(pdf_path).name,
         "timestamp": datetime.utcnow().isoformat(),
         "total_items": len(chapter_hierarchy.get("chapters") or []),

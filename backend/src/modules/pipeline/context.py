@@ -4,10 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING
+
+ProgressCallback = Callable[[str, str, int], None]
 
 from src.shared.models import FinalHeading, NormalizedLine
 from src.modules.structure.logging.pipeline_logger import PipelineLogger
+from src.modules.structure.dropped_heading_registry import DroppedHeadingRegistry
+
+if TYPE_CHECKING:
+    from src.modules.ingestion.document_profile import DocumentCharacterProfile
 
 
 @dataclass
@@ -15,6 +21,7 @@ class PipelineContext:
     pdf_path: str
     enable_logs: bool = False
     persist_to_db: bool = False
+    on_progress: Optional[ProgressCallback] = None
 
     logger: PipelineLogger = field(default_factory=lambda: PipelineLogger.create(enabled=False))
     lines: List[NormalizedLine] = field(default_factory=list)
@@ -39,6 +46,8 @@ class PipelineContext:
     stage_15b_segments: List[Dict[str, Any]] = field(default_factory=list)
     stage_15b_audits: List[Dict[str, Any]] = field(default_factory=list)
     final_headings_items: List[Dict[str, Any]] = field(default_factory=list)
+    dropped_heading_registry: DroppedHeadingRegistry = field(default_factory=DroppedHeadingRegistry)
+    document_profile: Optional["DocumentCharacterProfile"] = None
 
     @property
     def pdf_name(self) -> str:

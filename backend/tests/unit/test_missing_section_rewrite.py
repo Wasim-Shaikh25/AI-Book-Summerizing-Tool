@@ -23,7 +23,8 @@ def test_retry_missing_sections_fills_gaps() -> None:
     rewritten = {"S1": "notes-one"}
 
     def fake_generate(system: str, user: str) -> str:
-        if "Section to rewrite: Two" in user:
+        # Key on S2's unique source text (prompt format is the shared section builder).
+        if "beta content here" in user:
             return "notes-two"
         return ""
 

@@ -1,0 +1,62 @@
+---
+description: Controls implementation scope and prevents uncontrolled changes
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Implementation Control Rules
+
+Implement only what the user requested.
+
+If user asks for planning, create planning docs only.
+
+If user asks for implementation, implement only the specified task or phase.
+
+## Before Implementation
+
+Always:
+
+1. Read the relevant task file.
+2. Read relevant documentation.
+3. Inspect existing code.
+4. Identify impacted files.
+5. Create a short implementation plan if non-trivial.
+6. Implement the smallest working change.
+7. Add tests.
+8. Update docs if needed.
+
+## During Implementation
+
+Do:
+
+- follow existing project conventions
+- keep changes small
+- use typed schemas/types where appropriate
+- add validation
+- add error handling
+- add tests
+- preserve security rules
+- preserve provenance when data is transformed/generated
+
+Do not:
+
+- implement future phases
+- rewrite unrelated code
+- add unnecessary dependencies
+- create fake services
+- create fake integrations
+- create fake data
+- create fake AI/model outputs
+- bypass tests
+- bypass security checks
+- bypass approval gates
+
+## Missing Dependency Rule
+
+If a dependency/service/config is missing:
+
+- do not fake it
+- create an interface or clear error state
+- document the missing requirement
+- add a follow-up task

@@ -335,11 +335,13 @@ See [backend-api.md](./backend-api.md) §5 for full Pydantic schema definitions:
 
 | Path Pattern | Entity | Owner |
 |--------------|--------|-------|
-| `output/uploads/{user_id}/{filename}.pdf` | Uploaded PDF | User |
-| `output/exports/{user_id}/{title}.docx` | Generated Word | User |
-| `output/rag_index/{book_id}/` | FAISS index + meta | Book |
-| `logs/run_{timestamp}/` | Pipeline stage JSON | Book (via `user_books.log_dir`) |
-| `output/knowledge_base.db` | SQLite database | System |
+| `{UPLOADS_FOLDER}/{user_id}/{filename}.pdf` | Uploaded PDF | User |
+| `{EXPORTS_FOLDER}/{user_id}/{title}.docx` | Generated Word | User |
+| `{RAG_INDEX_DIR}/{book_id}/` | FAISS index + meta | Book |
+| `{LOGS_FOLDER}/run_{timestamp}/s*.json` | Pipeline stage JSON | Book (via `user_books.log_dir`) |
+| `{KNOWLEDGE_DB_PATH}` | SQLite database | System |
+
+All constants defined in `shared/config.py` relative to `PROJECT_ROOT`. Legacy run folders may use pre-rename filenames (`01_layout_lines.json`, `15d_ultimate_sections.json`); code reads via `resolve_existing_artifact()`.
 
 ---
 
@@ -351,7 +353,8 @@ See [backend-api.md](./backend-api.md) §5 for full Pydantic schema definitions:
 | Fields | `snake_case` | `book_id`, `created_at` |
 | Heading IDs | String from line ids | `h_1234` |
 | Fragment IDs | `frag_<n>` | `frag_42` |
-| Log stages | Whitelisted JSON filenames | `07_fragments.json` |
+| Log stages | Canonical JSON via `stage_registry` | `s05_fragments.json` |
+| Log keys | Semantic keys for `write_stage` | `fragments`, `15d_ultimate_sections` |
 | UUIDs | `uuid4()` string | `13cbacf8-9a50-44cc-944c-8989b71f38ed` |
 
 ---

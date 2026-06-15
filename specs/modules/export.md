@@ -1,6 +1,7 @@
 # Module: Export
 
 > **Code package:** `backend/src/modules/export/`  
+> **Symbol reference:** [../code-reference/export.md](../code-reference/export.md)  
 > **Web policy:** `backend/services/export_policy.py`
 
 ---
@@ -71,6 +72,20 @@ def resolve_export_mode(intent, *, answer, user_text) -> tuple[bool, str]:
 | Short Q&A | Default | Chat only |
 
 Requirement IDs: [requirements-web-platform.md](../requirements-web-platform.md) §2.4 (EXP-*)
+
+---
+
+## 3b. Missing rewrite body (`EXPORT_MISSING_BODY_MODE`)
+
+`chapter_blocks_from_hierarchy` no longer silently drops sections when rewrite body and fragment preview are empty.
+
+| Mode | Behaviour |
+|------|-----------|
+| `placeholder` (default) | Emit one-line placeholder referencing source page |
+| `fail` | Raise `ValueError` — caller handles retry |
+| `skip` | Legacy behaviour — omit section from export |
+
+Symbols: `resolve_export_missing_body_mode`, `_resolve_section_body` in `document_formatter.py`.
 
 ---
 

@@ -23,6 +23,7 @@ Each topic has **one authoritative spec**. Other files link to it — they do no
 | **API index** | Links to modules | `api.md` |
 | **Tests** | All test cases | `testing.md` |
 | **Changes** | Audit trail | `change-log.md` |
+| **Code reference** | Every file/function + why | `code-reference/*.md` |
 
 **Rule:** When updating a topic, edit the authoritative file only. Update links elsewhere if paths change.
 
@@ -41,8 +42,10 @@ Each topic has **one authoritative spec**. Other files link to it — they do no
 | [data-models.md](./data-models.md) | Schemas & entities (authoritative) |
 | [testing.md](./testing.md) | Test catalog (authoritative) |
 | [future-modifications.md](./future-modifications.md) | How to extend safely |
+| [deployment.md](./deployment.md) | Docker dev/prod, env profiles, storage strategy |
 | [requirements-web-platform.md](./requirements-web-platform.md) | Web requirement IDs (WHAT) |
 | [change-log.md](./change-log.md) | Append-only history |
+| [code-reference/index.md](./code-reference/index.md) | Exhaustive file/symbol inventory |
 | [unused-tracking.md](./unused-tracking.md) | Dead code registry |
 
 ---
@@ -53,6 +56,7 @@ Each topic has **one authoritative spec**. Other files link to it — they do no
 |---|------|------|
 | 01 | [cli-interaction.md](./modules/cli-interaction.md) | `backend/src/modules/interaction/` |
 | 02 | [pipeline-core.md](./modules/pipeline-core.md) | `backend/src/modules/pipeline/` |
+| 02b | [stage-catalog.md](./modules/stage-catalog.md) | Semantic stage names + structure phases |
 | 03 | [ingestion.md](./modules/ingestion.md) | `backend/src/modules/ingestion/` |
 | 04 | [structure-extraction.md](./modules/structure-extraction.md) | `backend/src/modules/structure/` |
 | 05 | [toc-persistence.md](./modules/toc-persistence.md) | `structure/toc_*`, `storage/` |
@@ -62,6 +66,7 @@ Each topic has **one authoritative spec**. Other files link to it — they do no
 | 09 | [export.md](./modules/export.md) | `export/` + `export_policy` |
 | 10 | [parameters-config.md](./modules/parameters-config.md) | `config/`, `shared/config.py` |
 | 11 | [rag-retrieval.md](./modules/rag-retrieval.md) | `rag/` |
+| 12 | [quality.md](./modules/quality.md) | `quality/` |
 
 Supplementary: [requirements-ocr-stage.md](./requirements-ocr-stage.md)
 
@@ -72,20 +77,22 @@ Supplementary: [requirements-ocr-stage.md](./requirements-ocr-stage.md)
 | Spec | Code |
 |------|------|
 | `data-models.md` | `shared/models.py`, `storage/schema.py`, `storage/user_repository.py` |
-| `modules/pipeline-core.md` | `pipeline/runner.py`, `stages.py` |
+| `modules/pipeline-core.md` | `pipeline/runner.py`, `stages.py`, `stage_registry.py` |
 | `modules/cli-interaction.md` | `interaction/command_parser.py`, handlers |
 | `backend-api.md` | `api/`, `services/`, `auth/`, `storage/` |
 | `frontend.md` | `frontend/src/`, `frontend/auth/` |
 | `modules/parameters-config.md` | `config/default.yaml`, `shared/config.py` |
 | `testing.md` | `backend/tests/` |
+| `modules/quality.md` | `quality/` |
 
 ---
 
 ## 4. Workflow (MESO Rule 10)
 
 1. Read this `index.md` → find authoritative spec for your topic
-2. Update that spec FIRST
-3. Implement code → tests → `change-log.md`
+2. For file/function detail → [code-reference/index.md](./code-reference/index.md)
+3. Update authoritative spec FIRST (or code-reference if adding symbols)
+4. Implement code → tests → `change-log.md`
 
 Guide: [future-modifications.md](./future-modifications.md)
 
@@ -100,11 +107,15 @@ Guide: [future-modifications.md](./future-modifications.md)
 | Add API endpoint | [backend-api.md](./backend-api.md) §11 |
 | Change UI | [frontend.md](./frontend.md) §11 |
 | UI↔API contract | [ui-backend-integration.md](./ui-backend-integration.md) |
-| Pipeline stage | [modules/pipeline-core.md](./modules/pipeline-core.md) |
+| Pipeline stage / log artifacts | [modules/pipeline-core.md](./modules/pipeline-core.md) · `stage_registry.py` |
+| Runtime paths (logs, output) | [modules/parameters-config.md](./modules/parameters-config.md) §2 |
+| Local ingestion roadmap | [change-plan-local-ingestion.md](../ai-agent-workflow/change-plan-local-ingestion.md) |
 | TOC / sections / RAG strategy (agent workflow) | [ingestion-toc-rag-strategy.md](../ai-agent-workflow/ingestion-toc-rag-strategy.md) |
 | Export policy | [modules/export.md](./modules/export.md) §3 |
 | Config / env | [modules/parameters-config.md](./modules/parameters-config.md) |
 | Tests | [testing.md](./testing.md) |
+| Notes quality audit | [modules/quality.md](./modules/quality.md) · [code-reference/quality.md](./code-reference/quality.md) |
+| File/function reference | [code-reference/index.md](./code-reference/index.md) |
 
 ---
 
@@ -130,3 +141,4 @@ Analysis and execution notes live in [`../ai-agent-workflow/`](../ai-agent-workf
 | [requirements.md](../ai-agent-workflow/requirements.md) | MESO requirements summary |
 | [tasks.md](../ai-agent-workflow/tasks.md) | Stage checklist |
 | [ingestion-toc-rag-strategy.md](../ai-agent-workflow/ingestion-toc-rag-strategy.md) | TOC / sections / RAG roadmap analysis |
+| [change-plan-local-ingestion.md](../ai-agent-workflow/change-plan-local-ingestion.md) | Local upload plan — Phase 0/5 paths & registry **done**; FLAN/RAG pending |

@@ -104,28 +104,6 @@ class PipelineResult:
     final_headings: List[FinalHeading] = field(default_factory=list)
     fragments: List[Fragment] = field(default_factory=list)
     heading_to_fragment_id: Dict[str, str] = field(default_factory=dict)
-
-
-@dataclass
-class HeadingGateTraceRecord:
-    line_id: Optional[int] = None
-    id: Optional[int] = None
-    text: str = ""
-    page_number: Optional[int] = None
-    decision: str = ""
-    reason: str = ""
-    signals: List[str] = field(default_factory=list)
-    stage: str = ""
-
-    def to_dict(self) -> Dict[str, Any]:
-        payload: Dict[str, Any] = {
-            "line_id": self.line_id,
-            "id": self.id,
-            "text": self.text,
-            "page_number": self.page_number,
-            "decision": self.decision,
-            "reason": self.reason,
-            "signals": list(self.signals),
-            "stage": self.stage,
-        }
-        return payload
+    lines: List[NormalizedLine] = field(default_factory=list)
+    book_title: str = ""
+    total_pages: int = 0

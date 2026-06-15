@@ -4,12 +4,12 @@ PDF visualization helpers (debug-only).
 This module is used by `src/debug/run_toc_trace.py --visualize`.
 
 It generates a simple, color-marked PDF that highlights:
-- noise lines (from 02_noise_filter.json)
-- final headings (from 09_final_headings.json)
-- fragments (from 07_fragments.json)
-- book document metadata (first TOC section, non-noise lines from 11_book_metadata.json, amber)
-- deterministic TOC section lines (`toc_section_span` in 10_deterministic_toc.json, else `is_toc`, purple)
-- legacy LLM TOC hints (from toc.json / 05_llm_toc_classification.json when present, orange)
+- noise lines (from s02_noise_filter.json)
+- final headings (from s07_final_headings.json)
+- fragments (from s05_fragments.json)
+- book document metadata (first TOC section, non-noise lines from s09_book_metadata.json, amber)
+- deterministic TOC section lines (`toc_section_span` in s08_deterministic_toc.json, else `is_toc`, purple)
+- legacy debug TOC hints (from toc.json when present, orange)
 
 Implementation notes:
 - This is intentionally "best effort": if any optional dependency is missing
@@ -24,6 +24,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
+
+from src.modules.pipeline.stage_registry import require_artifact
 
 
 @dataclass(frozen=True, slots=True)
@@ -407,10 +409,10 @@ def visualize_run(*, pdf_path: str, run_dir: str) -> Path:
     Output: <run_dir>/visualization.pdf
     """
     run = Path(run_dir)
-    layout_path = run / "01_layout_lines.json"
-    noise_path = run / "02_noise_filter.json"
-    fragments_path = run / "07_fragments.json"
-    final_headings_path = run / "09_final_headings.json"
+    layout_path = require_artifact(run, "layout_lines")
+    noise_path = require_artifact(run, "noise_filter")
+    fragments_path = require_artifact(run, "fragments")
+    final_headings_path = require_artifact(run, "final_headings")
 
     if not layout_path.exists():
         raise FileNotFoundError(f"Missing {layout_path}")

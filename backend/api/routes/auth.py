@@ -15,10 +15,11 @@ from auth.providers.oauth_providers import (
     GoogleOAuthProvider,
     new_oauth_state,
 )
-from api.schemas import AuthConfigResponse, UserProfile
+from api.schemas import AuthConfigResponse, GuestSessionResponse, UserProfile
 from auth.dependencies import get_current_user, get_dev_user
 from storage.user_repository import UserRecord, UserRepository
 from fastapi import Depends
+import uuid
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -31,14 +32,41 @@ _PROVIDERS = {
 
 @router.get("/config", response_model=AuthConfigResponse)
 def auth_config() -> AuthConfigResponse:
-    return AuthConfigResponse(auth_enabled=get_auth_settings().auth_enabled)
+    settings = get_auth_settings()
+    return AuthConfigResponse(
+        auth_enabled=settings.auth_enabled,
+        allow_guest=settings.allow_guest,
+    )
 
 
-@router.post("/guest", response_model=UserProfile)
-def login_as_guest() -> UserProfile:
-    if get_auth_settings().auth_enabled:
-        raise HTTPException(status_code=403, detail="Guest login is disabled. Set AUTH_ENABLED=false in .env.")
-    user = get_dev_user()
+@router.post("/guest", response_model=GuestSessionResponse)
+def login_as_guest() -> GuestSessionResponse:
+    settings = get_auth_settings()
+
+    # Auth off: everyone shares the local dev/guest identity (no token needed).
+    if not settings.auth_enabled:
+        user = get_dev_user()
+        return GuestSessionResponse(user=_to_profile(user), token=None)
+
+    # Auth on but guest allowed: mint an isolated, persisted guest + short-lived JWT.
+    if not settings.allow_guest:
+        raise HTTPException(
+            status_code=403,
+            detail="Guest access is disabled. Set ALLOW_GUEST=true (or AUTH_ENABLED=false) in .env.",
+        )
+    guest_id = uuid.uuid4().hex[:12]
+    user = UserRepository().upsert_oauth_user(
+        provider="guest",
+        provider_user_id=f"guest-{guest_id}",
+        email=f"guest-{guest_id}@guest.local",
+        display_name="Guest",
+        avatar_url=None,
+    )
+    token = create_access_token(user.user_id, user.email, extra={"guest": True})
+    return GuestSessionResponse(user=_to_profile(user), token=token)
+
+
+def _to_profile(user: UserRecord) -> UserProfile:
     return UserProfile(
         user_id=user.user_id,
         email=user.email,

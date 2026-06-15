@@ -45,15 +45,20 @@ def hybrid_retrieve(
     vector_weight: float = 0.65,
     lexical_weight: float = 0.35,
     min_score: float = 0.15,
+    rerank: bool | None = None,
+    rerank_candidates: int = 50,
+    rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
 ) -> List[Dict[str, Any]]:
-    """Fuse vector and lexical scores; return chunk dicts with `_score`."""
+    """Fuse vector and lexical scores; optional cross-encoder rerank; return chunk dicts."""
     chunks = vector_index.chunks if vector_index else []
     if not chunks:
         return []
 
+    candidate_k = max(rerank_candidates, top_k * 3, top_k)
+
     vec_map: Dict[str, float] = {}
     if vector_index is not None:
-        for score, ch in vector_index.search(query, top_k=max(top_k * 3, top_k)):
+        for score, ch in vector_index.search(query, top_k=candidate_k):
             cid = str(ch.get("chunk_id") or "")
             if cid:
                 vec_map[cid] = max(vec_map.get(cid, 0.0), float(score))
@@ -80,22 +85,36 @@ def hybrid_retrieve(
 
     fused.sort(key=lambda x: (-x[0], str(x[1].get("heading") or "")))
     if not fused and vector_index is not None:
-        for score, ch in vector_index.search(query, top_k=top_k):
+        for score, ch in vector_index.search(query, top_k=candidate_k):
             row = dict(ch)
             row["_score"] = round(float(score), 4)
             fused.append((float(score), row))
 
+    candidates: List[Dict[str, Any]] = []
     seen_sections: set[str] = set()
-    out: List[Dict[str, Any]] = []
     for _, row in fused:
         sid = str(row.get("section_id") or row.get("heading") or "")
-        if sid in seen_sections and len(out) >= top_k:
+        if sid in seen_sections:
             continue
         seen_sections.add(sid)
-        out.append(row)
-        if len(out) >= top_k:
+        candidates.append(row)
+        if len(candidates) >= candidate_k:
             break
-    return out
+
+    if rerank is None:
+        try:
+            from src import config
+
+            rerank = bool(getattr(config, "RAG_RERANK_ENABLED", True))
+        except Exception:
+            rerank = True
+
+    if rerank and candidates:
+        from src.modules.rag.reranker import rerank_chunks
+
+        return rerank_chunks(query, candidates, top_k=top_k, model_name=rerank_model)
+
+    return candidates[:top_k]
 
 
 def chunks_to_sections(chunks: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:

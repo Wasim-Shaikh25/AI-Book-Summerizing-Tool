@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Dict, List
 
+from src.shared.english_text import filter_english_line
 from src.shared.models import NormalizedLine
+
+
+def _apply_english_policy(lines: List[NormalizedLine]) -> List[NormalizedLine]:
+    out: List[NormalizedLine] = []
+    for ln in lines:
+        filtered = filter_english_line(ln.text)
+        out.append(ln if filtered == ln.text else replace(ln, text=filtered))
+    return out
 
 
 def normalize_text(pdf_extraction_result: Any) -> List[NormalizedLine]:
@@ -42,7 +52,7 @@ def normalize_text(pdf_extraction_result: Any) -> List[NormalizedLine]:
             out.append(
                 NormalizedLine(
                     line_id=line_id,
-                    text=line,
+                    text=filter_english_line(line),
                     page_number=page_number,
                     y_pos=0.0,
                     page_height=0.0,
@@ -59,4 +69,4 @@ def normalize_text(pdf_extraction_result: Any) -> List[NormalizedLine]:
             )
             line_id += 1
 
-    return out
+    return _apply_english_policy(out)

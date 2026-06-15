@@ -34,7 +34,12 @@ from src.modules.generation.parallel_rewrite import (
     resolve_parallel_workers,
     rewrite_sections_parallel,
 )
-from src.modules.generation.rewrite_prompts import is_exam_oriented_mode, rewrite_system_prompt
+from src.modules.generation.rewrite_prompts import (
+    resolve_rewrite_profile,
+    rewrite_system_prompt,
+)
+from src.modules.interaction.command_parser import IntentResult
+from src.modules.structure.final_structuring.chapter_placement import enforce_chapter_structure
 
 from src.modules.generation.toc_sections import load_chapter_hierarchy_json, load_rewrite_sections
 
@@ -81,6 +86,8 @@ class RewriteEngine:
         self.router = RewriteModelRouter()
 
         self.output = OutputManager(output_folder or config.OUTPUT_FOLDER)
+        self._last_auto_retry_summary: Dict[str, Any] = {}
+        self._last_fidelity_summary: Dict[str, Any] = {}
 
 
 
@@ -104,16 +111,32 @@ class RewriteEngine:
 
         source_pdf: str = "",
 
+        intent: Optional[IntentResult] = None,
+
+        document_profile: Optional[Any] = None,
+
     ) -> str:
 
         work = sections[:max_sections] if max_sections > 0 else sections
 
-        cap = max_source_chars or int(getattr(config, "ULTIMATE_MAX_REWRITE_SECTION_CHARS", 6000) or 6000)
+        if document_profile is not None:
+            cap = max_source_chars or int(document_profile.rewrite_max_source_chars)
+            if max_tokens == 1800:
+                max_tokens = int(document_profile.rewrite_max_tokens)
+            overlap = int(document_profile.rewrite_overlap_chars)
+        else:
+            cap = max_source_chars or int(getattr(config, "ULTIMATE_MAX_REWRITE_SECTION_CHARS", 6000) or 6000)
+            overlap = resolve_context_overlap_chars()
 
-        exam_oriented = is_exam_oriented_mode()
-        system = rewrite_system_prompt(exam_oriented=exam_oriented)
+        profile = resolve_rewrite_profile(user_instruction, intent=intent)
+        if max_tokens == 1800 and document_profile is None:
+            max_tokens = profile.max_tokens
+        system = rewrite_system_prompt(
+            user_instruction=user_instruction,
+            intent=intent,
+            enforce_single_topic=document_profile.enforce_single_topic_prompt if document_profile else False,
+        )
         workers = resolve_parallel_workers()
-        overlap = resolve_context_overlap_chars()
 
         _tls = threading.local()
 
@@ -130,6 +153,10 @@ class RewriteEngine:
             )
             return out.get("text") or ""
 
+        from src.shared.llm_cache import cached_generate
+
+        _generate = cached_generate(_generate, max_tokens=max_tokens)
+
         rewritten = rewrite_sections_parallel(
             work,
             user_instruction=user_instruction,
@@ -145,6 +172,48 @@ class RewriteEngine:
         )
 
         if chapter_hierarchy and chapter_hierarchy.get("chapters"):
+            from src.modules.generation.missing_section_rewrite import (
+                auto_retry_missing_enabled,
+                resolve_auto_retry_max_passes,
+                resolve_auto_retry_min_coverage,
+                retry_missing_sections,
+            )
+            from src.modules.generation.rewrite_validation import validate_rewrite_coverage
+
+            auto_retry_summary: Dict[str, Any] = {}
+            if auto_retry_missing_enabled():
+                min_coverage = resolve_auto_retry_min_coverage()
+                report = validate_rewrite_coverage(chapter_hierarchy, rewritten)
+                auto_retry_summary["missing_before"] = len(report.missing_section_ids) + len(
+                    report.empty_section_ids
+                )
+                if report.coverage_ratio < min_coverage:
+                    rewritten, report = retry_missing_sections(
+                        hierarchy=chapter_hierarchy,
+                        rewritten=rewritten,
+                        sections=work,
+                        user_instruction=user_instruction,
+                        generate=_generate,
+                        max_source_chars=cap,
+                        overlap_chars=0,
+                        max_rounds=resolve_auto_retry_max_passes(),
+                        intent=intent,
+                    )
+                    logger.info(
+                        "Auto-retry coverage: %s (%s/%s sections)",
+                        f"{report.coverage_ratio:.0%}",
+                        report.rewritten_count,
+                        report.total_sections,
+                    )
+                auto_retry_summary["missing_after"] = len(report.missing_section_ids) + len(
+                    report.empty_section_ids
+                )
+                auto_retry_summary["coverage_ratio"] = report.coverage_ratio
+            self._last_auto_retry_summary = auto_retry_summary
+
+            from src.modules.generation.rewrite_fidelity import get_last_fidelity_stats
+
+            self._last_fidelity_summary = get_last_fidelity_stats().to_dict()
 
             chapter_blocks, toc_entries = chapter_blocks_from_hierarchy(chapter_hierarchy, rewritten)
 
@@ -222,6 +291,12 @@ class RewriteEngine:
 
         lines: Optional[Sequence[NormalizedLine]] = None,
 
+        intent: Optional[IntentResult] = None,
+
+        document_profile: Optional[Any] = None,
+
+        pipeline_log_dir: Optional[str | Path] = None,
+
     ) -> Dict[str, Any]:
 
         sections = load_rewrite_sections(
@@ -253,6 +328,12 @@ class RewriteEngine:
         if chapter_hierarchy_path and Path(chapter_hierarchy_path).exists():
 
             chapter_hierarchy = load_chapter_hierarchy_json(chapter_hierarchy_path)
+            enforce_chapter_structure(chapter_hierarchy)
+
+        if document_profile is None and pipeline_log_dir:
+            from src.modules.ingestion.document_profile import load_document_profile
+
+            document_profile = load_document_profile(pipeline_log_dir)
 
 
 
@@ -270,6 +351,10 @@ class RewriteEngine:
 
             source_pdf=Path(pdf_path).name if pdf_path else "",
 
+            intent=intent,
+
+            document_profile=document_profile,
+
         )
 
         if not markdown or markdown.count("\n") < 2:
@@ -283,6 +368,10 @@ class RewriteEngine:
             "markdown": markdown,
 
             "section_count": len(sections[:cap] if cap > 0 else sections),
+
+            "auto_retry_summary": getattr(self, "_last_auto_retry_summary", {}),
+
+            "fidelity_summary": getattr(self, "_last_fidelity_summary", {}),
 
         }
 

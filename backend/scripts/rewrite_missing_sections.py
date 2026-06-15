@@ -20,7 +20,7 @@ from src import config
 from src.modules.export.document_formatter import cover_from_hierarchy_meta, rebuild_notes_markdown
 from src.modules.export.output_manager import OutputManager
 from src.modules.generation.missing_section_rewrite import retry_missing_sections
-from src.modules.generation.rewrite_prompts import is_exam_oriented_mode
+from src.modules.generation.rewrite_prompts import default_section_max_tokens
 from src.modules.generation.rewrite_validation import (
     default_rewritten_map_path,
     load_rewritten_map,
@@ -44,14 +44,23 @@ def _user_instruction() -> str:
 
 
 def _load_hierarchy(log_dir: Path) -> dict:
-    path_15f = log_dir / "15f_heading_cleanup.json"
-    path_15e = log_dir / "15e_chapter_hierarchy.json"
-    if path_15f.exists():
-        return load_chapter_hierarchy_json(path_15f)
-    if path_15e.exists():
-        return load_chapter_hierarchy_json(path_15e)
-    ultimate = json.loads((log_dir / "15d_ultimate_sections.json").read_text(encoding="utf-8"))["items"]
-    hierarchy_rows = json.loads((log_dir / "15a_heading_hierarchy.json").read_text(encoding="utf-8")).get("items") or []
+    from src.modules.pipeline.stage_registry import (
+        STAGE_CLEAN_TITLES,
+        STAGE_GROUP_CHAPTERS,
+        STAGE_PARTITION_SECTIONS,
+        STAGE_PARTITION_TREE,
+        require_artifact,
+        resolve_existing_artifact,
+    )
+
+    path_clean = resolve_existing_artifact(log_dir, STAGE_CLEAN_TITLES)
+    if path_clean is not None:
+        return load_chapter_hierarchy_json(path_clean)
+    path_group = resolve_existing_artifact(log_dir, STAGE_GROUP_CHAPTERS)
+    if path_group is not None:
+        return load_chapter_hierarchy_json(path_group)
+    ultimate = json.loads(require_artifact(log_dir, STAGE_PARTITION_SECTIONS).read_text(encoding="utf-8"))["items"]
+    hierarchy_rows = json.loads(require_artifact(log_dir, STAGE_PARTITION_TREE).read_text(encoding="utf-8")).get("items") or []
     return build_chapter_hierarchy(
         ultimate_sections=ultimate,
         hierarchy=hierarchy_rows,
@@ -118,7 +127,14 @@ def main() -> int:
             )
             or 6000
         )
-        max_tokens = int(os.environ.get("REWRITE_SECTION_MAX_TOKENS", "1200" if is_exam_oriented_mode() else "1800") or "1200")
+        user_instruction = _user_instruction()
+        max_tokens = int(
+            os.environ.get(
+                "REWRITE_SECTION_MAX_TOKENS",
+                str(default_section_max_tokens(user_instruction=user_instruction)),
+            )
+            or str(default_section_max_tokens(user_instruction=user_instruction))
+        )
         client = LlmChatClient.from_config(temperature=0.2)
 
         def _generate(system: str, user: str) -> str:

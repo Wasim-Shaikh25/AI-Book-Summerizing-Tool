@@ -21,8 +21,14 @@ router = APIRouter(prefix="/books", tags=["books"])
 
 
 def _run_ingestion_job(job_id: str, user_id: str, tmp_path: str, filename: str) -> None:
-    def on_progress(status: str, message: str) -> None:
-        upload_jobs.update_job(job_id, status=status, message=message)
+    def on_progress(stage: str, message: str, percent: int | None = None) -> None:
+        upload_jobs.update_job(
+            job_id,
+            status="processing",
+            stage=stage,
+            message=message,
+            percent=percent,
+        )
 
     try:
         upload_jobs.update_job(job_id, status="processing", message="Starting ingestion...")
@@ -90,6 +96,8 @@ def upload_status(job_id: str, current: UserRecord = Depends(get_current_user)):
         job_id=job.job_id,
         status=job.status,
         message=job.message,
+        stage=job.stage,
+        percent=job.percent,
         book=book,
         error=job.error,
     )

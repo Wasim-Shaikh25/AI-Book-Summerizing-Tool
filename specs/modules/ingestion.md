@@ -1,6 +1,7 @@
 # Module: Ingestion
 
 > **Code package:** `backend/src/modules/ingestion/`  
+> **Symbol reference:** [../code-reference/ingestion.md](../code-reference/ingestion.md)  
 > **Legacy:** `doc/spec/03-ingestion-layer.md` (removed)  
 > **Web entry:** `backend/services/ingestion_service.py`
 
@@ -20,6 +21,16 @@ Convert PDF files into layout-enriched, normalized line streams including tables
 | `apply_ocr_to_pages(...)` | `ocr_stage.py` | synthetic page dicts + OCR log |
 | `normalize_text(result)` | `text_normalizer.py` | `list[NormalizedLine]` |
 | `lines_to_log(lines)` | `layout_enrichment.py` | layout JSON payload |
+| `compute_document_profile(lines, headings)` | `document_profile.py` | `DocumentCharacterProfile` |
+| `load_document_profile(run_dir)` | `document_profile.py` | profile from `s00_document_profile.json` |
+
+---
+
+## 3b. Document character profile
+
+After early title validation, `stage_compute_document_profile` measures universal shape signals (heading density, median body size, prose vs enumerated-line ratios) and derives knobs consumed by `build_ultimate_sections` and `RewriteEngine`.
+
+Artifact: log key `document_profile` → `s00_document_profile.json`.
 
 ---
 
@@ -63,15 +74,19 @@ Requirements: [requirements-ocr-stage.md](../requirements-ocr-stage.md) · Confi
 ```python
 # backend/services/ingestion_service.py
 class IngestionService:
-    def ingest_upload(self, user_id: str, file_path: str, original_name: str) -> BookSummary:
-        # 1. Copy to output/uploads/{user_id}/
-        # 2. extract_pdf → normalize
-        # 3. BookRepository.save_book()
-        # 4. run_pipeline(enable_logs=True, persist_to_db=False)
-        # 5. TocRepository.save_full_toc()
-        # 6. UserBookRepository.link(user_id, book_id, file_path, log_dir)
-        # 7. [optional] RagService.ensure_index()
+    def ingest_upload(self, user_id, upload_path, original_name, *, skip_rag=None) -> dict:
+        # 1. Copy PDF → UPLOADS_FOLDER / {user_id} / {original_name}
+        # 2. run_pipeline(enable_logs=True) — single extract_pdf inside stage_extract
+        # 3. BookRepository.save_book() using PipelineResult.book_title / total_pages
+        # 4. TocRepository.save_full_toc()
+        # 5. UserBookRepository.link(user_id, book_id, file_path, log_dir)
+        # 6. [optional] RagService.ensure_index() — default skip (UPLOAD_SKIP_RAG=true)
+        #    uses PipelineResult.lines + stage_registry paths for 15d/15e/15f
 ```
+
+**Paths:** `UPLOADS_FOLDER` = `{PROJECT_ROOT}/output/uploads`. Logs: `{LOGS_FOLDER}/run_<utc>/` (not `backend/logs/`).
+
+**Performance note:** Do not call `extract_pdf()` before `run_pipeline()` — pipeline returns lines in `PipelineResult`.
 
 ---
 
@@ -88,5 +103,7 @@ class IngestionService:
 | Test | Coverage |
 |------|----------|
 | `test_ocr_stage.py` | Scan detection, two-up split, virtual pages |
+| `test_document_profile.py` | Clause-dense vs prose profiles, subject-keyword guard |
+| `test_ingestion_profile.py` | `fast_local` / `quality_cloud` overrides |
 
 See [testing.md](../testing.md) §5.5.

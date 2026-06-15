@@ -1,0 +1,25 @@
+{
+  "books": [
+    {
+      "label": "family-law",
+      "pdf": "C:/Users/Shaikh Wasim/Downloads/family-law-43811769208.pdf",
+      "log_dir": "C:/python_project/AI Notes Creater Model/logs/run_2026-06-09_16-47-02",
+      "md": "C:/python_project/AI Notes Creater Model/output/family-law-43811769208_2026-06-09_16-53-21.md",
+      "docx": "C:/python_project/AI Notes Creater Model/output/family-law-43811769208_2026-06-09_16-53-21.docx"
+    },
+    {
+      "label": "constitutional-law",
+      "pdf": "C:/Users/Shaikh Wasim/Downloads/constitutional-law-i-sem-ii-2022-23-1--43527772408.pdf",
+      "log_dir": "C:/python_project/AI Notes Creater Model/logs/run_2026-06-09_16-54-16",
+      "md": "C:/python_project/AI Notes Creater Model/output/constitutional-law-i-sem-ii-2022-23-1--43527772408_2026-06-09_16-59-55.md",
+      "docx": "C:/python_project/AI Notes Creater Model/output/constitutional-law-i-sem-ii-2022-23-1--43527772408_2026-06-09_16-59-55.docx"
+    },
+    {
+      "label": "environmental-law",
+      "pdf": "C:/Users/Shaikh Wasim/Downloads/environmental-law-1--43748672008.pdf",
+      "log_dir": "C:/python_project/AI Notes Creater Model/logs/run_2026-06-09_17-00-35",
+      "md": "C:/python_project/AI Notes Creater Model/output/environmental-law-1--43748672008_2026-06-09_17-06-29.md",
+      "docx": "C:/python_project/AI Notes Creater Model/output/environmental-law-1--43748672008_2026-06-09_17-06-29.docx"
+    }
+  ]
+}

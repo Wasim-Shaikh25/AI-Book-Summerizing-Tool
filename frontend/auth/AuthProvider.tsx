@@ -22,6 +22,7 @@ interface AuthContextValue {
   user: UserProfile | null;
   loading: boolean;
   authEnabled: boolean;
+  allowGuest: boolean;
   backendOk: boolean;
   skipAuth: boolean;
   setSkipAuth: (skip: boolean) => void;
@@ -37,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [authEnabled, setAuthEnabled] = useState(true);
+  const [allowGuest, setAllowGuest] = useState(true);
   const [backendOk, setBackendOk] = useState(false);
   const [skipAuth, setSkipAuthState] = useState(getSkipAuthPreference);
 
@@ -46,15 +48,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const enterWithoutAuth = useCallback(async () => {
-    const profile = await apiFetch<UserProfile>("/api/auth/guest", { method: "POST" });
-    clearToken();
-    setUser(profile);
+    const resp = await apiFetch<{ user: UserProfile; token?: string | null }>(
+      "/api/auth/guest",
+      { method: "POST" }
+    );
+    if (resp.token) {
+      setToken(resp.token);
+    } else {
+      clearToken();
+    }
+    setUser(resp.user);
     setSkipAuth(true);
   }, [setSkipAuth]);
 
   const refreshUser = useCallback(async () => {
     const cfg = await fetchAuthConfig();
     setAuthEnabled(cfg.auth_enabled);
+    setAllowGuest(cfg.allow_guest);
     setBackendOk(cfg.backend_ok);
 
     if (!cfg.backend_ok) {
@@ -119,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       authEnabled,
+      allowGuest,
       backendOk,
       skipAuth,
       setSkipAuth,
@@ -131,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       authEnabled,
+      allowGuest,
       backendOk,
       skipAuth,
       setSkipAuth,

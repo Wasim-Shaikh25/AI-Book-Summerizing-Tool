@@ -13,11 +13,11 @@ from src.modules.pipeline.llm_chat_client import LlmChatClient, normalize_chat_p
 
 _VALID_CATEGORIES = frozenset({"metadata", "toc", "real_content"})
 
-_CLASSIFY_SYSTEM = """You classify law textbook PDF excerpts.
-Categories: metadata (publisher/ISBN/title), toc (index/syllabus/exam Q lists only), real_content (chapter body with law text or cases).
+_CLASSIFY_SYSTEM = """You classify academic textbook PDF excerpts.
+Categories: metadata (publisher/ISBN/title), toc (index/syllabus/exam Q lists only), real_content (chapter body with subject matter).
 JSON only: {"category":"metadata"|"toc"|"real_content","confidence":0.0-1.0}"""
 
-_REVALIDATE_SYSTEM = """You audit law textbook structure classifications.
+_REVALIDATE_SYSTEM = """You audit academic textbook structure classifications.
 Given a draft label (metadata/toc/real_content) and local context, confirm or correct it.
 Rules:
 1) Integrated chapter openers (Chapter N + chapter questions + topic list) are real_content, NOT toc.

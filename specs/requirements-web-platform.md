@@ -39,8 +39,9 @@ Project layout: [architecture.md](./architecture.md) §3
 | AUTH-03 | Chat/book/export endpoints require JWT (except health + OAuth redirect) |
 | AUTH-04 | User profile: `user_id`, `email`, `display_name`, `provider`, `provider_user_id`, `avatar_url` |
 | AUTH-05 | Frontend stores JWT in `localStorage`; redirects unauthenticated users |
-| AUTH-06 | `AUTH_ENABLED=false` enables guest dev mode |
-| AUTH-07 | `GET /api/auth/config` returns `{ auth_enabled: bool }` |
+| AUTH-06 | `AUTH_ENABLED=false` enables guest dev mode (shared dev identity) |
+| AUTH-07 | `GET /api/auth/config` returns `{ auth_enabled: bool, allow_guest: bool }` |
+| AUTH-08 | `ALLOW_GUEST=true` + `AUTH_ENABLED=true`: `POST /api/auth/guest` mints an isolated, persisted guest user + short-lived JWT (`GuestSessionResponse`). 403 only when guest is explicitly disabled |
 
 Implementation: [backend-api.md](./backend-api.md) §4.2 · Flow: [ui-backend-integration.md](./ui-backend-integration.md) §2
 
@@ -99,8 +100,9 @@ Implementation: [modules/export.md](./modules/export.md) §3 · Tests: [testing.
 | UI-05 | New chat per book; auto-generated conversation titles |
 | UI-06 | Responsive (desktop-first, usable on tablet) |
 | UI-07 | Dark theme, DM Sans font |
-| UI-08 | Vite proxy `/api` → backend |
-| UI-09 | Guest mode when `AUTH_ENABLED=false` |
+| UI-08 | Vite proxy `/api` → backend (dev); nginx `/api` proxy (prod) |
+| UI-09 | "Continue as guest" button shown when `allow_guest` is true (any auth mode) |
+| UI-10 | Authenticated DOCX download via blob fetch with Bearer token (`downloadFile`), not a plain `<a href>` |
 
 Implementation: [frontend.md](./frontend.md)
 
@@ -112,12 +114,14 @@ Implementation: [frontend.md](./frontend.md)
 |----|-------------|
 | NFR-01 | Backend: FastAPI, Python 3.10+ |
 | NFR-02 | Frontend: React 18 + Vite + TypeScript |
-| NFR-03 | CORS for frontend origin |
+| NFR-03 | CORS env-driven: `FRONTEND_URL` + `CORS_EXTRA_ORIGINS` + localhost dev hosts (`AuthSettings.cors_origins`) |
 | NFR-04 | PDFs under `output/uploads/{user_id}/` |
 | NFR-05 | Docx under `output/exports/{user_id}/` |
 | NFR-06 | JWT expiry configurable (default 7 days) |
 | NFR-07 | Secrets in `.env` only |
 | NFR-08 | CLI (`main.py`) unchanged |
+| NFR-09 | Deployable via Docker: dev compose (hot reload) + prod compose (nginx + uvicorn workers, named volumes). See [deployment.md](./deployment.md) |
+| NFR-10 | Backend container runs as non-root, exposes `/api/health` healthcheck |
 
 Config keys: [modules/parameters-config.md](./modules/parameters-config.md) §8
 
@@ -133,9 +137,11 @@ Config keys: [modules/parameters-config.md](./modules/parameters-config.md) §8
 - [ ] Apple Sign In production setup
 
 ### Phase 3 — Production
-- [x] Docker compose scaffold
-- [ ] PostgreSQL option
-- [ ] HTTPS, secrets rotation
+- [x] Docker dev + prod compose (nginx static + `/api` proxy, uvicorn workers, healthchecks)
+- [x] Durable named volumes for output/logs/models; env profiles (`.env.example`, `.env.prod.example`)
+- [x] Guest mode with isolated per-session accounts (AUTH-08)
+- [ ] PostgreSQL option (currently SQLite)
+- [ ] HTTPS termination / reverse proxy TLS, secrets rotation
 
 ---
 
@@ -162,5 +168,6 @@ Test matrix: [testing.md](./testing.md) §7
 | ING-* | `services/ingestion_service.py` | `App.tsx` | `test_logging_contract` |
 | CHAT-* | `services/chat_service.py` | `App.tsx`, `MessageBubble` | `test_llm_and_parser` |
 | EXP-* | `services/export_policy.py` | `MessageBubble` | `test_export_policy` |
-| UI-* | — | `frontend/src/` | Manual |
-| NFR-* | `middleware/`, `api/main.py` | `vite.config.ts` | — |
+| UI-* | — | `frontend/src/`, `frontend/auth/` | `test_guest_auth` (UI-09/10 backend), Manual |
+| NFR-* | `middleware/`, `api/main.py`, `auth/config.py` | `vite.config.ts` | `test_guest_auth` |
+| NFR-09/10 (deploy) | `backend/Dockerfile`, `docker-compose*.yml` | `frontend/Dockerfile`, `nginx.conf` | `docker compose config` |

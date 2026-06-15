@@ -6,26 +6,13 @@ from typing import Any, Dict, List, Set
 
 import pytest
 
+from src import config
 from src.modules.pipeline import run_pipeline
-from src.modules.structure.logging.pipeline_logger import PipelineLogger
+from src.modules.pipeline.stage_registry import ALLOWED_LOG_FILES, CORE_STAGE_FILES, stage_log_filename
 
 from tests.conftest import sample_pdf_path
 
-# Stages written for the bundled Law of Torts PDF (continuity drops → 08b exists).
-EXPECTED_STAGE_FILES: Set[str] = {
-    "01_layout_lines.json",
-    "02_noise_filter.json",
-    "03_candidate_scoring.json",
-    "03b_heading_validity_gate.json",
-    "07_fragments.json",
-    "08b_continuity_filter.json",
-    "09_final_headings.json",
-    "10_deterministic_toc.json",
-    "11_book_metadata.json",
-    "12_final_headings_2.json",
-    "13_visual_elements.json",
-    "14_doubted_sections.json",
-}
+EXPECTED_STAGE_FILES = CORE_STAGE_FILES
 
 
 def _latest_run_dir(logs_dir: Path) -> Path:
@@ -63,18 +50,17 @@ def test_logging_contract_generates_expected_stage_files() -> None:
     """Run folder contains the expected deterministic stage JSON files."""
     run_pipeline(sample_pdf_path(), enable_logs=True)
 
-    run_dir = _latest_run_dir(Path("logs"))
+    run_dir = _latest_run_dir(Path(config.LOGS_FOLDER))
     files = {p.name for p in run_dir.iterdir() if p.is_file()}
 
-    allowed = PipelineLogger._ALLOWED_FILES  # type: ignore[attr-defined]
-    assert files <= allowed, f"Unexpected files not in whitelist: {sorted(files - allowed)}"
+    assert files <= ALLOWED_LOG_FILES, f"Unexpected files not in whitelist: {sorted(files - ALLOWED_LOG_FILES)}"
     assert EXPECTED_STAGE_FILES <= files, f"Missing expected files: {sorted(EXPECTED_STAGE_FILES - files)}"
 
 
 @pytest.mark.integration
 def test_each_stage_log_has_envelope_schema() -> None:
     run_pipeline(sample_pdf_path(), enable_logs=True)
-    run_dir = _latest_run_dir(Path("logs"))
+    run_dir = _latest_run_dir(Path(config.LOGS_FOLDER))
 
     for name in sorted(EXPECTED_STAGE_FILES):
         payload = _read_json(run_dir / name)
@@ -84,9 +70,9 @@ def test_each_stage_log_has_envelope_schema() -> None:
 @pytest.mark.integration
 def test_stage_item_shapes_spot_check() -> None:
     run_pipeline(sample_pdf_path(), enable_logs=True)
-    run_dir = _latest_run_dir(Path("logs"))
+    run_dir = _latest_run_dir(Path(config.LOGS_FOLDER))
 
-    layout = _assert_stage_envelope(_read_json(run_dir / "01_layout_lines.json"))
+    layout = _assert_stage_envelope(_read_json(run_dir / stage_log_filename("layout_lines")))
     _assert_items_have_keys(
         layout["items"],
         [
@@ -115,7 +101,7 @@ def test_stage_item_shapes_spot_check() -> None:
         ],
     )
 
-    noise = _assert_stage_envelope(_read_json(run_dir / "02_noise_filter.json"))
+    noise = _assert_stage_envelope(_read_json(run_dir / stage_log_filename("noise_filter")))
     _assert_items_have_keys(
         noise["items"],
         [
@@ -130,7 +116,7 @@ def test_stage_item_shapes_spot_check() -> None:
         ],
     )
 
-    scoring = _assert_stage_envelope(_read_json(run_dir / "03_candidate_scoring.json"))
+    scoring = _assert_stage_envelope(_read_json(run_dir / stage_log_filename("candidate_scoring")))
     _assert_items_have_keys(
         scoring["items"],
         [
@@ -150,5 +136,5 @@ def test_stage_item_shapes_spot_check() -> None:
         ],
     )
 
-    gate = _assert_stage_envelope(_read_json(run_dir / "03b_heading_validity_gate.json"))
+    gate = _assert_stage_envelope(_read_json(run_dir / stage_log_filename("heading_validity_gate")))
     assert isinstance(gate["items"], list)

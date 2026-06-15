@@ -94,19 +94,10 @@ class RagService:
             vector_weight=float(getattr(config, "RAG_VECTOR_WEIGHT", 0.65)),
             lexical_weight=float(getattr(config, "RAG_LEXICAL_WEIGHT", 0.35)),
             min_score=float(getattr(config, "RAG_MIN_SCORE", 0.15)),
+            rerank=bool(getattr(config, "RAG_RERANK_ENABLED", True)),
+            rerank_candidates=int(getattr(config, "RAG_RERANK_CANDIDATES", 50) or 50),
+            rerank_model=str(
+                getattr(config, "RAG_RERANK_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+            ),
         )
         return chunks_to_sections(chunks)
-
-
-def ensure_rag_index(book_id: str, sections: Sequence[Dict[str, Any]], *, force: bool = False) -> FaissVectorIndex:
-    return RagService().ensure_index(book_id=book_id, sections=sections, force_rebuild=force)
-
-
-def hybrid_retrieve_sections(
-    query: str,
-    *,
-    book_id: str,
-    sections: Sequence[Dict[str, Any]],
-    top_k: int = 6,
-) -> List[Dict[str, Any]]:
-    return RagService().retrieve(query, book_id=book_id, sections=sections, top_k=top_k)

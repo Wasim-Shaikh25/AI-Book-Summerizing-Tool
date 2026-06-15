@@ -32,7 +32,28 @@
 
 ---
 
-## 3. Detection Policy
+## 3. Removed (2026-06-07 cleanup)
+
+| Path / symbol | Reason removed |
+|---------------|----------------|
+| `pipeline_logger.py` legacy slots `04_*`, `05_*`, `06_*`, `08_hierarchy`, `decision_trace` | Never written by live pipeline |
+| `pipeline_logger.record_decision()`, `write_json()` | Zero callers |
+| `heading_validity_gate.gate_toc_candidates()` | Unwired; superseded by `toc_repeat_detection` |
+| `toc_cleaning.py` dedupe/trace helpers | Unreachable; `clean_toc` is identity pass |
+| `shared/models.HeadingGateTraceRecord` | Zero imports |
+| `rag/service.ensure_rag_index()`, `hybrid_retrieve_sections()` | Dead wrappers; use `RagService` |
+| `rag/__init__.py` broken `hybrid_retrieve` export | Fixed to `RagService` only |
+| `export_handler.py` merged import typo | Blocked CLI import |
+
+**Renamed:** stage log keys `doubted_resolved` → `15b_doubted_resolved`, `revalidation` → `15b_revalidation`.
+
+**Consolidated:** `pipeline/stage_registry.py` — single source for stage log keys and artifact filenames.
+
+**Deferred (still active):** `heading_heuristics.py` — used by unit tests; wire into gate or keep.
+
+---
+
+## 4. Detection Policy
 
 - Run `pytest` on every change.
 - Grep for imports before deleting modules.

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from src import config
+from src.modules.pipeline.stage_registry import STAGE_15D, STAGE_15E, STAGE_15F, resolve_existing_artifact
 from src.modules.export.output_manager import OutputManager
 from src.modules.generation.rewrite import RewriteEngine
 from src.modules.ingestion.pdf_extractor import extract_pdf
@@ -38,13 +39,14 @@ class RewriteHandler:
         if intent.scope == "full_book":
             import os
 
-            exam = intent.format_type == "exam_oriented" or intent.task_type in ("study_notes", "revision_notes")
-            os.environ["EXAM_ORIENTED"] = "1" if exam else "0"
-            compact = intent.depth == "very_short" or intent.task_type == "revision_notes"
-            os.environ["COMPACT_EXAM"] = "1" if compact else "0"
+            # Format and length are resolved from normalized_query inside rewrite_prompts —
+            # do not force EXAM_ORIENTED / COMPACT_EXAM env flags here.
 
             print(f"\nGenerating full-book {intent.task_type}...\n")
-            print(f"User instruction: {intent.normalized_query}\n")
+            from src.modules.interaction.command_parser import effective_user_instruction
+
+            instruction = effective_user_instruction(intent)
+            print(f"User instruction: {instruction}\n")
 
             lines = None
             ultimate_path = None
@@ -52,19 +54,20 @@ class RewriteHandler:
             if self.pdf_path:
                 lines, _, _ = extract_pdf(self.pdf_path)
             if self.ultimate_log_dir:
-                ultimate_path = Path(self.ultimate_log_dir) / "15d_ultimate_sections.json"
                 log_dir = Path(self.ultimate_log_dir)
-                h15f = log_dir / "15f_heading_cleanup.json"
-                h15e = log_dir / "15e_chapter_hierarchy.json"
-                hierarchy_path = h15f if h15f.exists() else h15e
+                ultimate_path = resolve_existing_artifact(log_dir, STAGE_15D)
+                hierarchy_path = resolve_existing_artifact(log_dir, STAGE_15F) or resolve_existing_artifact(
+                    log_dir, STAGE_15E
+                )
 
             results = self.engine.run(
-                user_instruction=intent.normalized_query,
+                user_instruction=instruction,
                 export_to_word=True,
                 pdf_path=self.pdf_path,
                 ultimate_sections_path=ultimate_path,
                 chapter_hierarchy_path=hierarchy_path if hierarchy_path and hierarchy_path.exists() else None,
                 lines=lines,
+                intent=intent,
             )
             if "error" in results:
                 print(f"Error: {results['error']}")

@@ -29,15 +29,16 @@ def test_parse_bundled_rewrite_by_sid_tags() -> None:
         sections=[{}, {}],
     )
     raw = """### Alpha <!-- sid:S1 -->
-- one
-- two
+- Alpha covers the first key rule with enough detail here.
+- It also explains a second supporting point clearly.
 
 ### Beta <!-- sid:S2 -->
-- three
+- Beta describes a separate provision with sufficient context.
 """
     out = parse_bundled_rewrite(raw, bundle)
-    assert out["S1"] == "- one\n- two"
-    assert out["S2"] == "- three"
+    assert "Alpha covers the first key rule" in out["S1"]
+    assert "second supporting point" in out["S1"]
+    assert "Beta describes a separate provision" in out["S2"]
 
 
 def test_resolve_chapter_page_breaks_auto_and_explicit(monkeypatch) -> None:

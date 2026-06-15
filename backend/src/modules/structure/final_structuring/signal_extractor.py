@@ -15,9 +15,15 @@ _TOC_RE = re.compile(
     re.I,
 )
 _CHAPTER_RE = re.compile(r"^chapter\s+\d+\b", re.I)
-_LEGAL_RE = re.compile(
-    r"\bv\.\s+[A-Z]|\bAIR\s+\d{4}\b|\bSCC\b|\(\d{4}\)\s+\d+\s+[A-Z]+",
+_CITATION_RE = re.compile(
+    r"\bv\.\s+[A-Z][a-z]|\bvs\.?\s+[A-Z]|"
+    r"\bAIR\s+\d{4}\b|\bSCC\b|\bAll\s+ER\b|\bSC\b|\bHC\b|\bILR\b|\bWLR\b|"
+    r"\b\(\d{4}\)\s+\d+\s+[A-Z]+|"
+    r"\bFig(?:ure)?\.?\s*\d+|\bTable\s+\d+|\bEq(?:uation)?\.?\s*\(?\d+|"
+    r"\bet\s+al\.|\bdoi:\s*\S+",
+    re.I,
 )
+CITATION_RE = _CITATION_RE
 
 
 def compute_line_signals(
@@ -37,7 +43,7 @@ def compute_line_signals(
 
     if _METADATA_RE.search(t):
         metadata_score += 3
-    if page_number <= 2 and wc <= 12 and not _LEGAL_RE.search(t):
+    if page_number <= 2 and wc <= 12 and not _CITATION_RE.search(t):
         metadata_score += 1
     if re.search(r"^\d{1,3}\s*$", t):
         metadata_score += 1
@@ -49,7 +55,7 @@ def compute_line_signals(
     if re.match(r"^\d+(\.\d+)*\s+\S", t) and re.search(r"\s+\d+\s*$", t):
         toc_score += 2
 
-    if _LEGAL_RE.search(t):
+    if _CITATION_RE.search(t):
         content_score += 3
     if _CHAPTER_RE.match(t):
         content_score += 2

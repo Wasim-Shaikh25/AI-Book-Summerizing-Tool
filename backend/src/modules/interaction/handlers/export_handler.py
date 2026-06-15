@@ -1,7 +1,8 @@
 import logging
 import os
 
-from src import configfrom src.modules.export.output_manager import OutputManager
+from src import config
+from src.modules.export.output_manager import OutputManager
 from src.modules.generation.rewrite import RewriteEngine
 from src.modules.interaction.command_parser import IntentResult
 from src.modules.storage.knowledge_store import KnowledgeStore

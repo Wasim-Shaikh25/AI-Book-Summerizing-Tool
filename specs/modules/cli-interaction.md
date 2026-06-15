@@ -1,6 +1,7 @@
 # Module: CLI Interaction
 
 > **Code package:** `backend/src/modules/interaction/`  
+> **Symbol reference:** [../code-reference/interaction.md](../code-reference/interaction.md)  
 > **Legacy:** `doc/spec/01-entry-cli-interaction.md` (removed)  
 > **Also used by:** `backend/services/chat_service.py` (web chat)
 

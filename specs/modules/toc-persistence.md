@@ -57,7 +57,7 @@ UserBookRepository.link(user_id, book_id, file_path, log_dir)
 
 - `final_headings` with `is_toc` / `in_toc_section` stripped for consumer-facing lists
 - SQLite rows in `books`, `final_headings`, `fragments`, `heading_fragments`
-- Pipeline logs in `logs/run_{timestamp}/` (linked via `user_books.log_dir` for web)
+- Pipeline logs in `{LOGS_FOLDER}/run_{timestamp}/` (`s01`–`s16` artifacts; linked via `user_books.log_dir` for web)
 
 ---
 

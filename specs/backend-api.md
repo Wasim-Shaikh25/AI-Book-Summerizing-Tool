@@ -83,7 +83,7 @@ flowchart TB
 # backend/api/main.py
 app = FastAPI(title="AI Notes Creator API", version="1.0.0")
 
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", ...])
+app.add_middleware(CORSMiddleware, allow_origins=get_auth_settings().cors_origins)
 app.add_middleware(RateLimitMiddleware)
 
 app.include_router(auth.router, prefix="/api")
@@ -117,8 +117,8 @@ uvicorn api.main:app --reload --port 8000
 
 | Method | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|
-| GET | `/api/auth/config` | No | — | `{ auth_enabled: bool }` |
-| POST | `/api/auth/guest` | No | — | `UserProfile` (403 if auth enabled) |
+| GET | `/api/auth/config` | No | — | `{ auth_enabled: bool, allow_guest: bool }` |
+| POST | `/api/auth/guest` | No | — | `GuestSessionResponse` `{ user: UserProfile, token: str\|null }` (403 only if `allow_guest=false`) |
 | GET | `/api/auth/{provider}/login` | No | provider: google\|apple\|facebook | 302 redirect to OAuth |
 | GET | `/api/auth/{provider}/callback` | No | Query: code, state, user (Apple) | 302 → `{FRONTEND_URL}/auth/callback?token={JWT}` |
 | GET | `/api/auth/me` | Bearer JWT | — | `UserProfile` |
@@ -153,14 +153,23 @@ sequenceDiagram
 }
 ```
 
-**Dev/guest mode** (`AUTH_ENABLED=false`):
+**Guest mode** — `POST /api/auth/guest` behavior depends on settings:
+
+| `AUTH_ENABLED` | `ALLOW_GUEST` | Result |
+|---|---|---|
+| false | (any) | Shared dev identity, no token (`{user, token: null}`) |
+| true | true | Isolated, persisted guest user + short-lived JWT (`{user, token}`) |
+| true | false | `403` |
+
+The frontend stores the returned token (if any) and uses it as a normal Bearer JWT,
+so guests get per-session isolation for books/conversations/exports.
 
 ```python
 # backend/auth/dependencies.py
 def get_current_user(...) -> UserRecord:
     if not settings.auth_enabled:
-        return get_dev_user()  # guest / local-dev-user
-    # ... validate Bearer JWT
+        return get_dev_user()  # shared local-dev-user
+    # ... validate Bearer JWT (covers OAuth users AND guest-issued tokens)
 ```
 
 ### 4.3 Books
@@ -289,6 +298,11 @@ class ChatReplyResponse(BaseModel):
 
 class AuthConfigResponse(BaseModel):
     auth_enabled: bool
+    allow_guest: bool = True
+
+class GuestSessionResponse(BaseModel):
+    user: UserProfile
+    token: str | None = None     # short-lived JWT when AUTH_ENABLED=true
 ```
 
 ---
@@ -389,10 +403,13 @@ backend/auth/
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `AUTH_ENABLED` | `true` | `false` = guest dev mode |
-| `JWT_SECRET` | `dev-secret-change-in-production` | HS256 signing |
+| `AUTH_ENABLED` | `true` | `false` = shared dev identity (no login) |
+| `ALLOW_GUEST` | `true` | Offer "Continue as guest" (isolated guest + JWT when auth enabled) |
+| `JWT_SECRET` | `dev-secret-change-in-production` | HS256 signing — **set random in prod** |
 | `JWT_EXPIRE_DAYS` | `7` | Token lifetime |
-| `FRONTEND_URL` | `http://localhost:5173` | OAuth redirect target |
+| `FRONTEND_URL` | `http://localhost:5173` | OAuth redirect target + CORS origin |
+| `CORS_EXTRA_ORIGINS` | `""` | Comma-separated extra allowed CORS origins |
+| `UVICORN_WORKERS` | `1` | Worker processes (prod compose default 2) |
 | `MAX_UPLOAD_MB` | `100` | PDF size limit |
 | `CHAT_DOCX_CHAR_LIMIT` | `4000` | Auto Word threshold |
 | `RATE_LIMIT_REQUESTS` | `60` | Per-IP request cap |
@@ -425,13 +442,17 @@ exports (export_id PK, user_id, file_path, file_name, created_at)
 | `MessageRepository` | `save`, `list_for_conversation` |
 | `ExportRepository` | `save`, `get`, `get_for_user` |
 
-**File storage:**
+**File storage** (all under `PROJECT_ROOT`; see `shared/config.py`):
 
-| Path | Content |
-|------|---------|
-| `output/uploads/{user_id}/` | Uploaded PDFs |
-| `output/exports/{user_id}/` | Generated Word files |
-| `logs/run_{timestamp}/` | Pipeline stage JSON (linked via `user_books.log_dir`) |
+| Constant | Path | Content |
+|----------|------|---------|
+| `UPLOADS_FOLDER` | `output/uploads/{user_id}/` | Uploaded PDFs |
+| `EXPORTS_FOLDER` | `output/exports/{user_id}/` | Generated Word files |
+| `LOGS_FOLDER` | `logs/run_{timestamp}/s*.json` | Pipeline stage JSON (via `user_books.log_dir`) |
+| `KNOWLEDGE_DB_PATH` | `output/knowledge_base.db` | SQLite |
+| `RAG_INDEX_DIR` | `output/rag_index/{book_id}/` | FAISS indexes |
+
+Services read stage artifacts via `stage_registry.resolve_existing_artifact(log_dir, key)` — not hardcoded filenames.
 
 ---
 
@@ -448,12 +469,18 @@ exports (export_id PK, user_id, file_path, file_name, created_at)
 
 ### CORS
 
+Origins are env-driven via `AuthSettings.cors_origins` (localhost dev hosts +
+`FRONTEND_URL` + comma-separated `CORS_EXTRA_ORIGINS`, deduplicated).
+
 ```python
-allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"]
+allow_origins=get_auth_settings().cors_origins  # e.g. ["http://localhost:5173", FRONTEND_URL, ...]
 allow_credentials=True
 allow_methods=["*"]
 allow_headers=["*"]
 ```
+
+In production the SPA is served same-origin by nginx (which proxies `/api`), so
+CORS is effectively a no-op; `FRONTEND_URL` still matters for OAuth redirects.
 
 ---
 
@@ -463,7 +490,7 @@ allow_headers=["*"]
 |-----------|------|
 | 400 | Invalid request, chat ValueError |
 | 401 | Missing/invalid JWT (when auth enabled) |
-| 403 | Guest login when auth enabled |
+| 403 | Guest login when `ALLOW_GUEST=false` |
 | 404 | Conversation/export not found |
 | 413 | Upload exceeds MAX_UPLOAD_MB |
 | 429 | Rate limit exceeded |

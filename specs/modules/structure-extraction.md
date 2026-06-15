@@ -1,13 +1,16 @@
 # Module: Structure Extraction
 
 > **Code package:** `backend/src/modules/structure/`  
+> **Symbol reference:** [../code-reference/structure.md](../code-reference/structure.md)  
 > **Pipeline stages:** `backend/src/modules/pipeline/stages.py`
+
+> **Stage name map:** [stage-catalog.md](./stage-catalog.md)
 
 ---
 
 ## 1. Purpose
 
-Deterministic heading detection, validity filtering, continuity enforcement, fragment building, TOC cleaning, and final structuring (stages 15a–15f).
+Deterministic heading detection, validity filtering, continuity enforcement, fragment building, TOC cleaning, and final structuring (`partition_tree` through `rag_snapshot` — see [stage-catalog.md](./stage-catalog.md)).
 
 ---
 
@@ -29,28 +32,41 @@ Deterministic heading detection, validity filtering, continuity enforcement, fra
 
 ## 3. Final Structuring (`final_structuring/`)
 
-Runs in `stage_final_structuring` via `final_structuring_stage.py`:
+Runs in `stage_build_book_structure` via `structure_orchestrator.py` → `final_structuring_stage.py`:
 
-| File | Stage | Role |
-|------|-------|------|
-| `book_assembler.py` | 15a, 15d, 15c, 16 | `build_heading_hierarchy`, `build_ultimate_sections`, `assemble_final_book`, `build_rag_snapshot` |
-| `chapter_hierarchy_builder.py` | 15e | Chapter hierarchy (LLM + rules) |
-| `heading_cleanup.py` | 15f | Weak title cleanup, chapter dedup |
-| `doubted_section_resolver.py` | 15b | Resolve ambiguous segments (late TOC) |
-| `revalidation.py` | 15b | Selective revalidation pass |
-| `signal_extractor.py` | 15b | Feature signals for resolver |
-| `models/segment_llm_classifier.py` | 15b | Fast local LLM classifier |
-| `models/mini_lm_encoder.py` | 15b | MiniLM embeddings |
-| `models/cross_encoder_model.py` | 15b | Cross-encoder scoring |
-| `models/bigbird_encoder.py` | 15b | BigBird encoder (optional) |
+| File | Log key | Role |
+|------|---------|------|
+| `book_assembler.py` | `partition_tree`, `partition_sections`, `assemble_book`, `rag_snapshot` | Tree, rewrite sections, final book, RAG snapshot |
+| `chapter_hierarchy_builder.py` | `group_chapters` | Chapter hierarchy (rules/MiniLM + optional LLM) |
+| `heading_cleanup.py` | `clean_titles` | Weak title cleanup, chapter dedup, `sanitize_hierarchy_headings` |
+| `chapter_placement.py` | `place_chapters` | `run_chapter_placement`, **`enforce_chapter_structure`** |
+| `subheading_refinement.py` | `refine_titles` | `run_heading_refinement`, parent-mirror + verbose title fixes |
+| `hierarchy_openai_refinement.py` | `cloud_hierarchy` | Optional cloud regroup + title polish |
+| `title_validation.py` | `validate_titles` | `validate_chapter_hierarchy` (FLAN/MiniLM title checks) |
+| `dropped_heading_registry.py` | — | `is_statute_prose_heading`, partition/noise patterns |
+| `doubted_section_resolver.py` | `resolve_doubted_toc` | Resolve ambiguous segments (late TOC) |
+| `revalidation.py` | `resolve_doubted_revalidation` | Selective revalidation pass |
+| `signal_extractor.py` | — | Feature signals for resolver |
+| `models/segment_llm_classifier.py` | — | Fast local LLM classifier |
+| `models/mini_lm_encoder.py` | — | MiniLM embeddings |
+| `models/cross_encoder_model.py` | — | Cross-encoder scoring |
+| `models/bigbird_encoder.py` | — | BigBird encoder (optional) |
 
-**Log artifacts:** `15a_heading_hierarchy.json` → `15d_ultimate_sections.json` → `15e_chapter_hierarchy.json` → `15f_heading_cleanup.json` → `15c_final_book.json` → `16_rag_snapshot.json`
+**Pipeline order** (`structure_orchestrator.py`): `partition_tree` → `partition_sections` → `group_chapters` → `place_chapters` → `clean_titles` → `refine_titles` → `cloud_hierarchy` → `validate_titles` → `assemble_book` → `rag_snapshot`.
+
+**`enforce_chapter_structure()`** runs at end of `validate_titles`, `refine_titles`, `cloud_hierarchy`, and again at rewrite load. It:
+- splits at structural markers and oversized chapters (`max_sections_per_chapter` default 10)
+- fixes parent-mirror chapters (chapter title ≈ first section)
+- sanitizes headings and repairs unacceptable/statute-prose section titles
+- re-splits after fixes and renumbers chapters
+
+**Log artifacts (filenames on disk):** `s15a_…` → `s15d_…` → `s15e_…` → `s15h_…` → `s15f_…` → `s15i_…` → `s15j_…` → `s15g_…` → `s15c_…` → `s16_…` — see [stage-catalog.md](./stage-catalog.md) for semantic log keys.
 
 ---
 
-## 4. Doubted Sections (Stage 15b)
+## 4. Doubted TOC resolution (`resolve_doubted_toc`)
 
-Triggered when `first_toc_page > 3` in `stage_doubted_sections`.
+Triggered when `first_toc_page > 3` in `stage_flag_doubted_toc`.
 
 | File | Role |
 |------|------|
@@ -58,7 +74,7 @@ Triggered when `first_toc_page > 3` in `stage_doubted_sections`.
 | `doubted_section_resolver.py` | Main resolver logic |
 | `revalidation.py` | LLM audit of flagged segments |
 
-**Logs:** `14_doubted_sections.json`, `15b_doubted_resolved.json`, `15b_revalidation.json`
+**Logs:** `s12_doubted_sections.json`, `s15b_doubted_resolved.json` (`resolve_doubted_toc`), `s15b_revalidation.json` (`resolve_doubted_revalidation`)
 
 ---
 
@@ -78,5 +94,9 @@ Triggered when `first_toc_page > 3` in `stage_doubted_sections`.
 | `test_continuity_and_gate.py` | Line ID parsing, heading heuristics |
 | `test_heading_validator_heuristics.py` | Enumeration blocking |
 | `test_heading_cleanup.py` | Stage 15f cleanup rules |
+| `test_enforce_chapter_structure.py` | Mega-chapter split, mirror/title enforce |
+| `test_title_validation.py` | Stage 15g title validation |
+| `test_heading_title_validation.py` | Heading title heuristics |
+| `test_dropped_heading_registry.py` | Statute prose / partition patterns |
 
 See [testing.md](../testing.md).

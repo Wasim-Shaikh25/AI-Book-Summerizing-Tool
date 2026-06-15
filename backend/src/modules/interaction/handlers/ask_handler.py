@@ -6,9 +6,8 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from src import config
 from src.modules.generation.qa_engine import BookQaEngine
-from src.modules.generation.toc_sections import load_rewrite_sections
-from src.modules.ingestion.pdf_extractor import extract_pdf
 from src.modules.interaction.command_parser import IntentResult
 from src.modules.storage.knowledge_store import KnowledgeStore
 
@@ -36,31 +35,43 @@ class AskHandler:
         self.subject_hint = subject_hint or book_title
 
     def _load_sections(self):
-        lines = None
-        ultimate_path = None
-        hierarchy_path = None
-        if self.pdf_path:
-            lines, _, _ = extract_pdf(self.pdf_path)
-        if self.ultimate_log_dir:
-            log_dir = Path(self.ultimate_log_dir)
-            ultimate_path = log_dir / "15d_ultimate_sections.json"
-            h15f = log_dir / "15f_heading_cleanup.json"
-            h15e = log_dir / "15e_chapter_hierarchy.json"
-            hierarchy_path = h15f if h15f.exists() else h15e
+        from services.rag_index_helper import load_book_sections
 
-        return load_rewrite_sections(
+        lines = None
+        if self.pdf_path and not self.ultimate_log_dir:
+            from src.modules.ingestion.pdf_extractor import extract_pdf
+
+            lines, _, _ = extract_pdf(self.pdf_path)
+
+        return load_book_sections(
             self.store,
             book_id=self.book_id,
             pdf_path=self.pdf_path,
-            ultimate_sections_path=ultimate_path,
-            chapter_hierarchy_path=hierarchy_path if hierarchy_path and hierarchy_path.exists() else None,
+            log_dir=self.ultimate_log_dir,
             lines=lines,
-            prefer_15e=True,
-            prefer_15d=True,
         )
 
+    def _ensure_rag_index(self, sections) -> None:
+        if not getattr(config, "RAG_ENABLED", True):
+            return
+        try:
+            from services.rag_index_helper import ensure_rag_index_for_book
+
+            chunks = ensure_rag_index_for_book(
+                self.store,
+                book_id=self.book_id,
+                pdf_path=self.pdf_path,
+                log_dir=self.ultimate_log_dir,
+            )
+            if chunks:
+                logger.info("Lazy RAG index ready for book_id=%s chunks=%d", self.book_id, chunks)
+        except Exception as exc:
+            logger.warning("Lazy RAG ensure skipped: %s", exc)
+
     def handle_intent(self, intent: IntentResult) -> str | None:
-        question = (intent.normalized_query or "").strip()
+        from src.modules.interaction.command_parser import effective_user_instruction
+
+        question = effective_user_instruction(intent)
         if not question:
             print("[!] Empty question.")
             return None
@@ -69,6 +80,8 @@ class AskHandler:
         if not sections:
             print("[!] No book sections found. Ingest the PDF first.")
             return None
+
+        self._ensure_rag_index(sections)
 
         engine = BookQaEngine(book_title=self.book_title, subject_hint=self.subject_hint, book_id=self.book_id)
         result = engine.answer(

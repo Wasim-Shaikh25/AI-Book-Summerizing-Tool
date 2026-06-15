@@ -1,0 +1,158 @@
+---
+description: Universal requirements, SDD, tasks, and lifecycle workflow rules
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Requirements, SDD, and Task Workflow Rules
+
+Maintain a project lifecycle folder when planning or implementation work is performed:
+
+```text
+/ai-agent-workflow/
+  requirements.md
+  tasks.md
+  SDD.md
+```
+
+Optional:
+
+```text
+/ai-agent-workflow/
+  architecture.md
+  decisions.md
+  changelog.md
+  risks.md
+  implementation-log.md
+  project-state.md
+```
+
+## Core Lifecycle Rule
+
+Planning can be autonomous.
+
+Implementation must be task-scoped and user-requested unless the user explicitly asked for automatic implementation.
+
+## Requirements Rule
+
+If `requirements.md` exists:
+
+- Read it.
+- Check if it matches the current docs and code.
+- Update it only when requirements changed.
+
+If it does not exist:
+
+Create:
+
+```text
+/ai-agent-workflow/requirements.md
+```
+
+Include:
+
+- problem definition
+- goals
+- scope
+- non-goals
+- functional requirements
+- non-functional requirements
+- assumptions
+- constraints
+- risks
+- open questions
+
+Mark unclear items as:
+
+```text
+Needs clarification
+```
+
+Do not invent business requirements.
+
+## SDD Rule
+
+If `SDD.md` exists:
+
+- Read it.
+- Compare it to current code.
+- Update it if code/architecture changed.
+
+If it does not exist:
+
+Create:
+
+```text
+/ai-agent-workflow/SDD.md
+```
+
+Include:
+
+- architecture overview
+- modules/components
+- data flow
+- dependencies
+- APIs/interfaces
+- storage/state
+- background jobs
+- external integrations
+- security considerations
+- deployment assumptions
+- testing strategy
+
+Clearly separate:
+
+```text
+Implemented
+Planned
+Partial
+Needs clarification
+```
+
+Do not mark planned features as implemented.
+
+## Tasks Rule
+
+If `tasks.md` exists:
+
+- Read it.
+- Update task status based on current code.
+- Add missing tasks from new requirements.
+- Preserve useful history.
+
+If it does not exist:
+
+Create:
+
+```text
+/ai-agent-workflow/tasks.md
+```
+
+Include:
+
+- features
+- subtasks
+- execution order
+- dependencies
+- priority
+- status
+- tests required
+- definition of done
+
+## Empty Project Sequence
+
+If the project is empty:
+
+1. Create `requirements.md`.
+2. Create `tasks.md`.
+3. Create `SDD.md`.
+4. Do not implement code unless explicitly requested.
+
+If the user explicitly asks to bootstrap implementation:
+
+1. Create planning docs.
+2. Create minimal project structure.
+3. Create minimal working implementation.
+4. Update SDD to reflect actual architecture.
+5. Update tasks.

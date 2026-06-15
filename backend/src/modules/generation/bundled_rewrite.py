@@ -8,7 +8,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Dict, List, Optional, Sequence
 
-from src.modules.generation.rewrite_prompts import build_bundle_user_prompt
+from src.modules.generation.rewrite_prompts import build_bundle_user_prompt, normalize_rewritten_section
 from src.modules.generation.section_bundler import RewriteBundle, build_rewrite_bundles
 from src.modules.generation.parallel_rewrite import ProgressCallback, resolve_parallel_workers
 
@@ -22,7 +22,12 @@ _SID_HEADING = re.compile(
 )
 
 
-def parse_bundled_rewrite(raw: str, bundle: RewriteBundle) -> Dict[str, str]:
+def parse_bundled_rewrite(
+    raw: str,
+    bundle: RewriteBundle,
+    *,
+    user_instruction: str = "",
+) -> Dict[str, str]:
     """Split bundled LLM output into section_id -> body using sid tags or headings."""
     text = (raw or "").strip()
     if not text:
@@ -66,7 +71,10 @@ def parse_bundled_rewrite(raw: str, bundle: RewriteBundle) -> Dict[str, str]:
             if body:
                 by_sid[sid] = body
 
-    return by_sid
+    return {
+        sid: normalize_rewritten_section(body, user_instruction=user_instruction)
+        for sid, body in by_sid.items()
+    }
 
 
 def rewrite_bundles_parallel(
@@ -98,7 +106,7 @@ def rewrite_bundles_parallel(
             max_source_chars=max_source_chars,
         )
         raw = generate(system, prompt)
-        return parse_bundled_rewrite(raw or "", bundle)
+        return parse_bundled_rewrite(raw or "", bundle, user_instruction=user_instruction)
 
     if pool_size <= 1 or total <= 1:
         for bundle in bundles:

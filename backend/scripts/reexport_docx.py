@@ -37,50 +37,84 @@ from src.modules.storage.knowledge_store import KnowledgeStore
 
 
 def _load_hierarchy(log_dir: Path) -> dict:
-    """Load chapter hierarchy: prefer 15f, else run 15f on saved 15e, else rebuild 15e."""
-    path_15f = log_dir / "15f_heading_cleanup.json"
-    path_15e = log_dir / "15e_chapter_hierarchy.json"
+    """Load chapter hierarchy: prefer 15g/15j/15i/15h/15f, else rebuild."""
+    from src.modules.pipeline.stage_registry import (
+        STAGE_CLEAN_TITLES,
+        STAGE_GROUP_CHAPTERS,
+        STAGE_PARTITION_SECTIONS,
+        STAGE_PARTITION_TREE,
+        artifact_path,
+        require_artifact,
+        resolve_chapter_hierarchy_artifact,
+        resolve_existing_artifact,
+    )
+
+    path_best = resolve_chapter_hierarchy_artifact(log_dir)
+    if path_best is not None:
+        print(f"Using saved hierarchy: {path_best.name}")
+        return load_chapter_hierarchy_json(path_best)
+
+    path_clean = resolve_existing_artifact(log_dir, STAGE_CLEAN_TITLES)
+    path_group = resolve_existing_artifact(log_dir, STAGE_GROUP_CHAPTERS)
     rebuild = os.environ.get("REBUILD_15E", "0").strip().lower() in {"1", "true", "yes", "y"}
-    rerun_15f = os.environ.get("RUN_15F", "0").strip().lower() in {"1", "true", "yes", "y"}
+    rerun_clean = os.environ.get("RUN_15F", "0").strip().lower() in {"1", "true", "yes", "y"}
 
-    if path_15f.exists() and not rerun_15f and not rebuild:
-        print(f"Using saved 15f: {path_15f.name}")
-        return load_chapter_hierarchy_json(path_15f)
+    if path_clean is not None and not rerun_clean and not rebuild:
+        print(f"Using saved clean_titles: {path_clean.name}")
+        return load_chapter_hierarchy_json(path_clean)
 
-    if not rebuild and path_15e.exists():
-        print(f"Using 15e + running stage 15f heading cleanup...")
-        raw = load_chapter_hierarchy_json(path_15e)
+    if not rebuild and path_group is not None:
+        print("Using group_chapters + running clean_titles heading cleanup...")
+        raw = load_chapter_hierarchy_json(path_group)
+        from src.modules.structure.dropped_heading_registry import load_dropped_registry_from_log_dir
         from src.modules.structure.final_structuring.heading_cleanup import clean_heading_hierarchy
 
-        cleaned = clean_heading_hierarchy(raw)
+        ultimate_sections: list = []
+        path_sections = resolve_existing_artifact(log_dir, STAGE_PARTITION_SECTIONS)
+        if path_sections is not None:
+            ultimate_sections = json.loads(path_sections.read_text(encoding="utf-8")).get("items", {}).get("sections") or []
+        registry = load_dropped_registry_from_log_dir(log_dir)
+
+        cleaned = clean_heading_hierarchy(
+            raw,
+            ultimate_sections=ultimate_sections,
+            dropped_registry=registry,
+        )
         meta = cleaned.get("meta") or {}
         print(
-            f"  15f method={meta.get('heading_cleanup_method')} "
+            f"  clean_titles method={meta.get('heading_cleanup_method')} "
             f"weak_after={meta.get('weak_section_headings_after')} "
             f"dup_chapters={meta.get('duplicate_chapter_names_after')}"
         )
         if os.environ.get("SAVE_15F", "1").strip().lower() not in {"0", "false", "no"}:
-            payload = {"run_id": log_dir.name.replace("run_", ""), "stage": "15f_heading_cleanup", "items": cleaned}
-            path_15f.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-            print(f"  saved {path_15f.name}")
+            payload = {"run_id": log_dir.name.replace("run_", ""), "stage": STAGE_CLEAN_TITLES, "items": cleaned}
+            out_clean = artifact_path(log_dir, STAGE_CLEAN_TITLES, for_write=True)
+            out_clean.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(f"  saved {out_clean.name}")
         return cleaned
 
-    if not (log_dir / "15d_ultimate_sections.json").exists():
-        raise FileNotFoundError(f"Missing 15d and no saved 15e in {log_dir}")
+    if resolve_existing_artifact(log_dir, STAGE_PARTITION_SECTIONS) is None:
+        raise FileNotFoundError(f"Missing partition_sections and no saved group_chapters in {log_dir}")
 
     os.environ.setdefault("CHAPTER_HIERARCHY_USE_LLM", "0")
     from src.modules.structure.final_structuring.chapter_hierarchy_builder import build_chapter_hierarchy
     from src.modules.structure.final_structuring.heading_cleanup import clean_heading_hierarchy
 
-    print("Rebuilding 15e (REBUILD_15E=1)...")
-    ultimate = json.loads((log_dir / "15d_ultimate_sections.json").read_text(encoding="utf-8"))["items"]
-    hierarchy_rows = json.loads((log_dir / "15a_heading_hierarchy.json").read_text(encoding="utf-8")).get("items") or []
+    print("Rebuilding group_chapters (REBUILD_15E=1)...")
+    ultimate = json.loads(require_artifact(log_dir, STAGE_PARTITION_SECTIONS).read_text(encoding="utf-8"))["items"]
+    hierarchy_rows = json.loads(require_artifact(log_dir, STAGE_PARTITION_TREE).read_text(encoding="utf-8")).get("items") or []
     raw = build_chapter_hierarchy(
         ultimate_sections=ultimate,
         hierarchy=hierarchy_rows,
         max_sections=0,
     )
-    return clean_heading_hierarchy(raw)
+    from src.modules.structure.dropped_heading_registry import load_dropped_registry_from_log_dir
+
+    return clean_heading_hierarchy(
+        raw,
+        ultimate_sections=ultimate.get("sections") or [],
+        dropped_registry=load_dropped_registry_from_log_dir(log_dir),
+    )
 
 
 def main() -> int:

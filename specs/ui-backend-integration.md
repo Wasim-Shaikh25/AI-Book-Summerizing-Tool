@@ -44,16 +44,18 @@ flowchart LR
 | Attach to requests | `Authorization: Bearer ${token}` header |
 | Handle 401 | Clear token, redirect to `/` |
 | OAuth callback | Parse `?token=` from URL, store, redirect to `/` |
-| Guest mode | `POST /api/auth/guest` when `auth_enabled=false` |
+| Guest mode | `POST /api/auth/guest`; store returned `token` if present (Bearer JWT) |
+| Authed download | DOCX via `downloadFile` blob fetch with Bearer header (not `<a href>`) |
 
 ### Backend Responsibilities
 
 | Action | Implementation |
 |--------|----------------|
-| Issue JWT | After OAuth callback or guest login |
-| Validate JWT | `get_current_user` dependency on protected routes |
+| Issue JWT | After OAuth callback **or** guest login (when `AUTH_ENABLED=true`) |
+| Validate JWT | `get_current_user` dependency on protected routes (OAuth + guest tokens) |
 | Return 401 | Invalid/expired token |
-| Config endpoint | `GET /api/auth/config` tells frontend if auth required |
+| Config endpoint | `GET /api/auth/config` → `{ auth_enabled, allow_guest }` |
+| Guest endpoint | `POST /api/auth/guest` → `{ user, token }`; 403 only if `allow_guest=false` |
 
 ### Auth State Machine
 
@@ -68,6 +70,7 @@ stateDiagram-v2
     CheckToken --> LoginPage: no token
     CheckToken --> Authenticated: valid token
     CheckToken --> LoginPage: invalid token (401)
+    LoginPage --> Authenticated: Continue as guest (POST /guest -> token, if allow_guest)
 
     LoginPage --> OAuthFlow: Click provider
     OAuthFlow --> Callback: Provider redirect
@@ -227,15 +230,21 @@ Authorization: Bearer <token>
 
 Returns: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
 
-Frontend renders as:
+The endpoint requires the Bearer token, so the frontend must fetch it as an
+authenticated blob — a plain `<a href>` cannot attach the JWT and would 401 for
+OAuth/guest users. `MessageBubble` renders a button that calls `downloadFile`:
 
 ```tsx
-<a href={metadata.docx_download_url} target="_blank" rel="noopener">
+<button onClick={() => void downloadFile(metadata.docx_download_url)}>
   Download Word file
-</a>
+</button>
+// downloadFile: fetch(path, { headers: { Authorization: Bearer <token> } })
+//   -> blob -> object URL -> programmatic <a download> click
 ```
 
-**Note:** URL is relative (`/api/exports/...`). Works with Vite proxy in dev; requires `VITE_API_BASE` prefix in production if frontend/backend on different hosts.
+**Note:** URL is relative (`/api/exports/...`). Works with the Vite proxy in dev
+and nginx `/api` proxy in prod (same-origin); set `VITE_API_BASE` only if the
+frontend and backend live on different hosts.
 
 ---
 
@@ -329,10 +338,11 @@ Both sides must agree on these settings:
 
 | Setting | Backend Env | Frontend Env | Must Match |
 |---------|-------------|--------------|------------|
-| API URL | `API_BASE_URL` | `VITE_API_BASE` | Yes (prod) |
-| Frontend URL | `FRONTEND_URL` | Dev server origin | Yes (OAuth) |
+| API URL | `API_BASE_URL` | `VITE_API_BASE` | Yes (prod; empty when nginx serves same-origin) |
+| Frontend URL | `FRONTEND_URL` | Dev server origin | Yes (OAuth + CORS) |
 | Auth enabled | `AUTH_ENABLED` | Read from `/api/auth/config` | Yes |
-| CORS origins | Hardcoded in `main.py` | Dev server URL | Yes |
+| Guest allowed | `ALLOW_GUEST` | Read from `/api/auth/config` (`allow_guest`) | Yes |
+| CORS origins | `FRONTEND_URL` + `CORS_EXTRA_ORIGINS` (`cors_origins`) | Dev server URL | Yes |
 
 ### Development Setup
 

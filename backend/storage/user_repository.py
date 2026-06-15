@@ -60,7 +60,11 @@ class ExportRecord:
 class PlatformStore:
     """Extends knowledge DB with user/chat tables."""
 
-    def __init__(self, db_path: str = "output/knowledge_base.db") -> None:
+    def __init__(self, db_path: str | None = None) -> None:
+        if db_path is None:
+            from src import config
+
+            db_path = getattr(config, "KNOWLEDGE_DB_PATH", "output/knowledge_base.db")
         self.db_path = db_path
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         KnowledgeStore(db_path)

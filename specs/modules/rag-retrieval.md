@@ -1,6 +1,7 @@
 # Module: Vector RAG
 
 > **Code:** `backend/src/modules/rag/`, `backend/src/modules/storage/rag_repository.py`  
+> **Symbol reference:** [../code-reference/rag.md](../code-reference/rag.md)  
 > **Config:** `backend/config/default.yaml`, `backend/src/shared/config.py`
 
 ---

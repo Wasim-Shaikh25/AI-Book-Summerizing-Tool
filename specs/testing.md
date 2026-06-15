@@ -23,11 +23,14 @@ backend/
 └── tests/
     ├── conftest.py          # PDF fixture, tmp cwd isolation
     ├── README.md
-    ├── unit/                # Fast, no external LLM calls
+    ├── unit/                # Fast, no external LLM calls (representative subset)
     │   ├── test_continuity_and_gate.py
     │   ├── test_docx_toc_export.py
     │   ├── test_export_policy.py
     │   ├── test_heading_cleanup.py
+    │   ├── test_heading_acceptance.py
+    │   ├── test_enforce_chapter_structure.py
+    │   ├── test_notes_body_postprocess.py
     │   ├── test_heading_validator_heuristics.py
     │   ├── test_llm_and_parser.py
     │   ├── test_missing_section_rewrite.py
@@ -38,7 +41,11 @@ backend/
     │   ├── test_rag_retriever.py
     │   ├── test_rewrite_validation.py
     │   ├── test_section_bundler.py
-    │   └── test_title_service.py
+    │   ├── test_title_service.py
+    │   ├── test_guest_auth.py            # guest mode + auth config
+    │   ├── test_llm_cache.py             # rewrite disk cache
+    │   ├── test_llm_chat_retry.py        # transient-error retry/backoff
+    │   └── test_hierarchy_openai_gate.py # 15j names-pass skip gate
     └── integration/
         ├── test_fragment_coverage.py
         └── test_logging_contract.py
@@ -152,6 +159,99 @@ def test_short_qa_stays_in_chat():
 | Late TOC flagging | TOC on page > 3 | `doubted_sections` populated |
 | Metadata stripping | Final headings with TOC rows | TOC/metadata removed from output |
 
+### 5.4b Stage catalog & registry (`test_stage_catalog.py`, `test_pipeline_progress.py`, `test_pipeline_stages_registry.py`)
+
+**Module under test:** `stage_catalog.py`, `stage_registry.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Semantic progress | `stage_progress_for("stage_ingest_pdf")` | ingest / 5% |
+| Legacy alias | `stage_progress_for("stage_extract")` | Same as semantic name |
+| STAGES order | `get_pipeline_stages()` | 15 functions; includes `stage_compute_document_profile` |
+| Structure groups | `STRUCTURE_LOGICAL_GROUPS` | Covers all 10 structure log keys |
+
+### 5.4c Document profile & export coverage (`test_document_profile.py`, `test_export_missing_body_mode.py`)
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Clause-dense profile | Many short enumerated lines | Lower overlap + min body chars |
+| Prose-heavy profile | Long paragraphs | Higher overlap retained |
+| Subject guard | `document_profile.py` source | No domain keywords |
+| Placeholder export | Empty rewrite map | Section preserved with page reference |
+| Skip / fail modes | `EXPORT_MISSING_BODY_MODE` | Omit or raise |
+
+### 5.4d Rewrite fidelity & mirrors (`test_rewrite_fidelity.py`, `test_chapter_single_section_mirror.py`)
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Overlap score | Shared token overlap | High when generated tracks source |
+| Regeneration trigger | Unrelated generated text | `needs_regeneration` true below 0.30 |
+| Single-section mirror | Chapter == sole section | Subheadings promoted / title repaired |
+| PDF title gate | LLM title not in lines | Reverts to local title when strict |
+
+### 5.4d-2 Audit recalibration: semantic grounding & source-grounded titles (`test_line_audit.py`, `test_notes_quality_audit.py`)
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Low-grounding source skips overlap | Index-style source + paraphrased body | No `low_source_overlap` / `section_drift` |
+| Literal overlap still flags (semantic off) | Unrelated body vs real source | `low_source_overlap` flagged |
+| Semantic grounder no-op | `enabled=False` | `ready=False`, `grounded()=False` |
+| Title grounded in source | Clean title covered by source | True; unrelated title False |
+| pdf_match grounded title | Clean title absent from PDF, covered by source | status `grounded_in_source` (not a failure) |
+| pdf_match ungrounded title | Clean title absent from PDF and source | status `not_in_pdf` |
+
+### 5.4d-1 Text grounding & contents-region detection (`test_text_grounding.py`, `test_contents_region.py`)
+
+**Modules under test:** `src/shared/text_grounding.py`, `src/modules/structure/contents_region.py`, partition gate in `book_assembler.build_ultimate_sections`.
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Enumerated-line match | `65. Title`, `(7) Title`, prose | True for index rows, False for prose |
+| Real content chars | Mixed index + prose | Counts only prose letters |
+| `is_low_grounding` | Enum list / thin prose / real section | True / True / False |
+| `is_contents_listing` | Short real (40–160 chars) | Kept (False) — stricter partition floor |
+| Contents-region detect | Enumeration-dominated page | All non-noise line ids flagged; noise excluded |
+| Contents-region detect | Prose page / short page | No region |
+| Partition grounding gate | Section body = index list | Section dropped; `meta.low_grounding_dropped ≥ 1` |
+
+### 5.4e Post-rewrite structural fixer (`test_notes_structure_fix.py`)
+
+**Module under test:** `src/modules/generation/notes_structure_fix.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Parse/render round-trip | Sample MD | Chapters/sections/bodies preserved |
+| Offline heading repair | Noisy prose section title | Replaced with `looks_ok` title; clean titles untouched |
+| LLM heading repair | Mocked batched chat | Title from JSON map applied (detail `section/llm`) |
+| Chapter title repair | Noisy `#` chapter | Repaired from section context |
+| TOC regeneration | Repaired heading | TOC reflects new title |
+| Low-grounding | Index-style source | Flagged; dropped only with `drop=True`; skipped without source |
+| Duplicate merge | Adjacent identical bodies | Flagged; merged only with `apply_merge=True` |
+
+### 5.4f Structure-fix runner + title sync (`test_structure_fix_runner.py`)
+
+**Module under test:** `src/modules/generation/structure_fix_runner.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Enabled/engine defaults | No env | `structure_fix_enabled()` true; engine `hybrid` |
+| Offline list renumber | Per-topic ordered lists | Restart at 1 each section |
+| Propagate in-memory | Noisy hierarchy + clean MD | Section (by sid) + chapter (by vote) headings replaced |
+| Propagate on-disk | Hierarchy artifact file | Artifact rewritten with clean titles |
+| Chapter sid-vote | Reordered sections | Correct chapter title by majority sid vote |
+| No-match no-op | Unrelated sids | 0 updates; titles untouched |
+
+### 5.4g Hierarchy loader (`test_toc_sections.py`)
+
+**Module under test:** `src/modules/generation/toc_sections.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Wrapped schema | `{items:{chapters}}` (s15f) | Loads inner hierarchy |
+| Top-level schema | `{chapters,...}` (s15j) | Loads directly |
+| Both present | `items` + top-level | Prefers `items` |
+| Non-hierarchy | List payload | Raises `ValueError` |
+
 ### 5.5 OCR Stage (`test_ocr_stage.py`)
 
 **Module under test:** `src/modules/ingestion/ocr_stage.py`  
@@ -245,6 +345,77 @@ def test_short_qa_stays_in_chat():
 | Section number blocking | "1.2.3 Item" | Blocked as heading |
 | Enumeration blocking | "a) First item" | Blocked as heading |
 
+### 5.16 Enforce Chapter Structure (`test_enforce_chapter_structure.py`)
+
+**Module under test:** `chapter_placement.enforce_chapter_structure`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Mega-chapter split | 22 sections in one chapter | ≥ 2 chapters after enforce |
+| Parent mirror | Chapter title = first section | Mirror fixed or chapter retitled |
+| Statute prose | `Explanation:` / `Section N: … —` titles | Repaired or demoted |
+
+### 5.17 Heading Acceptance (`test_heading_acceptance.py`)
+
+**Module under test:** `quality/heading_acceptance.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| AC-01 partition leak | `CHAPTER I:` in export `##` | FAIL |
+| AC-03 statute prose | `Explanation:` as section title | FAIL |
+| Clean export | Valid study titles only | PASS |
+
+### 5.18 Notes Body Postprocess (`test_notes_body_postprocess.py`)
+
+**Module under test:** `generation/notes_body_postprocess.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Meta filler strip | "This chapter covers…" | Removed |
+| Heading echo | Body repeats section title | Echo removed |
+| Thin bullets | Orphan one-liner bullets | Stripped |
+| Never empty real content | All bullets thin but body real | Original kept (robustness guard) |
+
+### 5.19 Guest Auth (`test_guest_auth.py`)
+
+**Module under test:** `auth/config.py`, `api/routes/auth.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Config exposes flag | `GET /api/auth/config` | Includes `allow_guest` |
+| Guest token issued | `AUTH_ENABLED=true`, `ALLOW_GUEST=true` | `{user, token}` with JWT |
+| Guest blocked | `ALLOW_GUEST=false` | 403 |
+| No token when auth off | `AUTH_ENABLED=false` | `{user, token: null}` (shared dev identity) |
+
+### 5.20 LLM Rewrite Cache (`test_llm_cache.py`)
+
+**Module under test:** `shared/llm_cache.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Cache hit | Identical prompt twice | Second call skips LLM |
+| Key sensitivity | Different prompt/model/max_tokens | New cache key |
+| Disable flag | `REWRITE_CACHE_ENABLED=0` | Cache bypassed |
+
+### 5.21 LLM Chat Retry (`test_llm_chat_retry.py`)
+
+**Module under test:** `pipeline/llm_chat_client.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Transient retry | 429 then 200 | Succeeds after backoff |
+| Client error | 400 | No retry; falls through to model fallback |
+
+### 5.22 Hierarchy OpenAI Gate (`test_hierarchy_openai_gate.py`)
+
+**Module under test:** `structure/final_structuring/hierarchy_openai_refinement.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Clean titles | All hierarchy titles already clean | Cloud names pass skipped (cost saved) |
+| Prose/partition title | Statute-prose or partition heading present | Cloud names pass runs |
+| Generic title | "Section topic (p.N)" style | Cloud names pass runs |
+
 ---
 
 ## 6. Integration Tests
@@ -257,32 +428,25 @@ def test_short_qa_stays_in_chat():
 
 | Check | Expected Artifacts |
 |-------|-------------------|
-| Stage files exist | `01_layout_lines.json` through `16_rag_snapshot.json` |
+| Stage files exist | `s01_layout_lines.json` through `s16_rag_snapshot.json` (see `stage_registry.py`) |
 | Envelope schema | Each file has `stage`, `timestamp`, `items` or `payload` |
 | Item shape | Spot-check heading/fragment fields |
 
 **Expected stage files:**
 
 ```
-01_layout_lines.json
-02_noise_filter.json
-03_candidate_scoring.json
-03b_heading_validity_gate.json
-07_fragments.json
-08b_continuity_filter.json
-09_final_headings.json
-10_deterministic_toc.json
-11_book_metadata.json
-12_final_headings_2.json
-13_visual_elements.json
-14_doubted_sections.json
-15a_heading_hierarchy.json
-15b_doubted_resolved.json (if late TOC)
-15c_final_book.json
-15d_ultimate_sections.json
-15e_chapter_hierarchy.json
-15f_heading_cleanup.json
-16_rag_snapshot.json
+s01_layout_lines.json … s12_doubted_sections.json
+s15a_heading_hierarchy.json
+s15b_doubted_resolved.json (if late TOC)
+s15c_final_book.json
+s15d_ultimate_sections.json
+s15e_chapter_hierarchy.json
+s15f_heading_cleanup.json
+s15h_chapter_placement.json
+s15i_heading_refinement.json
+s15j_hierarchy_openai.json
+s15g_title_validation.json
+s16_rag_snapshot.json
 ```
 
 ### 6.2 Fragment Coverage (`test_fragment_coverage.py`)
@@ -320,7 +484,7 @@ Maps to `requirements-web-platform.md` §9:
 | Asset | Path | Purpose |
 |-------|------|---------|
 | Torts PDF | `tests/fixtures/The Law of Torts 2018 by Jhabwala.pdf` | Integration tests |
-| Sample logs | `backend/logs/run_*/` | Reference artifacts (not test fixtures) |
+| Sample logs | `{PROJECT_ROOT}/logs/run_*/` | Reference artifacts (not test fixtures) |
 
 ---
 
@@ -348,8 +512,8 @@ steps:
 
 | Gap | Priority | Suggested Test |
 |-----|----------|----------------|
-| No API route tests | High | `tests/api/test_auth.py`, `test_chat.py` with TestClient |
-| No frontend tests | Medium | Vitest + React Testing Library |
+| Partial API route tests | Medium | Auth/guest covered (`test_guest_auth.py`); add `test_chat.py`, `test_books.py` with TestClient |
+| No frontend tests | Medium | Vitest + React Testing Library (guest button, `downloadFile`) |
 | No E2E browser tests | Low | Playwright for upload → chat → download |
 | Upload job persistence | Medium | Test job survives... (currently in-memory only) |
 

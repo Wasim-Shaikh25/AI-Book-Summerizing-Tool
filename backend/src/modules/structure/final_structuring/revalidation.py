@@ -1,5 +1,5 @@
 """
-Stage 15b — selective revalidation (fast local LLM / llama.cpp).
+Stage 15b — selective revalidation (cloud LLM audit of flagged segments).
 
 Fast pass classifies all doubted segments; only suspicious items are sent to a
 small instruct model for a second opinion.
@@ -267,7 +267,7 @@ def apply_revalidation(
     if not classifier.enabled:
         print(
             f"[Stage 15b] {len(candidates)} segment(s) flagged for revalidation "
-            f"but LLM backend disabled (set LLM_PROVIDER to LLAMACPP, OLLAMA, GEMINI, or OPENAI)."
+            f"but LLM backend disabled (set LLM_PROVIDER to OPENAI or OPENROUTER)."
         )
         return draft_segments, []
 

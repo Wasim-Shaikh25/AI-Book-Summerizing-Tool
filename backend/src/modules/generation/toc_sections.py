@@ -6,9 +6,39 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
+from src.modules.pipeline.stage_registry import (
+    STAGE_15D,
+    STAGE_15E,
+    STAGE_15F,
+    STAGE_15G,
+    STAGE_15H,
+    resolve_existing_artifact,
+)
 from src.shared.models import NormalizedLine
 from src.modules.storage.knowledge_store import KnowledgeStore
 from src.modules.storage.toc_repository import TocRepository
+
+
+def _logs_dir(logs_dir: str | Path | None = None) -> Path:
+    if logs_dir is not None:
+        return Path(logs_dir)
+    from src import config
+
+    return Path(getattr(config, "LOGS_FOLDER", "logs"))
+
+
+def _pdf_matches_run(run_dir: Path, pdf_name: str) -> bool:
+    meta = resolve_existing_artifact(run_dir, "book_metadata")
+    if meta is None:
+        return True
+    try:
+        meta_data = json.loads(meta.read_text(encoding="utf-8"))
+        pdf_file = meta_data.get("pdf_file")
+        if pdf_file and pdf_name not in str(pdf_file):
+            return False
+    except Exception:
+        pass
+    return True
 
 
 def _line_text_map(lines: Sequence[NormalizedLine]) -> Dict[int, str]:
@@ -46,6 +76,87 @@ def _body_from_15d_row(row: Dict[str, Any], line_text: Dict[int, str]) -> str:
     return preview
 
 
+def _substantive_subheading_labels(subs: Sequence[Dict[str, Any]], *, min_chars: int = 40) -> List[str]:
+    """Subheadings that carry enough source text to deserve a rewrite subtopic line."""
+    labels: List[str] = []
+    for sub in subs:
+        h = str(sub.get("heading") or "").strip()
+        if not h:
+            continue
+        frag = sub.get("fragment") or {}
+        chars = int(frag.get("chars") or 0)
+        preview = str(frag.get("preview") or "").strip()
+        if chars >= min_chars or len(preview) >= min_chars:
+            labels.append(h)
+    return labels
+
+
+def build_source_text_by_id(
+    hierarchy: Dict[str, Any],
+    line_text_by_id: Dict[int, str],
+) -> Dict[str, str]:
+    """Reconstruct the exact per-section source text the rewrite consumed.
+
+    Keyed by section_id over the resolved chapter hierarchy, using the same span
+    merge as the rewrite loader so audits compare notes against real source
+    (not a truncated preview). Subject-agnostic.
+    """
+    out: Dict[str, str] = {}
+    for chapter in hierarchy.get("chapters") or []:
+        for sec in chapter.get("sections") or []:
+            sid = str(sec.get("section_id") or "")
+            if not sid:
+                continue
+            out[sid] = _merge_section_body(sec, line_text_by_id)
+    return out
+
+
+def line_text_map_from_records(records: Sequence[Dict[str, Any]]) -> Dict[int, str]:
+    """Build a line_id -> text map from raw layout-line artifact records."""
+    out: Dict[int, str] = {}
+    for rec in records or []:
+        lid = rec.get("line_id") if isinstance(rec, dict) else None
+        if isinstance(lid, int):
+            out[lid] = str(rec.get("text") or "")
+    return out
+
+
+def _merge_section_body(
+    sec: Dict[str, Any],
+    line_text: Dict[int, str],
+    *,
+    min_chars: int = 10,
+) -> str:
+    """Merge section + subheading text; fall back to preview/heading so rewrite units match hierarchy."""
+    body = _body_from_15d_row(sec, line_text)
+    subs = sec.get("subheadings") or []
+    sub_blocks: List[str] = []
+    for sub in subs:
+        sub_heading = str(sub.get("heading") or "").strip()
+        sub_body = _body_from_15d_row(sub, line_text)
+        if sub_heading and sub_body:
+            sub_blocks.append(f"### {sub_heading}\n{sub_body}")
+    merged = body
+    if sub_blocks:
+        merged = (body + "\n\n" + "\n\n".join(sub_blocks)).strip() if body else "\n\n".join(sub_blocks)
+    if len(merged) >= min_chars or subs:
+        return merged
+    heading = str(sec.get("heading") or "").strip()
+    frag = sec.get("fragment") or {}
+    preview = str(frag.get("preview") or "").strip()
+    extra: List[str] = []
+    if preview:
+        extra.append(preview)
+    for sub in subs:
+        sub_frag = sub.get("fragment") or {}
+        sub_preview = str(sub_frag.get("preview") or "").strip()
+        if sub_preview:
+            extra.append(sub_preview)
+    if extra:
+        return "\n\n".join(extra).strip()
+    return heading
+
+
 def load_ultimate_sections_json(path: str | Path) -> Dict[str, Any]:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     items = data.get("items") if isinstance(data, dict) else data
@@ -56,55 +167,49 @@ def load_ultimate_sections_json(path: str | Path) -> Dict[str, Any]:
 
 def load_chapter_hierarchy_json(path: str | Path) -> Dict[str, Any]:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    items = data.get("items") if isinstance(data, dict) else data
-    if not isinstance(items, dict):
+    if not isinstance(data, dict):
         raise ValueError(f"Invalid chapter hierarchy payload in {path}")
-    return items
+    # Two equivalent on-disk schemas exist and both must load:
+    #   * legacy stage artifacts wrap the hierarchy under "items"
+    #     (e.g. s15f_heading_cleanup.json -> {"items": {"chapters": [...]}})
+    #   * the cloud-hierarchy stage stores chapters at the top level
+    #     (e.g. s15j_hierarchy_openai.json -> {"chapters": [...], "meta": {...}})
+    inner = data.get("items")
+    if isinstance(inner, dict) and inner.get("chapters") is not None:
+        return inner
+    if data.get("chapters") is not None:
+        return data
+    if isinstance(inner, dict):
+        return inner
+    raise ValueError(f"Invalid chapter hierarchy payload in {path}")
 
 
-def find_latest_hierarchy_log(*, pdf_name: str, logs_dir: str | Path = "logs") -> Optional[Path]:
-    """Prefer cleaned 15f artifact, then raw 15e."""
-    base = Path(logs_dir)
+def find_latest_hierarchy_log(*, pdf_name: str, logs_dir: str | Path | None = None) -> Optional[Path]:
+    """Prefer validated 15g artifact, then 15f, then raw 15e."""
+    base = _logs_dir(logs_dir)
     if not base.is_dir():
         return None
-    candidates: List[Path] = []
     for run_dir in sorted(base.glob("run_*"), reverse=True):
-        for name in ("15f_heading_cleanup.json", "15e_chapter_hierarchy.json"):
-            p = run_dir / name
-            if not p.exists():
-                continue
-            meta = run_dir / "11_book_metadata.json"
-            if meta.exists():
-                try:
-                    meta_data = json.loads(meta.read_text(encoding="utf-8"))
-                    if meta_data.get("pdf_file") and pdf_name not in str(meta_data.get("pdf_file")):
-                        continue
-                except Exception:
-                    pass
-            candidates.append(p)
-            break
-    return candidates[0] if candidates else None
-
-
-def find_latest_15e_log(*, pdf_name: str, logs_dir: str | Path = "logs") -> Optional[Path]:
-    base = Path(logs_dir)
-    if not base.is_dir():
-        return None
-    candidates: List[Path] = []
-    for run_dir in sorted(base.glob("run_*"), reverse=True):
-        p = run_dir / "15e_chapter_hierarchy.json"
-        if not p.exists():
+        if not _pdf_matches_run(run_dir, pdf_name):
             continue
-        meta = run_dir / "11_book_metadata.json"
-        if meta.exists():
-            try:
-                meta_data = json.loads(meta.read_text(encoding="utf-8"))
-                if meta_data.get("pdf_file") and pdf_name not in str(meta_data.get("pdf_file")):
-                    continue
-            except Exception:
-                pass
-        candidates.append(p)
-    return candidates[0] if candidates else None
+        for stage_key in (STAGE_15G, STAGE_15H, STAGE_15F, STAGE_15E):
+            path = resolve_existing_artifact(run_dir, stage_key)
+            if path is not None:
+                return path
+    return None
+
+
+def find_latest_15e_log(*, pdf_name: str, logs_dir: str | Path | None = None) -> Optional[Path]:
+    base = _logs_dir(logs_dir)
+    if not base.is_dir():
+        return None
+    for run_dir in sorted(base.glob("run_*"), reverse=True):
+        if not _pdf_matches_run(run_dir, pdf_name):
+            continue
+        path = resolve_existing_artifact(run_dir, STAGE_15E)
+        if path is not None:
+            return path
+    return None
 
 
 def load_rewrite_sections_from_15d(
@@ -120,19 +225,11 @@ def load_rewrite_sections_from_15d(
         heading = str(sec.get("heading") or "").strip()
         if not heading:
             continue
-        body = _body_from_15d_row(sec, line_text)
         subs = sec.get("subheadings") or []
-        sub_blocks: List[str] = []
-        for sub in subs:
-            sub_heading = str(sub.get("heading") or "").strip()
-            sub_body = _body_from_15d_row(sub, line_text)
-            if sub_heading and sub_body:
-                sub_blocks.append(f"### {sub_heading}\n{sub_body}")
-        merged = body
-        if sub_blocks:
-            merged = (body + "\n\n" + "\n\n".join(sub_blocks)).strip() if body else "\n\n".join(sub_blocks)
-        if len(merged) < 20 and not subs:
+        merged = _merge_section_body(sec, line_text)
+        if len(merged) < 3 and not subs:
             continue
+        sub_labels = _substantive_subheading_labels(subs)
         units.append(
             {
                 "section_id": sec.get("section_id"),
@@ -141,6 +238,7 @@ def load_rewrite_sections_from_15d(
                 "line_id": sec.get("line_id"),
                 "text": merged,
                 "subheading_count": len(subs),
+                "subheadings": sub_labels,
             }
         )
     units.sort(
@@ -159,29 +257,31 @@ def load_rewrite_sections_from_15e(
     lines: Sequence[NormalizedLine],
 ) -> List[Dict[str, Any]]:
     """Flatten 15e chapters into rewrite units with chapter metadata attached."""
+    import copy
+
+    from src.modules.structure.final_structuring.heading_cleanup import (
+        disambiguate_duplicate_section_headings,
+    )
+
+    hierarchy = copy.deepcopy(chapter_hierarchy)
+    chapters = list(hierarchy.get("chapters") or [])
+    disambiguate_duplicate_section_headings(chapters)
+
     line_text = _line_text_map(lines)
     units: List[Dict[str, Any]] = []
 
-    for chapter in chapter_hierarchy.get("chapters") or []:
+    for chapter in chapters:
         chapter_id = chapter.get("chapter_id")
         chapter_heading = str(chapter.get("heading") or "").strip()
         for sec in chapter.get("sections") or []:
             heading = str(sec.get("heading") or "").strip()
             if not heading:
                 continue
-            body = _body_from_15d_row(sec, line_text)
             subs = sec.get("subheadings") or []
-            sub_blocks: List[str] = []
-            for sub in subs:
-                sub_heading = str(sub.get("heading") or "").strip()
-                sub_body = _body_from_15d_row(sub, line_text)
-                if sub_heading and sub_body:
-                    sub_blocks.append(f"### {sub_heading}\n{sub_body}")
-            merged = body
-            if sub_blocks:
-                merged = (body + "\n\n" + "\n\n".join(sub_blocks)).strip() if body else "\n\n".join(sub_blocks)
-            if len(merged) < 20 and not subs:
+            merged = _merge_section_body(sec, line_text)
+            if len(merged) < 3 and not subs:
                 continue
+            sub_labels = _substantive_subheading_labels(subs)
             units.append(
                 {
                     "section_id": sec.get("section_id"),
@@ -190,6 +290,7 @@ def load_rewrite_sections_from_15e(
                     "line_id": sec.get("line_id"),
                     "text": merged,
                     "subheading_count": len(subs),
+                    "subheadings": sub_labels,
                     "chapter_id": chapter_id,
                     "chapter_heading": chapter_heading,
                     "chapter_page_start": chapter.get("page_start"),
@@ -221,25 +322,17 @@ def load_chapter_tree(chapter_hierarchy: Dict[str, Any]) -> List[Dict[str, Any]]
     return tree
 
 
-def find_latest_15d_log(*, pdf_name: str, logs_dir: str | Path = "logs") -> Optional[Path]:
-    base = Path(logs_dir)
+def find_latest_15d_log(*, pdf_name: str, logs_dir: str | Path | None = None) -> Optional[Path]:
+    base = _logs_dir(logs_dir)
     if not base.is_dir():
         return None
-    candidates: List[Path] = []
     for run_dir in sorted(base.glob("run_*"), reverse=True):
-        p = run_dir / "15d_ultimate_sections.json"
-        meta = run_dir / "11_book_metadata.json"
-        if not p.exists():
+        if not _pdf_matches_run(run_dir, pdf_name):
             continue
-        if meta.exists():
-            try:
-                meta_data = json.loads(meta.read_text(encoding="utf-8"))
-                if meta_data.get("pdf_file") and pdf_name not in str(meta_data.get("pdf_file")):
-                    continue
-            except Exception:
-                pass
-        candidates.append(p)
-    return candidates[0] if candidates else None
+        path = resolve_existing_artifact(run_dir, STAGE_15D)
+        if path is not None:
+            return path
+    return None
 
 
 def load_rewrite_sections(

@@ -12,22 +12,40 @@ venv/
 .mypy_cache/
 .ruff_cache/
 
-# VSCode
+# IDE
 .vscode/
+.idea/
 
 # Node.js
 node_modules/
 frontend/dist/
 
-# Local env files
+# Local env files (real secrets) — *.example profiles are committed
 .env
+.env.local
+.env.dev
+.env.prod
 
-# Run artifacts (optional but recommended for this project)
+# Runtime data (canonical paths under PROJECT_ROOT — see config LOGS_FOLDER / OUTPUT_FOLDER)
 logs/
 output/
 tmp/
+pdfs/
+backend/logs/
+backend/output/
+
+# SQLite journals
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Local LLM model weights (download separately)
 models/*.gguf
 models/*.tmp
 models/*.bin
+
+# OS / editor noise
+Thumbs.db
+.DS_Store
+*.swp
+*.swo

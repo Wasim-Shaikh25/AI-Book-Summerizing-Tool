@@ -1,0 +1,62 @@
+---
+description: Universal code quality and style rules
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Code Quality and Style Rules
+
+Follow existing project style.
+
+If no style exists:
+
+- choose simple readable conventions
+- prefer clarity over cleverness
+- use meaningful names
+- keep functions small
+- keep modules focused
+- avoid excessive abstraction
+
+## General Rules
+
+- Use type annotations where supported.
+- Validate inputs.
+- Handle errors explicitly.
+- Avoid magic constants.
+- Avoid duplicated code.
+- Avoid unnecessary dependencies.
+- Use configuration instead of hardcoding.
+- Write code that can be tested.
+- Keep comments useful and not noisy.
+
+## Error Handling
+
+Errors should be:
+
+- explicit
+- actionable
+- logged when appropriate
+- not leaking secrets
+- not hiding root cause from logs
+- user-safe in API/UI responses
+
+## Logging
+
+Use structured logs where possible.
+
+Include relevant IDs:
+- request ID
+- user/session ID if applicable
+- job ID
+- resource ID
+- source ID
+- trace ID
+
+Do not log secrets or sensitive raw data.
+
+## Refactoring
+
+Refactor only when needed for the requested task.
+
+Do not perform broad unrelated refactors.

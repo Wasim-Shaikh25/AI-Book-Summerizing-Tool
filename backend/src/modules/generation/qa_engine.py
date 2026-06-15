@@ -45,20 +45,25 @@ def retrieve_sections(
     return list(sections[:top_k])
 
 
-def _format_context(chunks: Sequence[Dict[str, Any]], *, max_chars: int = 12000) -> str:
-    parts: List[str] = []
-    used = 0
-    for sec in chunks:
-        heading = str(sec.get("heading") or "Section").strip()
-        body = str(sec.get("text") or "").strip()
-        if not body:
-            continue
-        block = f"### {heading}\n{body[:3000]}"
-        if used + len(block) > max_chars:
-            break
-        parts.append(block)
-        used += len(block)
-    return "\n\n".join(parts)
+def _format_context(chunks: Sequence[Dict[str, Any]], *, max_chars: int = 12000) -> tuple[str, List[str]]:
+    from src.modules.rag.context_builder import build_qa_context
+
+    return build_qa_context(chunks, max_chars=max_chars, include_citations=True)
+
+
+def _fallback_subject_relevance(
+    question: str,
+    *,
+    subject_hint: str,
+    book_title: str,
+) -> tuple[bool, str]:
+    """When the relevance LLM returns unparseable output, use book-domain token overlap."""
+    domain = _tokens(subject_hint) | _tokens(book_title)
+    overlap = _tokens(question) & domain
+    if overlap:
+        return True, "keyword overlap with book domain"
+    # User is asking about their uploaded book — prefer answering unless clearly off-topic.
+    return True, "classification unavailable — assume related to uploaded book"
 
 
 def _parse_json_bool(raw: str) -> Optional[bool]:
@@ -102,22 +107,11 @@ class BookQaEngine:
         raw = self.router.generate(system_prompt=system, user_prompt=user, max_tokens=200).get("text") or ""
         related = _parse_json_bool(raw)
         if related is None:
-            # Conservative default for legal/scenario phrasing
-            tortish = any(
-                w in question.lower()
-                for w in (
-                    "tort",
-                    "negligence",
-                    "liability",
-                    "damages",
-                    "injury",
-                    "defendant",
-                    "plaintiff",
-                    "accident",
-                    "consumer",
-                )
+            return _fallback_subject_relevance(
+                question,
+                subject_hint=self.subject_hint,
+                book_title=self.book_title,
             )
-            return tortish, "keyword fallback"
         reason = ""
         try:
             reason = str(json.loads(raw).get("reason") or "")
@@ -136,7 +130,10 @@ class BookQaEngine:
         format_type: str = "paragraph",
     ) -> Dict[str, Any]:
         relevant = self._retrieve(question, sections)
-        context = _format_context(relevant)
+        from src import config as cfg
+
+        max_ctx = int(getattr(cfg, "RAG_CONTEXT_MAX_CHARS", 12000) or 12000)
+        context, citation_labels = _format_context(relevant, max_chars=max_ctx)
 
         related, rel_reason = self.check_subject_relevance(question)
         if not related and not allow_external:
@@ -147,7 +144,7 @@ class BookQaEngine:
                 ),
                 "refused": True,
                 "related": False,
-                "sources": [str(s.get("heading") or "") for s in relevant[:3]],
+                "sources": citation_labels[:3] or [str(s.get("heading") or "") for s in relevant[:3]],
             }
 
         simple = language_level == "simple"
@@ -162,7 +159,7 @@ class BookQaEngine:
             system_parts.append(
                 "Use the provided book excerpts as primary grounding. "
                 "For scenario questions not literally in the book, apply principles from the excerpts "
-                "and standard subject knowledge — do not invent case names or statutes not implied by context."
+                "and standard subject knowledge — do not invent facts, citations, or examples not implied by context."
             )
         else:
             system_parts.append(
@@ -194,7 +191,7 @@ class BookQaEngine:
                 "answer": "[!] No answer generated (check LLM provider / API keys).",
                 "refused": False,
                 "related": related,
-                "sources": [str(s.get("heading") or "") for s in relevant[:5]],
+                "sources": citation_labels[:5] or [str(s.get("heading") or "") for s in relevant[:5]],
             }
 
         return {
@@ -202,8 +199,8 @@ class BookQaEngine:
             "refused": False,
             "related": related,
             "rel_reason": rel_reason,
-            "sources": [str(s.get("heading") or "") for s in relevant[:5]],
-            "retrieval": "vector_rag" if self.book_id else "lexical",
+            "sources": citation_labels[:5] or [str(s.get("heading") or "") for s in relevant[:5]],
+            "retrieval": "vector_rag_rerank" if self.book_id else "lexical",
         }
 
     def _retrieve(self, question: str, sections: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
