@@ -124,28 +124,35 @@ Per-section LLM output (body only — do NOT repeat the section title as first l
 """
 
 
-def universal_prose_rules() -> str:
+def universal_prose_rules(*, book_style: bool = False) -> str:
+    if book_style:
+        return """\
+Layout rules:
+  - Write continuous paragraphs; do not chop every sentence to its own line
+  - Use bullets ONLY for 3+ parallel items, steps, or case lists — not whole sections
+  - No "Key Points", "Quick Revision" blocks unless user explicitly asked
+  - No outline/admin filler; English only; faithful to source
+"""
     return """\
-Layout rules (export only — do NOT limit coverage, length, or sentence count):
-  - Word export uses Times New Roman 11pt, justified prose with first-line indent
-  - "Simple English" = plain words a beginner can understand — NOT short sentences or omitted detail
-  - Write continuous paragraphs for explanations; do not chop every sentence into its own line
-  - Use bullets or numbered lists ONLY for examples, steps, case lists, or 3+ parallel items — not for whole sections
-  - Do NOT add "Key Points", "Quick Revision", "Definition", or similar template blocks unless the user explicitly requested them
-  - Do NOT repeat the section title as the first sentence or standalone line
-  - Do NOT use standalone **bold** lines as fake subheadings unless the user asked for labeled blocks
-  - No syllabus/admin filler (course outcomes, instructional hours, module labels, "This chapter covers…")
-  - English only; stay faithful to the provided source text
+Layout rules (study notes):
+  - Mix prose paragraphs (for explanations) with bullet points (for key facts/types/items)
+  - Use ### subheadings for distinct sub-topics within the section
+  - Bullets are appropriate for: definitions, properties, elements, types, provisions, examples
+  - No "Key Points", "Quick Revision" template blocks unless user explicitly asked
+  - No outline/admin filler; English only; faithful to source
 """
 
 
 def universal_rewrite_format_addendum() -> str:
     """Appended to every rewrite system prompt — structure only, not content length."""
+    from src.shared.notes_export_style import is_book_export_style
+
+    book = is_book_export_style()
     return (
         "\nUNIVERSAL OUTPUT FORMAT (structure only — user request controls length and depth):\n"
         + universal_markdown_hierarchy()
         + "\n"
-        + universal_prose_rules()
+        + universal_prose_rules(book_style=book)
         + "\nExported book style: Times New Roman 11pt body, justified with first-line indent; "
         "chapter/section/subtopic headings 20pt / 16pt / 13pt.\n"
     )

@@ -22,7 +22,7 @@ class PDFReader:
             return "Rewritten Book Notes"
         base_name = os.path.splitext(filenames[0])[0]
         base_name = re.sub(r'\[\d+-\d+\]', '', base_name)
-        base_name = re.sub(r'Notes\s*(MU)?\s*(New\s*syllabus)?\s*\d{4}\s*\d{2}\s*\d{2}', '', base_name, flags=re.IGNORECASE)
+        base_name = re.sub(r'Notes\s*(MU)?\s*(New\s*outline)?\s*\d{4}\s*\d{2}\s*\d{2}', '', base_name, flags=re.IGNORECASE)
         base_name = re.sub(r'Notes\s*(\d{4}\s*\d{2}\s*\d{2})?', '', base_name, flags=re.IGNORECASE)
         base_name = re.sub(r'Notes', '', base_name, flags=re.IGNORECASE)
         base_name = re.sub(r'PDF', '', base_name, flags=re.IGNORECASE)

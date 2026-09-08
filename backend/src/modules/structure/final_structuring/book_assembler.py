@@ -330,13 +330,20 @@ def build_ultimate_sections(
         )
 
     def _is_high_probability_row(row: Dict[str, Any]) -> bool:
+        """Modified for rewrite sizing only - use strongest headings only."""
         text = str(row.get("text") or "")
         body_chars = int(row.get("body_chars") or 0)
+        level = int(row.get("level") or 2)
+        
         if _SEE_ABOVE_RE.search(text):
             return False
+        
+        # Much stricter threshold for rewrite sizing - only strongest headings
+        # Require either structural heading OR substantial body content
         if _looks_like_structural_heading(text):
-            return body_chars >= min_heading_fragment_chars or int(row.get("level") or 2) == 1
-        if body_chars >= min_heading_fragment_chars:
+            # Structural headings need more body content for rewrite sizing
+            return body_chars >= (min_heading_fragment_chars * 1.5) or level == 1
+        if body_chars >= (min_heading_fragment_chars * 2.0):
             return True
         if _PREAMBLE_CLAUSE_RE.search(text):
             return False
@@ -383,7 +390,8 @@ def build_ultimate_sections(
             sections.append(current)
             current = None
 
-    semantic_threshold = 0.38
+    # Stricter thresholds for rewrite sizing - strongest headings only
+    semantic_threshold = 0.50  # Increased from 0.38 for higher confidence
     low_coherence_folds = 0
     page_count = _page_count_from_lines(lines)
     headings_per_page = len(kept_rows) / max(page_count, 1)

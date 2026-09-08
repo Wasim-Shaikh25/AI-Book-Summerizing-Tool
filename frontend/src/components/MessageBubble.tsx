@@ -9,6 +9,7 @@ interface Props {
 export function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
   const downloadUrl = message.metadata?.docx_download_url;
+  const sources = message.metadata?.sources;
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +37,23 @@ export function MessageBubble({ message }: Props) {
             <ReactMarkdown>{message.content}</ReactMarkdown>
           )}
         </div>
+        {sources && sources.length > 0 && (
+          <div className="citations-section">
+            <p className="citations-label">Sources:</p>
+            <ul className="citations-list">
+              {sources.slice(0, 10).map((source, idx) => (
+                <li key={idx} className="citation-item">
+                  {source}
+                </li>
+              ))}
+              {sources.length > 10 && (
+                <li className="citation-more">
+                  +{sources.length - 10} more sources
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
         {downloadUrl && (
           <>
             <button

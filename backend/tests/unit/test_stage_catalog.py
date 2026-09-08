@@ -23,7 +23,7 @@ def test_structure_phases_grouped_without_gaps() -> None:
         all_keys |= keys
     phase_keys = {s.log_key for s in STRUCTURE_PHASES if s.log_key}
     assert all_keys == phase_keys
-    assert len(STRUCTURE_PHASES) == 10
+    assert len(STRUCTURE_PHASES) == 11  # +1 for synced_hierarchy (Phase 2)
 
 
 def test_legacy_fn_aliases_map_to_progress_functions() -> None:

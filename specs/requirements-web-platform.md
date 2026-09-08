@@ -1,4 +1,4 @@
-# Web Platform Requirements — AI Notes Creator
+# Web Platform Requirements — InsightEngine
 
 > **Role:** Functional requirements only (WHAT). Implementation detail in linked specs.  
 > **Version:** 3.0 — deduplicated 2026-06-07

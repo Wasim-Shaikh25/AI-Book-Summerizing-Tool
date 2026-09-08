@@ -196,6 +196,98 @@ def _apply_titles_to_hierarchy(
     return updated
 
 
+def sync_hierarchy_from_markdown(
+    md_path: "Path",
+    hierarchy: Dict[str, Any],
+    *,
+    write_path: Optional["Path"] = None,
+) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    """Rebuild hierarchy headings and section order from the final Markdown file.
+
+    This is a superset of ``propagate_titles_to_hierarchy``: it also reorders
+    sections within each chapter to match the Markdown display sequence and does
+    not require a FixReport — it reads the MD directly.
+
+    Args:
+        md_path:    Path to the ``.md`` notes file (the user-visible source of truth).
+        hierarchy:  The loaded hierarchy dict (mutated in-place and returned).
+        write_path: When provided, write the patched hierarchy as JSON here
+                    (new ``s15k_synced_hierarchy.json`` artifact).
+
+    Returns:
+        ``(hierarchy, sync_report)`` where ``sync_report`` has keys:
+            ``patched``  — number of section/chapter headings changed.
+            ``skipped``  — number of sids in Markdown not found in hierarchy.
+            ``warnings`` — list of human-readable warning strings.
+    """
+    from src.modules.generation.notes_structure_fix import parse_notes_md
+
+    md_text = Path(md_path).read_text(encoding="utf-8")
+    doc = parse_notes_md(md_text)
+
+    # Build sid → (chapter_title, section_title, order_within_chapter) map.
+    sid_to_info: Dict[str, Dict[str, Any]] = {}
+    for ch in doc.chapters:
+        for order, sec in enumerate(ch.sections):
+            if getattr(sec, "dropped", False) or not getattr(sec, "sid", ""):
+                continue
+            sid_to_info[sec.sid] = {
+                "section_heading": sec.title,
+                "chapter_heading": ch.title,
+                "order": order,
+            }
+
+    patched = 0
+    skipped = 0
+    warnings: list[str] = []
+
+    chapters = hierarchy.get("chapters") or []
+    for ch in chapters:
+        sections = ch.get("sections") or []
+        ch_vote: Dict[str, int] = {}
+
+        for sec in sections:
+            sid = str(sec.get("section_id") or "")
+            if not sid:
+                continue
+            info = sid_to_info.get(sid)
+            if info is None:
+                skipped += 1
+                warnings.append(
+                    f"sid '{sid}' referenced in hierarchy not found in Markdown — skipped"
+                )
+                continue
+            new_heading = info["section_heading"]
+            if new_heading and new_heading != str(sec.get("heading") or "").strip():
+                sec["heading"] = new_heading
+                patched += 1
+            ch_title = info.get("chapter_heading")
+            if ch_title:
+                ch_vote[ch_title] = ch_vote.get(ch_title, 0) + 1
+
+        def _section_order(s: Dict[str, Any]) -> int:
+            info = sid_to_info.get(str(s.get("section_id") or ""))
+            return int(info["order"]) if info else 9999
+
+        ch["sections"] = sorted(sections, key=_section_order)
+
+        if ch_vote:
+            new_ch = max(ch_vote, key=lambda k: ch_vote[k])
+            if new_ch and new_ch != str(ch.get("heading") or "").strip():
+                ch["heading"] = new_ch
+                patched += 1
+
+    if write_path is not None:
+        write_path = Path(write_path)
+        write_path.parent.mkdir(parents=True, exist_ok=True)
+        write_path.write_text(
+            json.dumps(hierarchy, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    return hierarchy, {"patched": patched, "skipped": skipped, "warnings": warnings}
+
+
 def propagate_titles_to_hierarchy(
     fixed_md: str,
     hierarchy: Optional[Dict[str, Any]],

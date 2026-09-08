@@ -21,7 +21,7 @@ _REGROUP_SYSTEM = """You organize academic textbook sections into study chapters
 
 Rules:
 1) Group ALL related consecutive sections under ONE chapter (same legal theme: marriage, divorce, succession, fundamental rights, pollution acts, etc.).
-2) Target 6-10 chapters for a ~50-section syllabus book. NEVER create more than 12 chapters.
+2) Target 6-10 chapters for a ~50-section outline book. NEVER create more than 12 chapters.
 3) Before starting a new chapter, ask: "Is the next section about the SAME major topic as the previous sections?" If yes, keep it in the same chapter.
 4) Do NOT create a chapter with only 1-2 sections unless the heading is MODULE N, UNIT N, or PART N.
 5) Combine thin tail chapters (probate, wills, misc) into the nearest related chapter when themes overlap.
@@ -38,7 +38,7 @@ Rules:
 1) chapter_heading: specific legal topic covering ALL sections (e.g. "Sources and Schools of Muslim Law", NOT "Family Law I" or "Overview of...").
 2) section_heading: the exact legal topic taught (e.g. "Meaning of Mahr", NOT "Overview of Family Law" or book/module labels).
 3) subheading: short topic label (max 8 words). No essay phrases like "A Study of...".
-4) Never use: "CHAPTER I:", "PART II", "OF OFFENCES…" ALL-CAPS partition lines, "Overview of X", "Family Law I/II", "Module N", book filename, or syllabus-only labels as section/subheading titles — those are chapter breaks only.
+4) Never use: "CHAPTER I:", "PART II", "OF OFFENCES…" ALL-CAPS partition lines, "Overview of X", "Family Law I/II", "Module N", book filename, or outline-only labels as section/subheading titles — those are chapter breaks only.
 5) Use consistent title case study labels (e.g. "Preliminary", "Punishments", "Offences Against the State") — not raw PDF chunk headings.
 6) Do not change section_id, topic_id, or hierarchy structure — titles only.
 7) Use simple English suitable for exam revision.

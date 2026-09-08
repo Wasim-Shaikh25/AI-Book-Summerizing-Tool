@@ -1,11 +1,23 @@
 # ============================================================================
-# default.yaml — Base configuration (AI Notes Creator Model)
+# default.yaml — Base configuration (InsightEngine)
 # ----------------------------------------------------------------------------
 # Authoritative key catalog: /spec/modules/parameters-config.md
 # Overlay order: default.yaml -> environment variables -> .env (via loader)
 # Secrets MUST come from env vars (.env). NEVER place secrets here.
 # MESO Rule 12: tunables live here, not as literals in business logic.
 # ============================================================================
+
+# Profiles: Set INSIGHT_PROFILE=research to enable all research features at once
+profiles:
+  research:
+    enable: false  # Set INSIGHT_PROFILE=research to activate
+    settings:
+      qa_multistep_enabled: true
+      rag_corpus_index_enabled: true
+      knowledge_graph_enabled: true
+      rag_chunk_strategy: semantic
+      rewrite_rag_context: true
+      body_audit_enabled: true
 
 paths:
   pdf_folder: pdfs
@@ -24,12 +36,36 @@ export:
   line_spacing: 1.2
   first_line_indent_inches: 0.3
   append_subtopic_checklist: false   # do not inject "**Also cover:** ..." into section bodies
-  notes_style: book   # book (prose textbook layout) | study (bullets + subtopic labels)
+  notes_style: study   # study (bullets + ### subheadings, default) | book (prose textbook layout)
   missing_body_mode: placeholder   # placeholder | fail | skip
   structure_fix_enabled: true        # post-export heading repair + list renumber (hybrid LLM/MiniLM)
   structure_fix_engine: hybrid       # hybrid | minilm | api
   structure_fix_merge_duplicates: false
   structure_fix_drop_low_grounding: false
+  sync_hierarchy_from_markdown: false   # set SYNC_HIERARCHY_FROM_MD=1 to rebuild hierarchy from final MD
+
+body_audit:
+  enabled: false           # set BODY_STRUCTURE_AUDIT_ENABLED=1 to enable post-rewrite audit
+  llm: false               # set BODY_AUDIT_LLM=1 to enable optional LLM fix pass
+  subheading_chars: 600    # min body chars before "missing subheadings" is flagged
+
+semantic_splitter:
+  enabled: false          # set SEMANTIC_SPLIT_ENABLED=1 to enable pre-LLM section splitting
+  threshold: 2000         # min chars before splitting is attempted
+
+qa:
+  multistep_enabled: false       # set QA_MULTISTEP_ENABLED=1 to enable chain-of-thought Q&A
+  multistep_top_k_per_question: 3  # chunks retrieved per sub-question
+
+rag_advanced:
+  chunk_strategy: section        # section | paragraph | semantic
+  semantic_chunk_target_chars: 500
+  semantic_overlap_sents: 1
+  corpus_index_enabled: false    # set RAG_CORPUS_INDEX_ENABLED=1 for cross-book search
+  rewrite_rag_context: false     # set REWRITE_RAG_CONTEXT=1 for same-book context in rewrite
+
+knowledge_graph:
+  enabled: false                 # set KNOWLEDGE_GRAPH_ENABLED=1 to enable concept graph
 
 chunking:
   chunk_size_words: 1500
@@ -113,6 +149,9 @@ chapter_hierarchy:
 
 ingestion:
   profile: fast_local             # fast_local | quality_cloud | debug
+  layout_backend: auto            # auto | pymupdf | docling — auto uses Docling on scan-like PDFs when installed
+  layout_auto_sample_pages: 8      # pages sampled for scan detection in auto mode
+  layout_docling_always: false     # true = prefer Docling whenever installed (quality_cloud sets true)
   # Per-profile overrides (merged over built-in defaults in profile.py)
   profiles:
     fast_local:
@@ -141,6 +180,8 @@ ingestion:
       heading_refinement_openai_fallback: true
       use_llm_intent: true
       notes_quality_llm: true
+      ingestion_layout_backend: auto
+      ingestion_layout_docling_always: true
     debug:
       upload_skip_rag: false
       ocr_zoom: 2.0

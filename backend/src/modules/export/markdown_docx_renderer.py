@@ -263,19 +263,21 @@ def render_markdown_to_document(
                 style_cover_title(h)
             continue
 
-        if is_callout_label(line):
-            list_tracker.on_non_ordered_line()
-            label = callout_label_text(line)
-            if is_named_callout_label(label):
-                add_callout_paragraph(doc, "", label=label)
-            else:
-                add_topic_subheading(doc, label)
-            continue
+        # Disabled internal subtitles for uniform structure - treat as regular text
+        # if is_callout_label(line):
+        #     list_tracker.on_non_ordered_line()
+        #     label = callout_label_text(line)
+        #     if is_named_callout_label(label):
+        #         add_callout_paragraph(doc, "", label=label)
+        #     else:
+        #         add_topic_subheading(doc, label)
+        #     continue
 
-        if line.startswith("> "):
-            list_tracker.on_non_ordered_line()
-            add_callout_paragraph(doc, line[2:].strip())
-            continue
+        # Disabled callout paragraphs for uniform structure - treat as regular text
+        # if line.startswith("> "):
+        #     list_tracker.on_non_ordered_line()
+        #     add_callout_paragraph(doc, line[2:].strip())
+        #     continue
 
         bullet = _BULLET_RE.match(line)
         if bullet:
@@ -291,14 +293,14 @@ def render_markdown_to_document(
         if ordered:
             indent, text = ordered.groups()
             level = min(len(indent.expandtabs()) // 2, 2)
-            style = "List Number" if level == 0 else f"List Number {level + 1}"
-            try:
-                p = doc.add_paragraph(style=style)
-            except KeyError:
-                p = doc.add_paragraph(style="List Number")
-            list_tracker.apply_restart_if_needed(p, level=level)
+            list_tracker.on_non_ordered_line()
+            num_m = re.match(r"^(\s*)(\d+)\.", line)
+            num = num_m.group(2) if num_m else "1"
+            p = doc.add_paragraph()
+            prefix = p.add_run(f"{num}. ")
+            prefix.bold = True
             _add_inline_runs(p, text.strip())
-            style_numbered_paragraph(p, level=level)
+            style_bullet_paragraph(p, level=level)
             continue
 
         list_tracker.on_non_ordered_line()

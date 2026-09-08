@@ -293,11 +293,20 @@ def pick_chapter_title(
     for sec in secs:
         h = _norm(str(sec.get("heading") or ""))
         if is_structural_chapter_break(h):
-            return h[:120]
+            from src.modules.structure.dropped_heading_registry import partition_heading_to_study_title
+
+            converted = partition_heading_to_study_title(h)
+            if converted and is_acceptable_study_title(converted, book_title=book_title):
+                return converted[:120]
+            continue
         for sub in sec.get("subheadings") or []:
             sh = _norm(str(sub.get("heading") or ""))
             if is_structural_chapter_break(sh):
-                return sh[:120]
+                from src.modules.structure.dropped_heading_registry import partition_heading_to_study_title
+
+                converted = partition_heading_to_study_title(sh)
+                if converted and is_acceptable_study_title(converted, book_title=book_title):
+                    return converted[:120]
 
     raw_candidates = [_norm(str(s.get("heading") or "")) for s in secs]
     candidates = _filter_candidates(raw_candidates)

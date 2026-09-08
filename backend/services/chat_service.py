@@ -21,6 +21,7 @@ from src.modules.interaction.command_parser import IntentResult, effective_user_
 from src.modules.interaction.intent_router import IntentRouter
 from src.modules.interaction.handlers.ask_handler import AskHandler
 from src.modules.interaction.handlers.rewrite_handler import RewriteHandler
+from src.modules.orchestration.research_agent import ResearchAgent
 from src.modules.storage.knowledge_store import KnowledgeStore
 
 from auth.config import get_auth_settings
@@ -45,6 +46,8 @@ class ChatService:
         self.user_books = UserBookRepository()
         self.exports = ExportRepository()
         self.word_exporter = WordExporter(output_folder=config.OUTPUT_FOLDER)
+        # Research agent for agentic workflows (optional alternative to IntentRouter)
+        self.agent = None  # Lazy-loaded when needed
 
     def _book_context(self, user_id: str, book_id: str) -> dict[str, Any] | None:
         ub = self.user_books.get(user_id, book_id)
@@ -123,17 +126,38 @@ class ChatService:
         docx_path = results.get("docx")
         return {"content": content, "docx_path": docx_path, "task": "rewrite"}
 
-    def _run_qa(self, ctx: dict[str, Any], intent: IntentResult) -> dict[str, Any]:
-        answer = AskHandler(
+    def _run_qa(self, ctx: dict[str, Any], intent: IntentResult, conversation_history: list[dict[str, str]] | None = None) -> dict[str, Any]:
+        result = AskHandler(
             self.store,
             book_id=ctx["book_id"],
             book_title=ctx["title"],
             pdf_path=ctx.get("file_path"),
             ultimate_log_dir=ctx.get("log_dir"),
             subject_hint=ctx["title"],
+            conversation_history=conversation_history or []
         ).handle_intent(intent)
 
-        return {"content": answer or "I could not generate an answer.", "task": "qa"}
+        if isinstance(result, dict):
+            content = result.get("answer") or "I could not generate an answer."
+            sources = result.get("sources", [])
+            related = result.get("related", True)
+            retrieval_mode = result.get("retrieval_mode")
+            reasoning = result.get("reasoning")
+        else:
+            content = result or "I could not generate an answer."
+            sources = []
+            related = True
+            retrieval_mode = None
+            reasoning = None
+
+        return {
+            "content": content,
+            "task": "qa",
+            "sources": sources,
+            "related": related,
+            "retrieval_mode": retrieval_mode,
+            "reasoning": reasoning,
+        }
 
     def _handle_word_only_request(
         self, user_id: str, conversation_id: str, ctx: dict[str, Any]
@@ -207,86 +231,44 @@ class ChatService:
             status("done")
             return result
 
-        status("parsing_intent")
-        intent = self.parser.parse_intent(user_text)
-        if not isinstance(intent, IntentResult):
-            raise ValueError("Could not parse intent")
+        status("planning")
+        # Get full conversation history for the agent
+        messages = self.messages.list_for_conversation(conversation_id)
+        conversation_history = [
+            {"role": msg.role, "content": msg.content} for msg in messages[-10:]
+        ]
+        logger.info(f"Retrieved {len(messages)} messages from conversation {conversation_id}")
+        logger.info(f"Conversation history length for agent: {len(conversation_history)}")
+        if conversation_history:
+            logger.info(f"Last message in history: role={conversation_history[-1]['role']}, content_length={len(conversation_history[-1]['content'])}")
 
-        if intent.task_type == "clarify":
-            clarify = (
-                intent.clarification_message.strip()
-                or "Could you clarify what you'd like — rewrite the full book, or ask a specific question?"
-            )
-            assistant = self.messages.add(conversation_id, "assistant", clarify, metadata={"task_type": "clarify"})
-            self.conversations.touch(conversation_id)
-            status("done")
-            return {
-                "assistant_message": self._msg_to_dict(assistant),
-                "docx_available": False,
-                "docx_download_url": None,
-                "char_limit": get_auth_settings().chat_docx_char_limit,
-                "is_rewrite": False,
-            }
+        # Run agentic flow with current book context
+        agent = ResearchAgent(
+            user_id=user_id,
+            book_context=ctx,
+            max_tool_calls=5,
+        )
 
-        if intent.task_type == "export":
-            status("exporting_word")
-            result = self._handle_word_only_request(user_id, conversation_id, ctx)
-            self.conversations.touch(conversation_id)
-            status("done")
-            return result
+        result = agent.run(
+            query=user_text,
+            conversation_history=conversation_history,
+            require_approval=False,
+        )
 
-        if is_rewrite := intent.task_type in ("rewrite_book", "summarize_book", "study_notes", "revision_notes"):
-            status("rewriting_book", {"task_type": intent.task_type, "routing": intent.routing_method})
-            engine_result = self._run_rewrite(ctx, intent)
-        else:
-            status("answering_question", {"routing": intent.routing_method})
-            engine_result = self._run_qa(ctx, intent)
+        content = result.final_answer
+        status("done")
 
-        content = engine_result.get("content") or ""
-        needs_docx, reason = resolve_export_mode(intent, answer=content, user_text=user_text)
-
-        export_id = None
-        download_url = None
-        docx_path = engine_result.get("docx_path")
-
-        if needs_docx:
-            status("preparing_word", {"reason": reason})
-            if docx_path and os.path.exists(docx_path):
-                file_name = os.path.basename(docx_path)
-                record = self.exports.save(user_id, docx_path, file_name)
-                export_id = record.export_id
-            else:
-                export_id, docx_path = self._export_answer_docx(user_id, content, ctx["title"])
-            download_url = f"/api/exports/{export_id}"
-
-        display_content = content
-        if needs_docx and reason in ("qa_length", "user_request"):
-            display_content = (
-                f"{content}\n\n---\n\n"
-                f"Your answer is long, so a Word file has been prepared.\n"
-                f"Download: {download_url}"
-            )
-        elif needs_docx and reason == "rewrite":
-            display_content = (
-                f"Full book rewrite complete.\n\n"
-                f"Download Word file: {download_url}\n\n"
-                f"Preview (first 2000 chars):\n\n{content[:2000]}"
-                f"{'...' if len(content) > 2000 else ''}"
-            )
-
-        meta = {
-            "task_type": intent.task_type,
-            "routing_method": intent.routing_method,
-            "export_reason": reason,
-            "docx_available": bool(export_id),
-            "docx_download_url": download_url,
-        }
+        # Metadata must stay JSON-serializable: ToolResult objects never leave this layer
         assistant = self.messages.add(
             conversation_id,
             "assistant",
-            display_content,
-            export_id=export_id,
-            metadata=meta,
+            content,
+            metadata={
+                "task_type": "agent",
+                "routing_method": "agent",
+                "tool_count": len(result.tool_results),
+                "total_cost_seconds": result.total_cost_seconds,
+            },
         )
 
         title = conv.title
@@ -295,11 +277,90 @@ class ChatService:
         self.conversations.touch(conversation_id, title=title)
 
         settings = get_auth_settings()
-        status("done")
-        return {
-            "assistant_message": self._msg_to_dict(assistant, download_url),
-            "docx_available": bool(export_id),
-            "docx_download_url": download_url,
+        response = {
+            "assistant_message": self._msg_to_dict(assistant),
+            "docx_available": False,
+            "docx_download_url": None,
             "char_limit": settings.chat_docx_char_limit,
-            "is_rewrite": is_rewrite,
+            "is_rewrite": False,
         }
+        return response
+
+    def chat_with_agent(
+        self,
+        conversation_id: str,
+        user_text: str,
+        user_id: str,
+        status: Callable[[str], None] = lambda _: None,
+    ) -> dict:
+        """Chat using the ResearchAgent (agentic workflow).
+
+        This is an alternative to the legacy IntentRouter-based chat.
+        The agent plans tool calls and executes them dynamically.
+
+        Args:
+            conversation_id: Conversation identifier.
+            user_text: User message.
+            user_id: User ID.
+            status: Status callback for progress updates.
+
+        Returns:
+            Response with agent execution result.
+        """
+        # Lazy-load agent
+        if self.agent is None:
+            self.agent = ResearchAgent(user_id=user_id)
+
+        # Get conversation context
+        messages = self.messages.list_by_conversation(conversation_id)
+        conversation_history = [
+            {"role": msg.role, "content": msg.content} for msg in messages[-10:]
+        ]
+
+        # Get book context
+        conv = self.conversations.get(conversation_id)
+        if not conv:
+            return {"error": "Conversation not found"}
+
+        ctx = self._book_context(user_id, conv.book_id)
+        if not ctx:
+            return {"error": "Book context not found"}
+
+        # Run agent
+        status("planning")
+        result = self.agent.run(
+            query=user_text,
+            conversation_history=conversation_history,
+            require_approval=False,  # Auto-approve for now
+        )
+
+        # Store assistant message
+        assistant = self.messages.add(
+            conversation_id,
+            "assistant",
+            result.final_answer,
+            metadata={
+                "task_type": "agent",
+                "routing_method": "agent",
+                "tool_count": len(result.tool_results),
+                "total_cost_seconds": result.total_cost_seconds,
+            },
+        )
+
+        # Update conversation title
+        title = conv.title
+        if title == "New chat" and len(user_text) > 0:
+            title = generate_conversation_title(user_text, ctx["title"])
+        self.conversations.touch(conversation_id, title=title)
+
+        status("done")
+
+        return {
+            "assistant_message": self._msg_to_dict(assistant),
+            "agent_result": {
+                "success": result.success,
+                "steps": len(result.steps),
+                "total_cost_seconds": result.total_cost_seconds,
+            },
+        }
+

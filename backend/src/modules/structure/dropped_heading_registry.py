@@ -28,8 +28,8 @@ _CASE_HINT_RE = re.compile(
 )
 
 
-_SYLLABUS_RE = re.compile(
-    r"^(course\s+objectives?|course\s+outcomes?|syllabus|reading\s+list|"
+_OUTLINE_RE = re.compile(
+    r"^(course\s+objectives?|course\s+outcomes?|outline|reading\s+list|"
     r"recommended\s+readings?|bibliography|references?)\s*:?\s*$",
     re.I,
 )
@@ -206,16 +206,22 @@ def is_sentence_like_title(text: str) -> bool:
     return False
 
 
-def is_syllabus_heading(text: str) -> bool:
+def is_outline_heading(text: str) -> bool:
+    """Domain-agnostic: detect outline/admin headings (course objectives, outcomes, etc.)."""
     t = re.sub(r"\s+", " ", (text or "").strip())
     if not t:
         return False
-    if _SYLLABUS_RE.match(t):
+    if _OUTLINE_RE.match(t):
         return True
     low = t.lower()
     if low.startswith("course objectives") or low.startswith("course outcomes"):
         return True
     return False
+
+
+def is_syllabus_heading(text: str) -> bool:
+    """Deprecated alias for domain-agnostic naming — use is_outline_heading instead."""
+    return is_outline_heading(text)
 
 
 def is_essay_style_title(text: str) -> bool:
@@ -325,7 +331,7 @@ _STUDY_TITLE_ACRONYMS = frozenset({"BNS", "IPC", "DPSP", "PIL", "NGT", "CPC", "C
 def is_structural_partition_heading(text: str) -> bool:
     """Book partition labels (CHAPTER I:, OF OFFENCES…) — chapter breaks only, not section/subtopic titles."""
     t = re.sub(r"\s+", " ", (text or "").strip())
-    if not t or is_syllabus_heading(t):
+    if not t or is_outline_heading(t):
         return False
     if _MODULE_UNIT_PART_RE.match(t):
         return True
@@ -443,7 +449,7 @@ def is_acceptable_study_title(text: str, *, book_title: str = "") -> bool:
     t = (text or "").strip()
     if not t or is_weak_section_heading(t):
         return False
-    if is_sentence_like_title(t) or is_essay_style_title(t) or is_syllabus_heading(t):
+    if is_sentence_like_title(t) or is_essay_style_title(t) or is_outline_heading(t):
         return False
     if is_statute_prose_heading(t):
         return False
@@ -557,7 +563,7 @@ def title_from_subheadings(
             continue
         if registry and not registry.is_allowed_title(heading):
             continue
-        if is_sentence_like_title(heading) or is_syllabus_heading(heading) or is_essay_style_title(heading):
+        if is_sentence_like_title(heading) or is_outline_heading(heading) or is_essay_style_title(heading):
             continue
         return heading[:120]
     return ""

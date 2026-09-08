@@ -18,7 +18,7 @@ from src.shared.notes_export_style import is_book_export_style, resolve_notes_ex
         ("textbook", "book"),
         ("prose", "book"),
         ("study", "study"),
-        ("", "book"),
+        ("", "study"),
     ],
 )
 def test_resolve_notes_export_style(raw: str, expected: str, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -17,7 +17,7 @@ from src.modules.quality.heuristics import (  # noqa: E402
     chapter_mirrors_first_section,
     classify_heading,
     compute_verdict_scores,
-    detect_syllabus_noise_in_body,
+    detect_outline_noise_in_body,
     find_parent_mirror_chapters,
 )
 from src.modules.quality.models import BookAuditResult  # noqa: E402
@@ -69,25 +69,25 @@ def test_dynamic_sample_section_ids_handles_small_list() -> None:
     assert "S2" in sample_ids
 
 
-def test_detect_syllabus_noise_in_body() -> None:
+def test_detect_outline_noise_in_body() -> None:
     body = "Course Outcomes:\n- Understand family law basics."
-    flags = detect_syllabus_noise_in_body(body)
-    assert "syllabus_admin" in flags
+    flags = detect_outline_noise_in_body(body)
+    assert "outline_admin" in flags
 
     clean = "- Mahr is mandatory payment to the wife."
-    assert detect_syllabus_noise_in_body(clean) == []
+    assert detect_outline_noise_in_body(clean) == []
 
 
-def test_detect_syllabus_noise_module_and_also_cover() -> None:
+def test_detect_outline_noise_module_and_also_cover() -> None:
     body = "Also cover: divorce rules.\nMODULE 2 topics listed here."
-    flags = detect_syllabus_noise_in_body(body)
+    flags = detect_outline_noise_in_body(body)
     assert "also_cover_checklist" in flags
     assert "module_unit_ref" in flags
 
 
 def test_classify_heading_flags_module() -> None:
     assert classify_heading("MODULE 1") == "structural_partition"
-    assert classify_heading("Course Outcomes") == "syllabus_heading"
+    assert classify_heading("Course Outcomes") == "outline_heading"
 
 
 def test_compute_verdict_scores_pass_case() -> None:

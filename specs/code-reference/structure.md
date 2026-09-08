@@ -11,7 +11,7 @@
 |------|---------|-----|
 | `noise_filter.py` | Mark header/footer/page-number lines | Page chrome scores as false headings |
 | `candidate_scoring.py` | Score lines as heading candidates | Deterministic first pass before LLM |
-| `heading_validity_gate.py` | Gate invalid candidates (paragraph-like, embeddings) | Block list items and body text as headings |
+| `heading_validity_gate.py` | Gate invalid candidates (paragraph-like, embeddings, continuation fragments) | Block list items, body text, and sentence fragments as headings |
 | `continuity_filter.py` | Require heading line continuity | Headings must sit on plausible layout lines |
 | `fragments.py` | Build text fragments between headings | Section bodies for rewrite and RAG |
 | `toc_cleaning.py` | Remove TOC-flagged lines from candidates | TOC is navigation, not content |
@@ -41,12 +41,22 @@
 
 ---
 
+## `heading_validity_gate.py` — key symbols (Phase 1 additions)
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `_CONTINUATION_CONJUNCTIONS_RE` | Regex matching subordinating conjunctions / relative pronouns at line start | Signal 1 of continuation check: candidate starting with "and / but / which / because …" after an open sentence is a fragment | `_continuation_context_check` |
+| `_continuation_context_check(candidate_text, before_lines, after_lines) → bool` | Return `True` when syntactic context strongly suggests the candidate is a continuation fragment. Signal 1: prev line ends mid-sentence AND candidate starts lowercase or with a conjunction. Signal 2: candidate >5 words AND next line starts lowercase. Purely syntactic — no domain vocabulary. | `_needs_continuity_check` was advisory-only; fragments like "such rules are binding upon…" passed the gate unchallenged. | `gate_heading_validity_candidates` |
+| `gate_heading_validity_candidates(candidates, *, lines=None)` | Deterministic gate; continuation check wired after `_is_non_bold_lowercase_fake_heading` and before MiniLM gate. `strong_layout_heading` fast-path short-circuits before continuation check. | Conservative safety: bold/Title-Case headings immune; only non-layout-strong candidates tested. | Heading detect stage |
+
+---
+
 ## `final_structuring/structure_orchestrator.py`
 
 | Symbol | Purpose | Why | Called by |
 |--------|---------|-----|-----------|
 | `phase_partition(...)` | 15a + 15d | Build tree and rewrite sections | `run_structure_phases` |
-| `phase_chapters(...)` | 15e + 15h | Group and place chapters | `run_structure_phases` |
+| `phase_chapters(..., lines=None)` | 15e + 15h | Group and place chapters; **passes `ctx.lines` into `run_chapter_placement`** for MODULE/UNIT page markers | `run_structure_phases` |
 | `phase_titles(...)` | 15f + 15i + 15j | Clean, refine, optional cloud polish | `run_structure_phases` |
 | `phase_publish(...)` | 15g + 15c + 16 | Validate, assemble book, RAG snapshot | `run_structure_phases` |
 | `run_structure_phases(...)` | Run all four phases; write legacy JSON artifacts | Consolidated orchestration without removing sub-steps | `run_final_structuring_stage` |
@@ -108,7 +118,10 @@ Shared grounding primitives live in `src/shared/text_grounding.py` (`ENUM_TITLE_
 
 | Symbol | Purpose | Why | Called by |
 |--------|---------|-----|-----------|
-| `run_chapter_placement(hierarchy)` | 15h entry: splits, reassignment, rename | Initial chapter boundaries before refinement | `run_final_structuring_stage` |
+| `run_chapter_placement(hierarchy, *, lines=None)` | 15h entry: module-page split, structural splits, reassignment, rename | Initial chapter boundaries before refinement; **pass `lines` for MODULE/UNIT page markers** | `phase_chapters` in `structure_orchestrator.py` |
+| `detect_module_unit_break_pages_from_lines(lines)` | Find MODULE/UNIT lines + page numbers from s01 layout | Syllabus PDFs declare units on dedicated lines | `run_chapter_placement`, `refresh_chapter_placement_if_module_gap` |
+| `split_chapters_at_module_page_markers(chapters, breaks)` | Bucket sections by module start page; one chapter per non-empty bucket | s15d may not put MODULE 2–4 on section boundaries | `run_chapter_placement` |
+| `refresh_chapter_placement_if_module_gap(hierarchy, lines)` | Re-run 15h when `len(module_breaks) >= 2` and `chapters < len(breaks)` | Re-export can fix chapter count without full pipeline | `reexport_docx.py` |
 | `is_structural_chapter_break(title)` | Detect MODULE/UNIT/PART | Syllabus books have explicit part boundaries |
 | `split_chapters_at_structural_markers(chapters)` | Split at structural titles | One mega-chapter spans unrelated units |
 | `split_oversized_chapters(chapters)` | Split when section count > max | 15e/15j can leave 20+ sections in one chapter |
@@ -188,11 +201,14 @@ Runs **after** 15j so validation sees final regrouped tree.
 
 ## `chapter_cohesion.py` / `chapter_merger.py`
 
-| Symbol | Purpose | Why |
-|--------|---------|-----|
-| `consolidate_chapter_hierarchy(hierarchy)` | Merge related adjacent chapters | 15j can over-split thin chapters |
-| `merge_undersized_chapters(chapters)` | Combine chapters with too few sections | Avoid 1-section chapters except MODULE breaks |
-| `chapters_are_related(a, b)` | MiniLM + heading overlap | Thematic cohesion without hardcoded book rules |
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `consolidate_chapter_hierarchy(chapters)` | Merge related adjacent chapters | 15j can over-split thin chapters | `run_chapter_placement` |
+| `merge_related_adjacent_chapters(chapters)` | MiniLM + heading overlap merge | Thematic cohesion without hardcoded book rules | `consolidate_chapter_hierarchy` |
+| `merge_undersized_chapters(chapters)` | Combine chapters with too few sections | Avoid 1-section chapters except MODULE breaks | `consolidate_chapter_hierarchy` |
+| `_is_module_page_partition(ch)` | True when `assignment_method=15h_module_page_split` or `module_page_partition` | **Never merge across MODULE page buckets** | `merge_undersized_chapters`, `merge_related_adjacent_chapters` |
+| `_is_hard_break_heading(text)` | MODULE/UNIT/PART/CHAPTER N detector | Structural boundaries must survive merge | `merge_undersized_chapters` |
+| `chapters_are_related(a, b)` | MiniLM + heading overlap score | Decide if adjacent chapters are same theme | `merge_related_adjacent_chapters` |
 
 ---
 

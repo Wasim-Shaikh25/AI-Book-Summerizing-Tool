@@ -116,7 +116,7 @@ def test_compute_verdict_includes_line_quality() -> None:
         repeated_pairs=0,
         weak_heading_count=0,
         title_noise_count=0,
-        syllabus_body_hits=0,
+        outline_body_hits=0,
         pdf_match_failures=0,
         line_audit_fail_sections=2,
         line_audit_warn_sections=3,

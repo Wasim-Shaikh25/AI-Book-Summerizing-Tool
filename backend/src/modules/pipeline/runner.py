@@ -83,6 +83,9 @@ def _persist(ctx: PipelineContext, result: PipelineResult) -> None:
         clear_existing=True,
     )
 
+    # Save sections for RAG indexing
+    _save_sections_for_rag(store, book.book_id, result.fragments, result.final_headings)
+
     if ctx.enable_logs and ctx.logger is not None:
         for stage_name, filename in STAGE_LOG_FILES.items():
             path = ctx.logger.run_dir / filename
@@ -95,3 +98,46 @@ def _persist(ctx: PipelineContext, result: PipelineResult) -> None:
                 payload=path.read_text(encoding="utf-8"),
                 run_id=getattr(ctx.logger, "run_id", None),
             )
+
+
+def _save_sections_for_rag(store: KnowledgeStore, book_id: str, fragments: list, headings: list) -> None:
+    """Save sections from fragments for RAG indexing."""
+    conn = store.get_connection()
+    try:
+        cur = conn.cursor()
+
+        # Create sections table if it doesn't exist
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS sections (
+                section_id TEXT PRIMARY KEY,
+                book_id TEXT NOT NULL,
+                title TEXT,
+                content TEXT,
+                page_start INTEGER,
+                page_end INTEGER,
+                FOREIGN KEY (book_id) REFERENCES books (book_id)
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sections_book ON sections (book_id)")
+
+        # Clear existing sections for this book
+        cur.execute("DELETE FROM sections WHERE book_id = ?", (book_id,))
+
+        # Create sections from fragments
+        import uuid
+        for i, fragment in enumerate(fragments):
+            if hasattr(fragment, 'heading') and hasattr(fragment, 'content'):
+                section_id = str(uuid.uuid4())
+                title = getattr(fragment, 'heading', f'Section {i+1}')
+                content = getattr(fragment, 'content', '')
+                page_start = getattr(fragment, 'page_start', None)
+                page_end = getattr(fragment, 'page_end', None)
+
+                cur.execute("""
+                    INSERT INTO sections (section_id, book_id, title, content, page_start, page_end)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (section_id, book_id, title, content, page_start, page_end))
+
+        conn.commit()
+    finally:
+        conn.close()

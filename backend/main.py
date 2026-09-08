@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 def main():
     """
-    Entry point for the AI Knowledge Engine.
+    Entry point for InsightEngine.
     """
-    logger.info("Initializing AI Knowledge Engine...")
+    logger.info("Initializing InsightEngine...")
     
     # Start Command Loop immediately. Ingestion will be handled via terminal input.
     loop = CommandLoop()

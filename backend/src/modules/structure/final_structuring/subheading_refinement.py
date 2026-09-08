@@ -11,7 +11,7 @@ from src.modules.generation.rewrite_validation import is_weak_section_heading, n
 from src.modules.structure.dropped_heading_registry import (
     is_noisy_fragment_heading,
     is_structural_partition_heading,
-    is_syllabus_heading,
+    is_outline_heading,
     partition_heading_to_study_title,
     title_from_subheadings,
 )
@@ -190,7 +190,7 @@ def refine_chapter_titles(hierarchy: Dict[str, Any]) -> int:
                 ch["heading"] = normalized[:120]
                 changed += 1
                 old = normalized
-        if is_syllabus_heading(old) and book_title:
+        if is_outline_heading(old) and book_title:
             ch["heading"] = book_title[:120]
             changed += 1
             continue
@@ -203,7 +203,7 @@ def refine_chapter_titles(hierarchy: Dict[str, Any]) -> int:
         first = _norm(str(sections[0].get("heading") or ""))
         mirror = (
             normalize_heading(old) == normalize_heading(first)
-            or is_syllabus_heading(old)
+            or is_outline_heading(old)
             or chapter_mirrors_first_section(old, first)
         )
         if mirror:

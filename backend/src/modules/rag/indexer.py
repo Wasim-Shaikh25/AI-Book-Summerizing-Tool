@@ -88,6 +88,30 @@ def build_faiss_index(
     index = faiss.IndexFlatIP(dim)
     index.add(vectors)
 
+    # Build knowledge graph when enabled
+    try:
+        from src import config as cfg
+        if getattr(cfg, "KNOWLEDGE_GRAPH_ENABLED", False):
+            from src.modules.knowledge.concept_extractor import extract_concepts_from_chunk
+            from src.modules.knowledge.concept_graph import build_concept_graph
+            from pathlib import Path
+
+            all_concepts = []
+            for chunk in chunks:
+                text = chunk.get("text") or chunk.get("embed_text") or ""
+                chunk_id = chunk.get("chunk_id") or chunk.get("section_id") or ""
+                bid = chunk.get("book_id", book_id)
+                if text and chunk_id:
+                    concepts = extract_concepts_from_chunk(text, chunk_id=chunk_id, book_id=bid, top_k=5)
+                    all_concepts.extend(concepts)
+
+            if all_concepts:
+                db_path = Path(getattr(cfg, "KNOWLEDGE_DB_PATH", "output/knowledge_base.db"))
+                build_concept_graph(all_concepts, db_path=db_path)
+                logger.info("Built knowledge graph with %d concepts", len(all_concepts))
+    except Exception as exc:
+        logger.warning("Knowledge graph build failed: %s", exc)
+
     idx_dir = Path(index_dir)
     faiss_path, chunks_path, meta_path = _index_paths(idx_dir, book_id)
     faiss.write_index(index, str(faiss_path))

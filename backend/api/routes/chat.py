@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -20,7 +22,18 @@ from auth.dependencies import get_current_user
 from services.chat_service import ChatService
 from storage.user_repository import ConversationRepository, MessageRepository, UserRecord
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["chat"])
+
+
+def _json_default(obj: Any) -> Any:
+    """Fallback serializer for non-JSON-native objects reaching the SSE boundary."""
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return dataclasses.asdict(obj)
+    if hasattr(obj, "__dict__"):
+        return {k: v for k, v in vars(obj).items() if not k.startswith("_")}
+    return str(obj)
 
 
 def _to_reply(result: dict[str, Any]) -> ChatReplyResponse:
@@ -127,13 +140,16 @@ async def send_message_stream(
             )
         except ValueError as exc:
             return {"error": str(exc)}
+        except Exception as exc:  # surface thread failures as SSE error events
+            logger.exception("Chat streaming failed for conversation %s", conversation_id)
+            return {"error": f"Internal error: {exc}"}
 
     async def event_generator():
         task = asyncio.create_task(run_chat())
         while not task.done() or not queue.empty():
             try:
                 stage, detail = await asyncio.wait_for(queue.get(), timeout=0.25)
-                payload = json.dumps({"stage": stage, "detail": detail})
+                payload = json.dumps({"stage": stage, "detail": detail}, default=_json_default)
                 yield f"event: status\ndata: {payload}\n\n"
             except asyncio.TimeoutError:
                 if task.done():
@@ -144,7 +160,7 @@ async def send_message_stream(
         if "error" in result:
             yield f"event: error\ndata: {json.dumps({'detail': result['error']})}\n\n"
         else:
-            yield f"event: done\ndata: {json.dumps(result)}\n\n"
+            yield f"event: done\ndata: {json.dumps(result, default=_json_default)}\n\n"
 
     return StreamingResponse(
         event_generator(),

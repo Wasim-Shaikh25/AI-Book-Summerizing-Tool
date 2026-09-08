@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 # Pandoc OpenXML page break (works for DOCX export; harmless in plain MD viewers).
@@ -108,16 +109,12 @@ def build_cover_page(meta: BookCoverMeta) -> str:
         f"| **Book** | {title} |",
     ]
     if meta.source_pdf:
-        lines.append(f"| **Source PDF** | {meta.source_pdf} |")
+        pass  # omitted from cover by design
     lines.append(f"| **Generated** | {meta.generated_at} |")
     if meta.chapter_count:
         lines.append(f"| **Chapters** | {meta.chapter_count} |")
-    if meta.section_count:
-        lines.append(f"| **Sections** | {meta.section_count} |")
     if meta.topic_count:
         lines.append(f"| **Topics** | {meta.topic_count} |")
-    if meta.user_instruction:
-        lines.append(f"| **Notes style** | {meta.user_instruction} |")
     for extra in meta.extra_lines:
         if extra.strip():
             lines.append(extra.strip())
@@ -411,6 +408,69 @@ def chapter_blocks_from_hierarchy(
                 )
             )
     return blocks, toc_entries_from_hierarchy(hierarchy)
+
+
+def humanize_book_title(raw: str) -> str:
+    """Turn a PDF stem or slug into a readable book title (subject-agnostic)."""
+    t = re.sub(r"[_-]+", " ", (raw or "").strip())
+    t = re.sub(r"\s+\d{6,}\s*$", "", t).strip()
+    t = re.sub(r"\s+", " ", t)
+    if not t:
+        return "Study Notes"
+    return " ".join(w.capitalize() if w.islower() else w for w in t.split())
+
+
+def resolve_export_book_title(
+    *,
+    hierarchy: Optional[Dict[str, Any]] = None,
+    md_path: Optional[Path] = None,
+    sidecar_meta: Optional[Dict[str, Any]] = None,
+    pdf_path: Optional[str] = None,
+    log_dir: Optional[Path] = None,
+) -> str:
+    """Resolve the cover/book title for export — never use the wrong DB row."""
+    meta = (hierarchy or {}).get("meta") or {}
+    for candidate in (
+        str((hierarchy or {}).get("book_title") or "").strip(),
+        str(meta.get("book_title") or "").strip(),
+    ):
+        if candidate and not candidate.lower().endswith(".pdf"):
+            human = humanize_book_title(candidate)
+            if human and human != "Study Notes":
+                return human
+
+    if sidecar_meta:
+        pdf_ref = str(sidecar_meta.get("pdf") or "")
+        if pdf_ref:
+            return humanize_book_title(Path(pdf_ref).stem)
+
+    if pdf_path:
+        return humanize_book_title(Path(pdf_path).stem)
+
+    if log_dir and log_dir.exists():
+        try:
+            import json
+
+            for pattern in ("s15j_hierarchy_openai.json", "s15f_heading_cleanup.json", "s15e_chapter_hierarchy.json"):
+                p = log_dir / pattern
+                if not p.exists():
+                    continue
+                data = json.loads(p.read_text(encoding="utf-8"))
+                pdf_file = str(data.get("pdf_file") or (data.get("meta") or {}).get("pdf_file") or "")
+                if pdf_file:
+                    return humanize_book_title(Path(pdf_file).stem)
+                bt = str(data.get("book_title") or (data.get("meta") or {}).get("book_title") or "")
+                if bt:
+                    return humanize_book_title(bt)
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
+
+    if md_path:
+        stem = md_path.stem
+        stem = re.sub(r"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$", "", stem)
+        return humanize_book_title(stem)
+
+    return "Study Notes"
 
 
 def cover_from_hierarchy_meta(

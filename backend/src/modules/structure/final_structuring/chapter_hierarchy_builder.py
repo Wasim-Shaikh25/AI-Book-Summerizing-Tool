@@ -268,37 +268,29 @@ def build_chapter_hierarchy(
     hierarchy: Optional[Sequence[Dict[str, Any]]] = None,
     max_sections: int = 0,
 ) -> Dict[str, Any]:
-    """Stage 15e — chapters (L1) → sections (L2) → subheadings (L3)."""
+    """Stage 15e — chapters (L1) → sections (L2) → subheadings (L3).
+    
+    Modified to preserve original PDF structure without regrouping or consolidation.
+    Uses rule-based boundary detection only to maintain original chapter boundaries.
+    """
     from src.modules.pipeline.llm_chat_client import normalize_chat_provider
 
     sections = list(ultimate_sections.get("sections") or [])
     if max_sections > 0:
         sections = sections[:max_sections]
 
-    use_llm = os.environ.get("CHAPTER_HIERARCHY_USE_LLM", getattr(config, "CHAPTER_HIERARCHY_USE_LLM", "1")).strip().lower() not in {
-        "0",
-        "false",
-        "no",
-        "n",
-    }
-    batch_size = int(getattr(config, "CHAPTER_HIERARCHY_BATCH_SIZE", 25) or 25)
-    hierarchy_openai = getattr(config, "HIERARCHY_OPENAI_ENABLED", True)
-
+    # Force rule-based only to preserve original structure - no LLM regrouping
     method = "rule"
     assignments = _rule_based_assignments(sections)
 
-    # Skip 15e LLM when 15j will regroup — saves redundant API calls.
-    if use_llm and sections and not hierarchy_openai:
-        llm_rows = _llm_assignments(sections, batch_size=batch_size)
-        if llm_rows:
-            assignments = llm_rows
-            method = "llm"
-        else:
-            logger.info("15e LLM assignment failed; using rule-based fallback")
-
+    # Skip LLM regrouping - preserve original PDF structure
+    # Skip chapter consolidation - preserve original boundaries
     chapters = _assignments_to_chapters(sections, assignments)
-    min_per = int(getattr(config, "CHAPTER_HIERARCHY_MIN_SECTIONS_PER_CHAPTER", 6) or 6)
-    chapters = _consolidate_chapters(chapters, min_sections=min_per)
+    
+    # No consolidation - preserve original chapter boundaries as detected from PDF
+    # min_per = int(getattr(config, "CHAPTER_HIERARCHY_MIN_SECTIONS_PER_CHAPTER", 6) or 6)
+    # chapters = _consolidate_chapters(chapters, min_sections=min_per)
+    
     topic_count = sum(
         1 + len(s.get("subheadings") or []) for ch in chapters for s in ch.get("sections") or []
     )
@@ -314,7 +306,8 @@ def build_chapter_hierarchy(
             "total_topics": topic_count,
             "levels": 3,
             "llm_provider": normalize_chat_provider(config.CHAPTER_HIERARCHY_LLM or config.LLM_PROVIDER or ""),
-            "batch_size": batch_size,
+            "batch_size": 0,  # No batching needed for rule-based only
+            "structure_preserved": True,  # Flag indicating original structure preserved
         },
         "chapters": chapters,
         "section_assignments": assignments,

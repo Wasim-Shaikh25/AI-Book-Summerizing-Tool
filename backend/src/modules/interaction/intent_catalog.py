@@ -5,27 +5,27 @@ from __future__ import annotations
 INTENT_OPTIONS: list[dict[str, str]] = [
     {
         "task_type": "rewrite_book",
-        "description": "Rewrite or generate notes for the entire book from source text.",
+        "description": "Rewrite or generate notes for the entire book from source text. Works for textbooks, manuals, acts, treatises, reports.",
     },
     {
         "task_type": "study_notes",
-        "description": "Create study or exam-prep notes for the full book.",
+        "description": "Create structured learning notes for the full book. Examples: study guides, exam prep, technical summaries, reference sheets.",
     },
     {
         "task_type": "revision_notes",
-        "description": "Create short last-minute revision notes for the full book.",
+        "description": "Create concise quick-reference notes for the full book. Examples: last-minute revision, cheat sheets, executive summaries, key points.",
     },
     {
         "task_type": "summarize_book",
-        "description": "Summarize the full book (shorter than full rewrite).",
+        "description": "Summarize the full book (shorter than full rewrite). Works for any domain.",
     },
     {
         "task_type": "explain_section",
-        "description": "Explain one section or topic only — not a full-book rewrite.",
+        "description": "Explain one section or topic only — not a full-book rewrite. Works for any subject area.",
     },
     {
         "task_type": "question_answer",
-        "description": "Answer a specific question about the book.",
+        "description": "Answer a specific question about the book. Works for legal queries, technical questions, research inquiries, etc.",
     },
     {
         "task_type": "export",

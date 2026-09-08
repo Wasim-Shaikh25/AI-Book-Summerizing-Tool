@@ -19,6 +19,11 @@ except Exception:  # pragma: no cover
 
 _WS_RE = re.compile(r"\s+")
 _WORD_RE = re.compile(r"\b\w+\b")
+_CONTINUATION_CONJUNCTIONS_RE = re.compile(
+    r"^(?:and|but|or|nor|so|yet|which|that|who|whom|whose|when|where|"
+    r"because|although|though|since|unless|until|while|as|if)\b",
+    re.IGNORECASE,
+)
 _PAGE_OF_RE = re.compile(r"^page\s*\d+\s*(of\s*\d+)?\s*$", re.IGNORECASE)
 # Spaced-letter page footer variants: "29| P a g e", "P a g e | 13", "P a g e"
 _SPACED_PAGE_RE = re.compile(
@@ -287,6 +292,42 @@ def _is_list_like_numbered_candidate(text: str) -> bool:
         or re.match(r"^[IVXLCDM]+\.\s+[A-Za-z]", t, re.IGNORECASE)
         or re.match(r"^[A-Z]\.\s+[A-Za-z]", t)
     )
+
+
+def _continuation_context_check(
+    candidate_text: str,
+    before_lines: list[str],
+    after_lines: list[str],
+) -> bool:
+    """Return True when syntactic context strongly suggests the candidate is a
+    continuation fragment rather than a heading.
+
+    Signal 1 — previous line ends mid-sentence AND candidate starts lowercase or
+               with a conjunction: the candidate is the second half of a sentence.
+    Signal 2 — candidate is >5 words AND the very next line starts lowercase:
+               the candidate is a mid-paragraph line, not a heading that introduces
+               what follows.
+
+    Both signals are purely syntactic; no domain vocabulary is used.
+    """
+    text = (candidate_text or "").strip()
+    if not text:
+        return False
+
+    if before_lines:
+        prev = (before_lines[-1] or "").strip()
+        if prev and prev[-1] not in ".!?:;":
+            if text[0].islower():
+                return True
+            if _CONTINUATION_CONJUNCTIONS_RE.match(text):
+                return True
+
+    if after_lines and len(text.split()) > 5:
+        nxt = (after_lines[0] or "").strip()
+        if nxt and nxt[0].islower():
+            return True
+
+    return False
 
 
 def _needs_continuity_check(c: HeadingCandidate, first_ln: NormalizedLine | None) -> bool:
@@ -634,6 +675,15 @@ def gate_heading_validity_candidates(
             if _is_non_bold_lowercase_fake_heading(c=c, first_ln=first_ln):
                 reasons.append("not_bold_and_starts_lowercase")
                 signals.append("not_bold_and_starts_lowercase")
+
+        # Syntactic continuation-fragment check.
+        # Runs only for candidates that did NOT short-circuit via strong_layout_heading.
+        # Cheap (no model): drop when context lines prove this is mid-sentence prose.
+        _before_ctx = list(getattr(c, "before_context", []) or [])
+        _after_ctx = list(getattr(c, "after_context", []) or [])
+        if _continuation_context_check(text, _before_ctx, _after_ctx):
+            reasons.append("continuation_fragment")
+            signals.append("continuation_fragment")
 
         # MiniLM continuity gate: compare candidate to its local paragraph context (before/after)
         neigh = []

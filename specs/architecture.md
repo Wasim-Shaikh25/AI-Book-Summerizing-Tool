@@ -1,4 +1,4 @@
-# Architecture — AI Notes Creator Model
+# Architecture — InsightEngine
 
 > **Role:** System layers, repo layout, ADRs. Pipeline/web/storage detail in linked module specs.  
 > **Authority:** Structural changes MUST update this file BEFORE code (MESO Rule 6).
@@ -7,7 +7,7 @@
 
 ## 1. System Overview
 
-AI Notes Creator transforms legal/academic PDF books into structured AI-generated notes. The system has **three entry points** sharing one engine:
+InsightEngine transforms PDF documents into structured AI-generated research notes and summaries. The system has **three entry points** sharing one engine:
 
 ```mermaid
 flowchart TB
@@ -92,7 +92,7 @@ flowchart TB
 ## 3. Repository Layout
 
 ```
-AI Notes Creater Model/
+InsightEngine/
 ├── backend/                     # All Python: engine + API + CLI + tests
 │   ├── api/                     # FastAPI routes, schemas, main.py
 │   ├── auth/                    # OAuth, JWT, dependencies

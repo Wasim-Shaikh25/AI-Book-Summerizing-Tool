@@ -47,6 +47,32 @@
 |--------|---------|-----|-----------|
 | `enrich_layout_from_pymupdf_pages(pages)` | Add geometry/font to lines | Bold/size help heading gate | `extract_pdf` |
 | `lines_to_log(lines)` | Serialize for `s01` artifact | Debug visualizer | `stage_layout_log` |
+| `log_dict_to_normalized_line(item)` | Rebuild `NormalizedLine` from s01 JSON item | Re-run 15h from saved logs | `load_layout_lines_from_log_dir` |
+| `load_layout_lines_from_log_dir(log_dir)` | Load all lines from `s01_layout_lines.json` | Re-export / placement refresh without re-ingest | `reexport_docx.py` |
+| `finalize_line_layout_signals(lines)` | Per-page large_font/large_gap/centered | After Docling or PyMuPDF extract | `docling_adapter.py` |
+
+---
+
+## `layout_backends/` — ML layout parsing
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `resolve_layout_backend(pdf_path)` | Pick `pymupdf` or `docling` | Scanned PDFs need ML layout when available | `extract_layout_lines` |
+| `extract_layout_lines(pdf_path, ...)` | Route to backend + fallback | Single entry for `extract_pdf` | `pdf_extractor.extract_pdf` |
+| `pdf_likely_scanned(pages)` | Low text char count ratio | Auto mode scan detection | `resolve_layout_backend` |
+| `extract_lines_docling(pdf_path)` | Docling → NormalizedLine | ML section_header/title labels | `extract_layout_lines` |
+| `docling_items_to_normalized_lines(items)` | Map Docling items to lines | Testable adapter | `extract_lines_docling` |
+
+Optional install: `pip install -r requirements-ml-layout.txt` (Docling).
+
+---
+
+## `pymupdf_backend.py`
+
+| Symbol | Purpose | Why | Called by |
+|--------|---------|-----|-----------|
+| `extract_lines_pymupdf(...)` | PyMuPDF dict + OCR + enrich | Legacy signal path + fallback | `extract_layout_lines` |
+| `pymupdf_extract_pages_dict(...)` | Raw page dicts | Scan sample + OCR input | `registry`, tests |
 
 ---
 

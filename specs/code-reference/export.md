@@ -32,7 +32,12 @@
 | `_section_id_tag(section_id)` | `<!-- sid:SXX -->` HTML comment suffix | Deterministic audit/re-export join when display title ≠ hierarchy heading | `chapter_blocks_from_hierarchy` |
 | `format_chapter_block(chapter, sections, map)` | One chapter MD block | `#` chapter + `##` sections | Assembler |
 | `build_toc_section(entries)` | Markdown TOC | Optional MD TOC | Assembler |
-| `build_cover_page(meta)` | Title page MD | Book metadata on cover | Assembler |
+| `build_cover_page(meta)` | Title page MD | Book metadata on cover; **Book / Generated / Chapters only** (no Source PDF, Sections, Notes style) | Assembler |
+| `humanize_book_title(raw)` | PDF stem → readable title | Slug cleanup for cover | `resolve_export_book_title` |
+| `resolve_export_book_title(...)` | Cover/book title from hierarchy, sidecar PDF, log artifacts, or MD stem | **Never use wrong DB row** (`ORDER BY processed_at`) | `run_full_openai_pipeline.py`, `reexport_docx.py` |
+| `cover_from_hierarchy_meta(title, hierarchy)` | `BookCoverMeta` dataclass | DOCX + MD cover fields; `source_pdf` / `user_instruction` / `section_count` kept on dataclass but **not rendered on cover** | Pipeline, reexport |
+
+**`BookCoverMeta`:** `title`, `subtitle`, `generated_at`, `chapter_count`, `topic_count` are exported. `source_pdf`, `user_instruction`, `section_count` are legacy fields omitted from cover by design (2026-06-15).
 | `toc_entries_from_hierarchy(hierarchy)` | TOC row list | Page ref generation in DOCX | `DocxNotesExporter` |
 | `rebuild_notes_markdown(md_path, map)` | Patch bodies into existing MD | Sidecar rebuild scripts | `build_rewritten_sidecar.py` |
 
@@ -43,6 +48,7 @@
 | Symbol | Purpose | Why | Called by |
 |--------|---------|-----|-----------|
 | `export(hierarchy, rewritten_map, out_path, ...)` | Full book DOCX | TOC page numbers require two-pass build | `RewriteEngine` |
+| `_add_cover_page(doc, cover)` | Word cover: title, subtitle, metadata table | **Fields: Book, Generated, Chapters only** (no Source PDF, Sections, Notes style) | `export` |
 | `parse_markdown_sections(md)` | Split MD into section bodies | Returns `(by_heading, by_sid)` when sid tags present | Reexport, audit |
 | `rewritten_map_from_section_bodies(sections)` | Bodies dict from parsed MD | Heading fallback when no sid tags | `reexport_docx.py` |
 | `resolve_rewritten_map(log_dir, md_path)` | Load map from sidecar or MD | **Prefers `by_sid` from `<!-- sid:SXX -->` tags** | Quality audit, scripts |

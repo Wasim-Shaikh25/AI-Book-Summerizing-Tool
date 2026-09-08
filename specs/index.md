@@ -1,4 +1,4 @@
-# SPEC INDEX — AI Notes Creator Model
+# SPEC INDEX — InsightEngine
 
 > **This folder is the authoritative SDD.** Start every task here (MESO Rule 10).
 
@@ -67,6 +67,7 @@ Each topic has **one authoritative spec**. Other files link to it — they do no
 | 10 | [parameters-config.md](./modules/parameters-config.md) | `config/`, `shared/config.py` |
 | 11 | [rag-retrieval.md](./modules/rag-retrieval.md) | `rag/` |
 | 12 | [quality.md](./modules/quality.md) | `quality/` |
+| 13 | [pipeline-signal-sections.md](./modules/pipeline-signal-sections.md) | `structure/signal_sections/`, `generation/signal_rewrite/`, `export/signal_export/` (parallel V2, opt-in) |
 
 Supplementary: [requirements-ocr-stage.md](./requirements-ocr-stage.md)
 
@@ -78,6 +79,7 @@ Supplementary: [requirements-ocr-stage.md](./requirements-ocr-stage.md)
 |------|------|
 | `data-models.md` | `shared/models.py`, `storage/schema.py`, `storage/user_repository.py` |
 | `modules/pipeline-core.md` | `pipeline/runner.py`, `stages.py`, `stage_registry.py` |
+| `modules/pipeline-signal-sections.md` | `structure/signal_sections/*`, `generation/signal_rewrite/*`, `export/signal_export/*`, `scripts/pipeline_signal_sections.py` |
 | `modules/cli-interaction.md` | `interaction/command_parser.py`, handlers |
 | `backend-api.md` | `api/`, `services/`, `auth/`, `storage/` |
 | `frontend.md` | `frontend/src/`, `frontend/auth/` |

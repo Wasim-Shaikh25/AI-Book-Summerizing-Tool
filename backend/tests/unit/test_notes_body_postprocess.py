@@ -23,7 +23,7 @@ Marriage Law
     assert "Mahr is a mandatory payment" in out
 
 
-def test_postprocess_removes_syllabus_line() -> None:
+def test_postprocess_removes_outline_line() -> None:
     body = "Instructional hours: 45\n\n- Divorce rules apply in family courts."
     out = postprocess_rewritten_section(body, heading="Divorce")
     assert "Instructional hours" not in out

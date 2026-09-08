@@ -1,4 +1,4 @@
-# Frontend Specification — AI Notes Creator Web UI
+# Frontend Specification — InsightEngine Web UI
 
 > **Role:** Authoritative for React UI (components, state, flows).  
 > **Not here:** Requirement IDs → [requirements-web-platform.md](./requirements-web-platform.md) · API contracts → [ui-backend-integration.md](./ui-backend-integration.md) · Endpoints → [backend-api.md](./backend-api.md)  

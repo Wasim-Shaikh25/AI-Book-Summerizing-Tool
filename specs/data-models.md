@@ -1,4 +1,4 @@
-# Data Models — AI Notes Creator Model
+# Data Models — InsightEngine
 
 > **Role:** Authoritative for all entities and SQLite schemas (MESO Rule 8).  
 > **Not here:** Repository usage → [modules/storage.md](./modules/storage.md) · API response shapes → [backend-api.md](./backend-api.md) §5

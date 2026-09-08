@@ -26,6 +26,7 @@ class AskHandler:
         pdf_path: Optional[str] = None,
         ultimate_log_dir: Optional[str] = None,
         subject_hint: str = "",
+        conversation_history: list[dict[str, str]] | None = None,
     ) -> None:
         self.store = store
         self.book_id = book_id
@@ -33,6 +34,7 @@ class AskHandler:
         self.pdf_path = pdf_path
         self.ultimate_log_dir = ultimate_log_dir
         self.subject_hint = subject_hint or book_title
+        self.conversation_history = conversation_history or []
 
     def _load_sections(self):
         from services.rag_index_helper import load_book_sections
@@ -91,6 +93,7 @@ class AskHandler:
             depth=intent.depth,
             language_level=intent.language_level,
             format_type=intent.format_type,
+            conversation_history=self.conversation_history,
         )
 
         print("\n" + "=" * 60)
@@ -103,7 +106,13 @@ class AskHandler:
         print()
         print(result.get("answer") or "")
         print("=" * 60 + "\n")
-        return result.get("answer")
+        return {
+            "answer": result.get("answer") or "",
+            "sources": result.get("sources", []),
+            "related": result.get("related", True),
+            "retrieval_mode": result.get("retrieval_mode"),
+            "reasoning": result.get("reasoning"),
+        }
 
     def handle(self, question: str) -> str | None:
         from src.modules.interaction.command_parser import IntentResult

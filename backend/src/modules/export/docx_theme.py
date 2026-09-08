@@ -322,26 +322,12 @@ def style_numbered_paragraph(paragraph, *, level: int = 0) -> None:
 
 
 def restart_numbered_paragraph(paragraph, *, level: int = 0) -> None:
-    """Tell Word to restart decimal list numbering at 1 for this paragraph.
+    """No-op: Word rejects inline ``w:lvlOverride`` on paragraph ``w:numPr``.
 
-    Without this, each section's ``List Number`` paragraphs continue the
-    document-wide counter (topic A ends at 5, topic B wrongly shows 6, 7, …).
+    Ordered lists are rendered as plain ``N. text`` paragraphs (numbers come from
+    markdown renumbering per section). Kept for API compatibility.
     """
-    p_pr = paragraph._p.get_or_add_pPr()
-    num_pr = p_pr.find(qn("w:numPr"))
-    if num_pr is None:
-        num_pr = OxmlElement("w:numPr")
-        p_pr.append(num_pr)
-
-    for old in list(num_pr.findall(qn("w:lvlOverride"))):
-        num_pr.remove(old)
-
-    lvl_override = OxmlElement("w:lvlOverride")
-    lvl_override.set(qn("w:ilvl"), str(max(0, int(level))))
-    start_override = OxmlElement("w:startOverride")
-    start_override.set(qn("w:val"), "1")
-    lvl_override.append(start_override)
-    num_pr.append(lvl_override)
+    del paragraph, level  # unused
 
 
 class NumberedListTracker:

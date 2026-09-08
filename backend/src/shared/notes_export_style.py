@@ -8,7 +8,7 @@ from src.shared import config
 
 
 def resolve_notes_export_style(name: str | None = None) -> str:
-    raw = (name or os.environ.get("NOTES_EXPORT_STYLE") or getattr(config, "NOTES_EXPORT_STYLE", "book") or "book")
+    raw = (name or os.environ.get("NOTES_EXPORT_STYLE") or getattr(config, "NOTES_EXPORT_STYLE", "study") or "study")
     style = str(raw).strip().lower()
     if style in {"book", "textbook", "prose"}:
         return "book"

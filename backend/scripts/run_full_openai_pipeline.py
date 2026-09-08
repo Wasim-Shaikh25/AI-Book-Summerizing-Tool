@@ -25,6 +25,7 @@ from src.modules.export.document_formatter import (
     chapter_blocks_from_hierarchy,
     cover_from_hierarchy_meta,
     flat_chapter_blocks,
+    resolve_export_book_title,
 )
 from src.modules.generation.rewrite_prompts import (
     default_section_max_tokens,
@@ -262,14 +263,20 @@ def main() -> int:
     else:
         lines, _, _ = extract_pdf(pdf_path, max_pages=max_pages or None)
 
+    pdf_name = Path(pdf_path).name
     store = KnowledgeStore()
     row = store.get_connection().execute(
-        "SELECT book_id, title FROM books ORDER BY processed_at DESC LIMIT 1"
+        "SELECT book_id, title FROM books WHERE source_file_name = ? ORDER BY processed_at DESC LIMIT 1",
+        (pdf_name,),
     ).fetchone()
+    if not row:
+        row = store.get_connection().execute(
+            "SELECT book_id, title FROM books ORDER BY processed_at DESC LIMIT 1"
+        ).fetchone()
     if not row:
         print("[!] No book persisted to DB.")
         return 1
-    book_id, title = row[0], row[1]
+    book_id, db_title = row[0], row[1]
 
     sections = load_rewrite_sections(
         store,
@@ -356,6 +363,16 @@ def main() -> int:
                 intent=rewrite_intent,
             )
         )
+    )
+
+    title = (
+        resolve_export_book_title(
+            hierarchy=hierarchy,
+            pdf_path=pdf_path,
+            log_dir=pipeline_log_dir,
+        )
+        or db_title
+        or Path(pdf_path).stem
     )
 
     out_dir = PROJECT_ROOT / "output"
@@ -507,6 +524,11 @@ def main() -> int:
         from src.modules.structure.final_structuring.hierarchy_export import refine_hierarchy_for_export
 
         hierarchy = refine_hierarchy_for_export(hierarchy)
+        title = resolve_export_book_title(
+            hierarchy=hierarchy,
+            pdf_path=pdf_path,
+            log_dir=pipeline_log_dir,
+        ) or db_title
         chapter_blocks, toc_entries = chapter_blocks_from_hierarchy(
             hierarchy,
             rewritten,
@@ -516,8 +538,6 @@ def main() -> int:
         cover = cover_from_hierarchy_meta(
             title=title,
             hierarchy=hierarchy,
-            source_pdf=Path(pdf_path).name,
-            user_instruction=effective_instruction,
         )
         response = assemble_notes_document(
             cover=cover,
@@ -532,10 +552,12 @@ def main() -> int:
             for i, sec in enumerate(work, start=1)
         ]
         chapter_blocks, toc_entries = flat_chapter_blocks(flat_pairs)
+        title = resolve_export_book_title(
+            pdf_path=pdf_path,
+            log_dir=pipeline_log_dir,
+        ) or db_title
         cover = cover_from_hierarchy_meta(
             title=title,
-            source_pdf=Path(pdf_path).name,
-            user_instruction=effective_instruction,
         )
         cover.section_count = len(work)
         response = assemble_notes_document(
@@ -594,6 +616,43 @@ def main() -> int:
                 print(f"      synced {synced} titles into hierarchy (DOCX + audit)", flush=True)
         except Exception as exc:
             print(f"[!] Title sync to hierarchy failed (continuing): {exc}", flush=True)
+
+    # Opt-in: body structure audit [3.5/4] — deterministic checks on rewritten section bodies.
+    if os.getenv("BODY_STRUCTURE_AUDIT_ENABLED", "0").strip() == "1":
+        try:
+            from src.modules.generation.body_audit_runner import run_body_audit
+
+            # Build section list from rewritten map for audit
+            _audit_sections = [
+                {"section_id": sid, "heading": "", "body": body}
+                for sid, body in (rewritten.items() if isinstance(rewritten, dict) else {}.items())
+            ]
+            _source_by_id: dict = {}
+            run_body_audit(
+                _audit_sections,
+                source_by_id=_source_by_id,
+                log_dir=pipeline_log_dir,
+            )
+        except Exception as exc:
+            print(f"[!] Body audit failed (continuing): {exc}", flush=True)
+
+    # Opt-in: additionally rebuild hierarchy section order from final Markdown.
+    if os.getenv("SYNC_HIERARCHY_FROM_MD", "0").strip() == "1":
+        try:
+            from src.modules.generation.structure_fix_runner import sync_hierarchy_from_markdown
+
+            synced_artifact = pipeline_log_dir / "s15k_synced_hierarchy.json" if pipeline_log_dir else None
+            hierarchy, sync_report = sync_hierarchy_from_markdown(
+                md_path if md_path.exists() else Path(response[:0]),
+                hierarchy,
+                write_path=synced_artifact,
+            )
+            print(
+                f"      sync_from_md patched={sync_report['patched']} skipped={sync_report['skipped']}",
+                flush=True,
+            )
+        except Exception as exc:
+            print(f"[!] sync_hierarchy_from_markdown failed (continuing): {exc}", flush=True)
 
     md_path.write_text(response, encoding="utf-8")
     print(f"\n[+] Markdown: {md_path}")

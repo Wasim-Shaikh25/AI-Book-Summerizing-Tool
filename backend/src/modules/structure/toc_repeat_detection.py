@@ -5,7 +5,7 @@ Seed rule — for each final heading at line L:
 1. Heading line text (stripped) must appear at least twice among all PDF lines.
 2. The next line in document order must also appear at least twice.
 3. The previous line must not look like another numbered outline row (e.g. ``1.2 …``),
-   so consecutive syllabus/TOC list rows are not all marked as seeds—only the first
+   so consecutive outline/TOC list rows are not all marked as seeds—only the first
    row after a non-numbered line qualifies.
 If any check fails, the heading is not marked as TOC (`is_toc`).
 
@@ -39,7 +39,7 @@ def _norm(s: str) -> str:
     return s.strip()
 
 
-# Syllabus / outline rows usually start with "1.2", "2.3.1", etc. Used to break false seed chains.
+# Outline rows usually start with "1.2", "2.3.1", etc. Used to break false seed chains.
 _RE_NUMBERED_OUTLINE_START = re.compile(r"^\d+(?:\.\d+)+\b")
 
 

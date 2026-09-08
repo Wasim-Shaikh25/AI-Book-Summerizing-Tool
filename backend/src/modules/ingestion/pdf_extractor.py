@@ -9,7 +9,6 @@ from src.utils.pdf_reader import PDFReader
 from src.utils.ocr_reader import OCRReader
 
 from .layout_enrichment import enrich_layout_from_pymupdf_pages
-from .ocr_stage import apply_ocr_to_pages
 from src.shared.models import NormalizedLine
 
 
@@ -245,29 +244,17 @@ def extract_pdf(
     """
     book_title = _title_from_path(pdf_path)
 
-    # Visual elements (tables with cells, images with OCR, diagrams)
     visual_elements = extract_visual_elements(pdf_path, max_pages=max_pages)
 
-    # Layout: structured extraction with OCR injection and table tagging
-    pages_dict = _pymupdf_extract_pages_dict(pdf_path, max_pages=max_pages)
+    from .layout_backends import extract_layout_lines
 
-    from src.shared import config
-
-    pages_dict, ocr_log = apply_ocr_to_pages(
+    enriched_lines, backend, layout_meta = extract_layout_lines(
         pdf_path,
-        pages_dict,
-        visual_elements,
-        enabled=bool(getattr(config, "OCR_ENABLED", True)),
-        mode=str(getattr(config, "OCR_MODE", "auto")),
-        split_two_up=bool(getattr(config, "OCR_SPLIT_TWO_UP", False)),
-        min_text_chars=int(getattr(config, "OCR_MIN_TEXT_CHARS", 40) or 40),
-        zoom=float(getattr(config, "OCR_ZOOM", 2.0) or 2.0),
-        lang=str(getattr(config, "OCR_LANG", "eng") or "eng"),
-        tesseract_cmd=str(getattr(config, "TESSERACT_CMD", "") or ""),
+        max_pages=max_pages,
+        visual_elements=visual_elements,
     )
-    if ocr_log:
-        visual_elements = list(visual_elements) + [{"kind": "ocr_log", "pages": ocr_log}]
-
-    enriched_lines = enrich_layout_from_pymupdf_pages(pages_dict, visual_elements=visual_elements)
+    if layout_meta.get("ocr_log"):
+        visual_elements = list(visual_elements) + [{"kind": "ocr_log", "pages": layout_meta["ocr_log"]}]
+    visual_elements = list(visual_elements) + [{"kind": "layout_backend", "backend": backend, **layout_meta}]
 
     return enriched_lines, book_title, visual_elements

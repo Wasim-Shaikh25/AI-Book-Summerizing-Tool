@@ -27,7 +27,7 @@ Canonical names (preferred) delegate to legacy scripts. Full catalog: `backend/s
 
 | Canonical | Legacy | Purpose | Why it exists | Key env / inputs |
 |-----------|--------|---------|---------------|------------------|
-| `pipeline_full_book.py` | `run_full_openai_pipeline.py` | Full PDF → structure → rewrite → **structural cleanup → title sync** → DOCX → quality audit | Primary end-to-end dev script; title sync (`propagate_titles_to_hierarchy`) writes cleaned MD titles into the hierarchy so DOCX + audit AC-04 match the Markdown | `PIPELINE_PDF`, `INGESTION_PROFILE`, `REWRITE_USER_INSTRUCTION`, `NOTES_STRUCTURE_FIX_*` |
+| `pipeline_full_book.py` | `run_full_openai_pipeline.py` | Full PDF → structure → rewrite → **structural cleanup → title sync** → DOCX → quality audit | Resolves `title` via `resolve_export_book_title` **before** output path; title sync for DOCX + audit | `PIPELINE_PDF`, `OCR_SPLIT_TWO_UP`, `INGESTION_PROFILE`, `REWRITE_USER_INSTRUCTION` |
 | `pipeline_batch_books.py` | `run_batch_pipeline.py` | Pipeline + audit for multiple PDFs | Regression across test books | PDF list in script |
 | `export_notes_docx.py` | `reexport_docx.py` | DOCX from hierarchy + rewritten map | Format/theme changes without LLM | `PIPELINE_LOG_DIR`, `NOTES_MD` |
 | `audit_notes_quality.py` | `run_notes_quality_audit.py` | Standalone quality audit | Audit without full pipeline | MD/DOCX paths, `NOTES_QUALITY_LLM=0` |
@@ -41,7 +41,7 @@ Canonical names (preferred) delegate to legacy scripts. Full catalog: `backend/s
 | `compare_runs.py` | Summarize log run metadata | Debug run folders | `logs/` |
 | `rewrite_missing_sections.py` | Fill gaps + re-export | Recovery after partial rewrite | `rewritten_map` |
 | `build_rewritten_sidecar.py` | Build `rewritten_map` from MD | Re-export without LLM | Existing `.md` |
-| `reexport_docx.py` | DOCX from hierarchy + map | Format/theme changes only | Log dir + MD |
+| `reexport_docx.py` | DOCX from hierarchy + map | Format/theme changes; **auto 15h refresh** when module markers exceed chapter count; per-book cover title | `PIPELINE_LOG_DIR`, `NOTES_MD`, `DOCX_NAME` |
 | `export_universal_docx.py` | MD → DOCX with theme env | Quick format test | `.md` file |
 | `bench_15f_cleanup.py` | Benchmark 15f modes | rules vs MiniLM vs cloud | 15e logs |
 | `run_e2e_scenarios.py` | Rewrite + Q&A scenarios | Integration smoke | Configured books |

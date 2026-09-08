@@ -1,4 +1,4 @@
-# Overview — AI Notes Creator Model
+# Overview — InsightEngine
 
 > **Role:** One-page executive summary. Details live in linked specs below.
 
@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Transform legal/academic **PDF books** into structured AI-generated notes via:
+Transform **PDF documents** into structured AI-generated research notes and summaries via:
 
 1. Deterministic pipeline (ingest → structure → TOC → final structuring)
 2. Optional LLM overlays (rewrite, Q&A with RAG)

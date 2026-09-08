@@ -96,9 +96,9 @@ def build_rewrite_jobs(
             next_overlap = _overlap_head(str(nxt.get("text") or ""), max_chars=overlap_chars)
 
         sub_labels = tuple(
-            str(s).strip()
+            h
             for s in (sec.get("subheadings") or [])
-            if str(s).strip()
+            if (h := (s["heading"].strip() if isinstance(s, dict) else str(s).strip()))
         )
         jobs.append(
             _RewriteJob(
@@ -145,12 +145,26 @@ def resolve_context_overlap_chars(explicit: Optional[int] = None) -> int:
     return max(0, n)
 
 
+def _semantic_split_enabled() -> bool:
+    raw = os.environ.get("SEMANTIC_SPLIT_ENABLED", "0").strip().lower()
+    return raw in {"1", "true", "yes"}
+
+
+def _semantic_split_threshold() -> int:
+    try:
+        return int(os.environ.get("SEMANTIC_SPLIT_THRESHOLD", "2000"))
+    except ValueError:
+        return 2000
+
+
 def _build_prompt(
     job: _RewriteJob,
     *,
     user_instruction: str,
     overlap_chars: int,
     strict: bool = False,
+    semantic_chunks: Optional[List[dict]] = None,
+    rag_context: Optional[str] = None,
 ) -> str:
     prefix = fidelity_strict_prompt_prefix() if strict else ""
     body = build_section_user_prompt_with_context(
@@ -163,8 +177,16 @@ def _build_prompt(
         next_overlap="" if strict else job.next_overlap,
         chapter_heading=job.chapter_heading,
         subheadings=list(job.subheadings),
+        semantic_chunks=semantic_chunks,
     )
-    return prefix + body
+    result = prefix + body
+    if rag_context:
+        result += (
+            "\n\n---\nRelated context (do not repeat, use for continuity only):\n"
+            + rag_context
+            + "\n---"
+        )
+    return result
 
 
 def _rewrite_job(
@@ -182,11 +204,52 @@ def _rewrite_job(
         stats = get_last_fidelity_stats()
         stats.low_grounding_sections += 1
 
+    # Opt-in: semantic splitting pre-LLM. Skipped for low-grounding sections where
+    # strict mode is already enforced and chunking would reduce source grounding.
+    semantic_chunks: Optional[List[dict]] = None
+    if _semantic_split_enabled() and not low_grounding:
+        try:
+            from src.modules.generation.semantic_splitter import semantic_split_section as _split_fn
+
+            chunks = _split_fn(
+                job.source_text,
+                job.heading,
+                threshold=_semantic_split_threshold(),
+                max_chunks=4,
+                overlap_sents=1,
+            )
+            if len(chunks) > 1:
+                semantic_chunks = chunks
+        except Exception:
+            semantic_chunks = None
+
+    # Opt-in: inject same-book RAG context for rewrite continuity.
+    rag_context: Optional[str] = None
+    if os.environ.get("REWRITE_RAG_CONTEXT", "0").strip() == "1" and not low_grounding:
+        try:
+            from src.modules.rag.service import RagService
+
+            _rag = RagService()
+            _candidates = _rag.retrieve(
+                job.heading,
+                book_id=getattr(job, "book_id", ""),
+                sections=[],
+                top_k=3,
+            )
+            # Exclude the current section to avoid self-reference
+            _candidates = [c for c in _candidates if c.get("section_id") != job.section_id][:2]
+            if _candidates:
+                rag_context = "\n".join(c.get("text", "")[:200] for c in _candidates)[:400]
+        except Exception:
+            rag_context = None
+
     prompt = _build_prompt(
         job,
         user_instruction=user_instruction,
         overlap_chars=0 if low_grounding else overlap_chars,
         strict=low_grounding,
+        semantic_chunks=semantic_chunks,
+        rag_context=rag_context,
     )
     text = normalize_rewritten_section(
         (generate(system, prompt) or "").strip(),

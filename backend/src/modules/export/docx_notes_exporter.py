@@ -181,11 +181,8 @@ def _add_cover_page(doc: Document, cover: BookCoverMeta) -> None:
     doc.add_paragraph()
     rows = [
         ("Book", title),
-        ("Source PDF", cover.source_pdf),
         ("Generated", cover.generated_at),
         ("Chapters", str(cover.chapter_count) if cover.chapter_count else ""),
-        ("Sections", str(cover.section_count) if cover.section_count else ""),
-        ("Notes style", cover.user_instruction),
     ]
     table = doc.add_table(rows=1, cols=2)
     hdr = table.rows[0].cells

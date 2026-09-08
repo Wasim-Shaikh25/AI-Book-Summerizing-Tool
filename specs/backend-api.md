@@ -1,4 +1,4 @@
-# Backend API Specification — AI Notes Creator
+# Backend API Specification — InsightEngine
 
 > **Role:** Authoritative for REST API (endpoints, schemas, services, auth).  
 > **Not here:** Requirement IDs → [requirements-web-platform.md](./requirements-web-platform.md) · UI contracts → [ui-backend-integration.md](./ui-backend-integration.md) · Engine → [modules/](./modules/)  
@@ -81,7 +81,7 @@ flowchart TB
 
 ```python
 # backend/api/main.py
-app = FastAPI(title="AI Notes Creator API", version="1.0.0")
+app = FastAPI(title="InsightEngine API", version="1.0.0")
 
 app.add_middleware(CORSMiddleware, allow_origins=get_auth_settings().cors_origins)
 app.add_middleware(RateLimitMiddleware)
@@ -93,7 +93,7 @@ app.include_router(exports.router, prefix="/api")
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "ai-notes-creator-api"}
+    return {"status": "ok", "service": "insightengine-api"}
 ```
 
 **Run:**

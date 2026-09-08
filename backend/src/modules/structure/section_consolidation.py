@@ -11,7 +11,7 @@ from src.modules.structure.dropped_heading_registry import (
     is_acceptable_study_title,
     is_generic_study_title,
     is_noisy_fragment_heading,
-    is_syllabus_heading,
+    is_outline_heading,
 )
 from src.modules.structure.final_structuring.book_assembler import (
     _looks_like_structural_heading,
@@ -64,7 +64,7 @@ def is_low_value_heading(text: str) -> bool:
 
     if is_incomplete_pdf_heading(t):
         return True
-    if is_syllabus_heading(t):
+    if is_outline_heading(t):
         return True
     if is_generic_study_title(t):
         return True

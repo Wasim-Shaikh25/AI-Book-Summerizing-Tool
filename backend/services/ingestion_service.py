@@ -74,7 +74,7 @@ class IngestionService:
             result, pipeline_logger = run_pipeline(
                 file_path,
                 enable_logs=True,
-                persist_to_db=False,
+                persist_to_db=True,
                 on_progress=pipeline_progress,
             )
             log_dir = str(pipeline_logger.run_dir) if pipeline_logger else None

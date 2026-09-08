@@ -102,7 +102,7 @@ def test_compute_verdict_scores_weights_completeness_and_heading_acceptance() ->
         repeated_pairs=0,
         weak_heading_count=0,
         title_noise_count=0,
-        syllabus_body_hits=0,
+        outline_body_hits=0,
         pdf_match_failures=0,
         heading_acceptance_failed=3,
         heading_export_violations=5,

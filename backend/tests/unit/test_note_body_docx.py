@@ -44,8 +44,8 @@ def test_numbered_sublist_after_bullet() -> None:
         "- Main idea\n  1. Step one\n  2. Step two",
     )
     assert doc.paragraphs[0].style.name.startswith("List Bullet")
-    assert doc.paragraphs[1].style.name.startswith("List Number")
-    assert "Step one" in doc.paragraphs[1].text
+    assert "1. Step one" in doc.paragraphs[1].text
+    assert "2. Step two" in doc.paragraphs[2].text
 
 
 def test_standalone_bold_becomes_subtopic() -> None:
@@ -56,36 +56,26 @@ def test_standalone_bold_becomes_subtopic() -> None:
 
 
 def test_numbered_list_restarts_each_section_body() -> None:
-    """Topic B must show 1, 2 — not continue 6, 7 from topic A in Word."""
-    from docx.oxml.ns import qn
-
-    from src.modules.export.docx_theme import restart_numbered_paragraph
-
+    """Topic B must show 1, 2 — numbers come from markdown, not Word list counter."""
     doc = Document()
     append_note_body_markdown(doc, "1. First\n2. Second\n3. Third")
     append_note_body_markdown(doc, "1. New topic first\n2. New topic second")
-    numbered = [p for p in doc.paragraphs if p.style.name.startswith("List Number")]
-    assert len(numbered) == 5
-    # Second section's first numbered paragraph should carry a restart override.
-    restart_p = numbered[3]
-    num_pr = restart_p._p.pPr.numPr
-    assert num_pr is not None
-    lvl_override = num_pr.find(qn("w:lvlOverride"))
-    assert lvl_override is not None
-    start_override = lvl_override.find(qn("w:startOverride"))
-    assert start_override is not None
-    assert start_override.get(qn("w:val")) == "1"
+    texts = [p.text for p in doc.paragraphs if p.text.strip()]
+    assert texts[0].startswith("1. First")
+    assert texts[3].startswith("1. New topic first")
+    assert texts[4].startswith("2. New topic second")
+    # Must not use Word List Number (invalid restart XML was breaking Word open).
+    assert not any(p.style.name.startswith("List Number") for p in doc.paragraphs)
 
 
-def test_restart_numbered_paragraph_sets_start_override() -> None:
-    from docx.oxml.ns import qn
-
+def test_restart_numbered_paragraph_is_noop() -> None:
     from src.modules.export.docx_theme import restart_numbered_paragraph
 
     doc = Document()
     p = doc.add_paragraph("item", style="List Number")
     restart_numbered_paragraph(p, level=0)
-    lvl_override = p._p.pPr.numPr.find(qn("w:lvlOverride"))
-    assert lvl_override is not None
-    start_override = lvl_override.find(qn("w:startOverride"))
-    assert start_override.get(qn("w:val")) == "1"
+    num_pr = p._p.pPr.numPr if p._p.pPr is not None else None
+    if num_pr is not None:
+        from docx.oxml.ns import qn
+
+        assert num_pr.find(qn("w:lvlOverride")) is None

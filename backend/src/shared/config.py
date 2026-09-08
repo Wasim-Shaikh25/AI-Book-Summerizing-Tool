@@ -107,6 +107,58 @@ def _cfg_get(cfg: dict[str, Any], *keys: str, default: Any = None) -> Any:
 
 _YAML = _load_yaml(_DEFAULT_YAML)
 
+# Apply profile overrides (e.g., INSIGHT_PROFILE=research enables all research features)
+def _apply_profile_overrides(yaml_cfg: dict[str, Any]) -> dict[str, Any]:
+    """Apply profile-based configuration overrides."""
+    profile_name = _env("INSIGHT_PROFILE", "").strip().lower()
+    if not profile_name:
+        return yaml_cfg
+
+    profile_cfg = _cfg_get(yaml_cfg, "profiles", profile_name, default=None)
+    if not profile_cfg or not isinstance(profile_cfg, dict):
+        return yaml_cfg
+
+    profile_enable = profile_cfg.get("enable", False)
+    if not profile_enable:
+        return yaml_cfg
+
+    profile_settings = profile_cfg.get("settings", {})
+    if not isinstance(profile_settings, dict):
+        return yaml_cfg
+
+    # Apply profile settings to appropriate sections
+    result = dict(yaml_cfg)
+    for key, value in profile_settings.items():
+        # Map flat keys to nested structure
+        if key == "qa_multistep_enabled":
+            if "qa" not in result:
+                result["qa"] = {}
+            result["qa"]["multistep_enabled"] = value
+        elif key == "rag_corpus_index_enabled":
+            if "rag_advanced" not in result:
+                result["rag_advanced"] = {}
+            result["rag_advanced"]["corpus_index_enabled"] = value
+        elif key == "knowledge_graph_enabled":
+            if "knowledge_graph" not in result:
+                result["knowledge_graph"] = {}
+            result["knowledge_graph"]["enabled"] = value
+        elif key == "rag_chunk_strategy":
+            if "rag_advanced" not in result:
+                result["rag_advanced"] = {}
+            result["rag_advanced"]["chunk_strategy"] = value
+        elif key == "rewrite_rag_context":
+            if "rag_advanced" not in result:
+                result["rag_advanced"] = {}
+            result["rag_advanced"]["rewrite_rag_context"] = value
+        elif key == "body_audit_enabled":
+            if "body_audit" not in result:
+                result["body_audit"] = {}
+            result["body_audit"]["enabled"] = value
+
+    return result
+
+_YAML = _apply_profile_overrides(_YAML)
+
 # Paths
 BASE_DIR = str(_PROJECT_ROOT)
 PDF_FOLDER = str(_PROJECT_ROOT / _cfg_get(_YAML, "paths", "pdf_folder", default="pdfs"))
@@ -137,7 +189,7 @@ DOCX_FONT_FAMILY = _env(
 ).strip()
 NOTES_EXPORT_STYLE = _env(
     "NOTES_EXPORT_STYLE",
-    str(_cfg_get(_YAML, "export", "notes_style", default="book")),
+    str(_cfg_get(_YAML, "export", "notes_style", default="study")),
 ).strip().lower()
 
 # LLM generic
@@ -406,6 +458,30 @@ NOTES_STRUCTURE_FIX_DROP_LOW_GROUNDING = _env_bool(
     "NOTES_STRUCTURE_FIX_DROP_LOW_GROUNDING",
     bool(_cfg_get(_YAML, "export", "structure_fix_drop_low_grounding", default=False)),
 )
+SYNC_HIERARCHY_FROM_MD = _env_bool(
+    "SYNC_HIERARCHY_FROM_MD",
+    bool(_cfg_get(_YAML, "export", "sync_hierarchy_from_markdown", default=False)),
+)
+
+# Semantic splitter (pre-LLM section splitting)
+SEMANTIC_SPLIT_ENABLED = _env_bool(
+    "SEMANTIC_SPLIT_ENABLED",
+    bool(_cfg_get(_YAML, "semantic_splitter", "enabled", default=False)),
+)
+SEMANTIC_SPLIT_THRESHOLD = _env_int(
+    "SEMANTIC_SPLIT_THRESHOLD",
+    int(_cfg_get(_YAML, "semantic_splitter", "threshold", default=2000)),
+)
+
+# Q&A chain-of-thought reasoning
+QA_MULTISTEP_ENABLED = _env_int(
+    "QA_MULTISTEP_ENABLED",
+    int(_cfg_get(_YAML, "qa", "multistep_enabled", default=0)),
+)
+QA_MULTISTEP_TOP_K_PER_Q = _env_int(
+    "QA_MULTISTEP_TOP_K_PER_Q",
+    int(_cfg_get(_YAML, "qa", "multistep_top_k_per_question", default=3)),
+)
 
 DOCUMENT_PROFILE_SHORT_BODY_CHARS = _env_int(
     "DOCUMENT_PROFILE_SHORT_BODY_CHARS",
@@ -650,4 +726,64 @@ OCR_ZOOM = _env_float("OCR_ZOOM", float(_cfg_get(_YAML, "ocr", "zoom", default=2
 OCR_LANG = _env("OCR_LANG", str(_cfg_get(_YAML, "ocr", "lang", default="eng")))
 TESSERACT_CMD = _env("TESSERACT_CMD", "")
 
+# ML layout parsing (Docling) — optional; improves scanned / complex PDFs
+INGESTION_LAYOUT_BACKEND = _env(
+    "INGESTION_LAYOUT_BACKEND",
+    str(_cfg_get(_YAML, "ingestion", "layout_backend", default="auto")).strip().lower(),
+)
+INGESTION_LAYOUT_AUTO_SAMPLE_PAGES = _env_int(
+    "INGESTION_LAYOUT_AUTO_SAMPLE_PAGES",
+    int(_cfg_get(_YAML, "ingestion", "layout_auto_sample_pages", default=8)),
+)
+INGESTION_LAYOUT_DOCLING_ALWAYS = _env_bool(
+    "INGESTION_LAYOUT_DOCLING_ALWAYS",
+    bool(_cfg_get(_YAML, "ingestion", "layout_docling_always", default=False)),
+)
+
 os.makedirs(RAG_INDEX_DIR, exist_ok=True)
+
+# Body structure audit (post-rewrite deterministic checks)
+BODY_STRUCTURE_AUDIT_ENABLED = _env_bool(
+    "BODY_STRUCTURE_AUDIT_ENABLED",
+    bool(_cfg_get(_YAML, "body_audit", "enabled", default=False)),
+)
+BODY_AUDIT_LLM = _env_bool(
+    "BODY_AUDIT_LLM",
+    bool(_cfg_get(_YAML, "body_audit", "llm", default=False)),
+)
+BODY_AUDIT_SUBHEADING_CHARS = _env_int(
+    "BODY_AUDIT_SUBHEADING_CHARS",
+    int(_cfg_get(_YAML, "body_audit", "subheading_chars", default=600)),
+)
+
+# Advanced RAG chunk strategies (Phase 5A)
+RAG_CHUNK_STRATEGY = _env(
+    "RAG_CHUNK_STRATEGY",
+    str(_cfg_get(_YAML, "rag_advanced", "chunk_strategy", default="section")),
+).strip().lower()
+RAG_SEMANTIC_CHUNK_TARGET_CHARS = _env_int(
+    "RAG_SEMANTIC_CHUNK_TARGET_CHARS",
+    int(_cfg_get(_YAML, "rag_advanced", "semantic_chunk_target_chars", default=500)),
+)
+RAG_SEMANTIC_OVERLAP_SENTS = _env_int(
+    "RAG_SEMANTIC_OVERLAP_SENTS",
+    int(_cfg_get(_YAML, "rag_advanced", "semantic_overlap_sents", default=1)),
+)
+
+# Cross-book corpus index (Phase 5B)
+RAG_CORPUS_INDEX_ENABLED = _env_bool(
+    "RAG_CORPUS_INDEX_ENABLED",
+    bool(_cfg_get(_YAML, "rag_advanced", "corpus_index_enabled", default=False)),
+)
+
+# Rewrite RAG context injection (Phase 5C)
+REWRITE_RAG_CONTEXT = _env_bool(
+    "REWRITE_RAG_CONTEXT",
+    bool(_cfg_get(_YAML, "rag_advanced", "rewrite_rag_context", default=False)),
+)
+
+# Knowledge graph (Phase 7)
+KNOWLEDGE_GRAPH_ENABLED = _env_bool(
+    "KNOWLEDGE_GRAPH_ENABLED",
+    bool(_cfg_get(_YAML, "knowledge_graph", "enabled", default=False)),
+)

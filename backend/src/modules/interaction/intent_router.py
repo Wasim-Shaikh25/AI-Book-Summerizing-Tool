@@ -37,7 +37,7 @@ _VALID_FORMATS = frozenset({"paragraph", "bullet", "exam_oriented", "free"})
 _JSON_BLOCK = re.compile(r"```(?:json)?\s*([\s\S]*?)\s*```", re.I)
 _JSON_OBJECT = re.compile(r"\{[\s\S]*\}")
 
-_CLASSIFIER_SYSTEM = f"""You classify user requests about an ingested PDF/book.
+_CLASSIFIER_SYSTEM = f"""You classify user requests about an ingested document (book, manual, act, report, treatise, etc.).
 Your job is ROUTING ONLY — decide which pipeline to invoke. Do not write rewrite prompts here.
 
 {intent_options_for_prompt()}
@@ -64,6 +64,7 @@ Rules:
 - clarify → too vague to route
 - allow_external_knowledge=false for book rewrite tasks; true for QA unless user says book-only
 - Do NOT include rewrite_format or detailed output templates in this response
+- Examples: legal acts (BNS, CPC), medical textbooks, engineering manuals, business reports, research papers — all use same routing
 """
 
 

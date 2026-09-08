@@ -1,4 +1,4 @@
-# Testing Specification — AI Notes Creator
+# Testing Specification — InsightEngine
 
 > **Status:** ACTIVE  
 > **Version:** 2.0  
@@ -39,13 +39,19 @@ backend/
     │   ├── test_pipeline_stages.py
     │   ├── test_qa_engine.py
     │   ├── test_rag_retriever.py
+    │   ├── test_rewrite_prompts.py
     │   ├── test_rewrite_validation.py
     │   ├── test_section_bundler.py
     │   ├── test_title_service.py
     │   ├── test_guest_auth.py            # guest mode + auth config
     │   ├── test_llm_cache.py             # rewrite disk cache
     │   ├── test_llm_chat_retry.py        # transient-error retry/backoff
-    │   └── test_hierarchy_openai_gate.py # 15j names-pass skip gate
+    │   ├── test_hierarchy_openai_gate.py # 15j names-pass skip gate
+    │   ├── test_signal_classifier.py            # signal-sections V2 boundary picker
+    │   ├── test_signal_partitioner.py           # signal-sections V2 boundary→section partitioner
+    │   ├── test_pdf_chapter_grouper.py          # signal-sections V2 PDF chapter grouping
+    │   ├── test_signal_rewrite_prompt.py        # signal-sections V2 prompt + inner-heading decider
+    │   └── test_signal_pipeline_end_to_end.py   # signal-sections V2 structure→mocked-LLM→markdown
     └── integration/
         ├── test_fragment_coverage.py
         └── test_logging_contract.py
@@ -252,6 +258,36 @@ def test_short_qa_stays_in_chat():
 | Both present | `items` + top-level | Prefers `items` |
 | Non-hierarchy | List payload | Raises `ValueError` |
 
+### 5.4h Module page chapter split (`test_chapter_placement.py`)
+
+**Module under test:** `src/modules/structure/final_structuring/chapter_placement.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| `detect_module_break_pages_from_lines` | MODULE 1–3 lines with pages | 3 breaks detected |
+| `split_chapters_at_module_page_markers` | Sections across module page ranges | One chapter per non-empty bucket |
+| `refresh_chapter_placement_if_module_gap` | 4 module markers, 1 mega-chapter | Re-run 15h → multiple chapters |
+
+### 5.4i Export cover title (`test_export_cover.py`)
+
+**Module under test:** `src/modules/export/document_formatter.py`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| `humanize_book_title` | Slug with numeric suffix | Readable title |
+| `resolve_export_book_title` | MD stem environmental-law | Environmental title, not bareact |
+| Sidecar PDF preference | Sidecar `pdf` vs wrong MD stem | Sidecar PDF name wins |
+
+### 5.4j ML layout backend (`test_layout_backend.py`)
+
+**Module under test:** `src/modules/ingestion/layout_backends/`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| `pdf_likely_scanned` | Empty/low-text page dicts | True |
+| `docling_items_to_normalized_lines` | section_header item | is_bold + large_font |
+| `resolve_layout_backend` | INGESTION_LAYOUT_BACKEND=pymupdf | Returns pymupdf |
+
 ### 5.5 OCR Stage (`test_ocr_stage.py`)
 
 **Module under test:** `src/modules/ingestion/ocr_stage.py`  
@@ -289,6 +325,182 @@ def test_short_qa_stays_in_chat():
 | Art-only cleanup | Heading "Art. 5" only | Cleaned or flagged |
 | Number prefix strip | "1. Introduction" | Prefix removed |
 | Chapter dedup | Duplicate chapter titles | Deduplicated |
+
+### 5.9a Rewrite prompts (`test_rewrite_prompts.py`)
+
+**Module under test:** `rewrite_prompts.py`, `parallel_rewrite.build_rewrite_jobs`, `document_format_style.universal_prose_rules`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Dict subheadings | `subheadings: [{heading: ...}]` | Clean label strings in job, not `str(dict)` |
+| Long section fallback | Source >1800 chars, no labels | `LONG SECTION` inference hint in user prompt |
+| Study vs book system prompt | `NOTES_EXPORT_STYLE` | Study → bullets/`###`; book → prose-first rule 14 |
+
+### 5.9b Heading Continuation Check (`test_heading_continuation.py`)
+
+**Module under test:** `src/modules/structure/heading_validity_gate._continuation_context_check`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Lowercase after open sentence | prev line ends without `.?!:;`, candidate starts lowercase | `True` (drop) |
+| Keep after complete sentence | prev line ends with `.` | `False` (keep) |
+| Next line lowercase + long candidate | candidate >5 words, next line starts lowercase | `True` (drop) |
+| No context | empty before/after | `False` (conservative keep) |
+| Short candidate immunity | ≤5 words, next line lowercase | `False` (keep) |
+| Gate integration | continuation fragment → gate drops with `continuation_fragment` reason | dropped, reason logged |
+| Bold fast-path safety | bold Title Case heading, open previous line | kept (strong_layout short-circuit) |
+| Conjunction opener | candidate starts with `and`, `but`, etc. after open sentence | `True` (drop) |
+
+### 5.9c TOC Sync from Markdown (`test_toc_sync_from_markdown.py`)
+
+**Module under test:** `src/modules/generation/structure_fix_runner.sync_hierarchy_from_markdown`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Heading patched from sid | `## New Title <!-- sid:S1 -->` | hierarchy heading updated |
+| Section order from Markdown | S2 before S1 in MD | reordered in hierarchy |
+| No sid tag → untouched | section without `<!-- sid:... -->` | heading unchanged, `patched=0` |
+| Chapter vote | 3 sections under "Corrected Chapter" | chapter heading updated |
+| patched count | 2 sections + 1 chapter changed | `patched=3` |
+| Artifact write | `write_path` given | `.json` file created and parseable |
+| No artifact | `write_path=None` | no `.json` file written |
+| Missing sid gracefully | MD sid not in hierarchy | skipped, `warnings` list non-empty |
+| Env flag 0 | `SYNC_HIERARCHY_FROM_MD=0` | sync not called |
+| Env flag 1 | `SYNC_HIERARCHY_FROM_MD=1` | sync called with correct args |
+
+### 5.9d Semantic Splitter (`test_semantic_splitter.py`)
+
+**Module under test:** `src/modules/generation/semantic_splitter`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| Short passthrough | `len(text) <= threshold` | single chunk, `sub_heading_hint=None` |
+| Long text splits | text > threshold, 2 topics | 1–4 chunks |
+| No content lost | all words in original in combined chunks | 0 lost words |
+| Overlap sents | `overlap_sents=1` | last sentence of chunk N in chunk N+1 |
+| Hint = first 8 words | multi-chunk result | hint matches `" ".join(words[:8])` |
+| max_chunks respected | many topic shifts, `max_chunks=3` | ≤3 chunks |
+| Single sentence | no terminal punctuation | passthrough, `sub_heading_hint=None` |
+| Abbreviation safety | `Dr.`, `Mr.` | no false splits |
+| Period + capital splits | normal sentence boundary | 2 sentences |
+| No sentence-transformers | `_get_encoder` patched to `None` | no exception, char fallback used |
+| Splitter called when enabled | `SEMANTIC_SPLIT_ENABLED=1` | `_semantic_split_enabled()` returns `True` |
+| Splitter skipped when disabled | `SEMANTIC_SPLIT_ENABLED=0` | `_semantic_split_enabled()` returns `False` |
+
+### 5.9e Q&A Chain-of-Thought Reasoning (`test_qa_reasoning.py`)
+
+**Module under test:** `src/modules/generation/qa_reasoning`, `src/modules/generation/qa_engine`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| decompose returns string list | valid JSON array from LLM | list of 2 strings |
+| decompose fallback on bad JSON | invalid JSON | returns `[original_question]` |
+| decompose capped at 3 | LLM returns 5 sub-questions | only first 3 returned |
+| retrieve deduplicates | same chunk-A in 2 sub-question results | chunk-A appears once |
+| retrieve respects top_k | 3 sub-questions × 2 = 6 unique | ≤6 results |
+| synthesize returns ReasoningAnswer | valid JSON synthesis | `result.answer` and `result.reasoning` populated |
+| synthesize includes sources | 2 source entries | `len(result.sources) == 2` |
+| synthesize empty context | no excerpts | no exception; `answer != ""` |
+| engine routes to multistep | `QA_MULTISTEP_ENABLED=1`, 6+ word question | `_answer_multistep` called |
+| engine routes to singleshot | `QA_MULTISTEP_ENABLED=0` | `_answer_singleshot` called |
+| short question → singleshot | 4 words even if flag=1 | `_answer_singleshot` called |
+| hops count | 2 sub-questions | `result.hops == 2` |
+
+### 5.9f Body Structure Audit (`test_body_structure_audit.py`)
+
+**Module under test:** `src/modules/generation/body_structure_audit`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| flags missing_subheadings | long body (>600 chars) with no `###` | `missing_subheadings` in issue types |
+| no flag for short body | body < 600 chars, no `###` | no `missing_subheadings` |
+| flags missing_bullets | source has numbered list, body has no bullets | `missing_bullets` flagged |
+| no flag for prose source | source has no enumeration | no `missing_bullets` |
+| detects numbered list | `"1. Item\n2. Item"` | `_source_has_list_content` returns `True` |
+| detects lettered list | `"a) Item\nb) Item"` | `_source_has_list_content` returns `True` |
+| pure prose source | `"A plain paragraph."` | `_source_has_list_content` returns `False` |
+| flags bold_fragments | standalone `**Key point**` line | `bold_fragments` flagged |
+| flags thin_bullets | >30% bullets < 5 words | `thin_bullets` flagged |
+| no flag for good bullets | all bullets ≥5 words | no `thin_bullets` |
+| count accuracy | 3 good + 2 flagged sections | `sections_checked=5`, `sections_flagged=2` |
+| LLM disabled | `BODY_AUDIT_LLM=0`, chat mock provided | chat never called |
+| has_subheadings true | `### Subtitle` in body | returns `True` |
+| has_subheadings false | only `##` heading | returns `False` |
+| ratio calculation | 2 of 10 bullets thin | ratio ≈ 0.2 |
+| standalone bold detected | bold line matched | `True` |
+| inline bold ignored | `**word** is bold inline` | `False` |
+
+### 5.9g RAG Chunk Strategies (`test_chunk_builder_strategies.py`)
+
+**Module under test:** `src/modules/rag/chunk_builder`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| section strategy | `RAG_CHUNK_STRATEGY=section`, 2 sections | 2 chunks |
+| paragraph strategy | `RAG_CHUNK_STRATEGY=paragraph`, 3 para text | 3 chunks |
+| semantic splits long para | single para >500 chars, `target_chars=100` | >1 chunks |
+| chunk has paragraph_idx | semantic split | all chunks have `paragraph_idx` |
+| chunk_strategy field | semantic split | all `chunk_strategy == "semantic"` |
+| overlap in adjacent chunks | `overlap_sents=1` | chunk[1] starts with first sentence |
+| short para not split | `target_chars=500`, short text | 1 chunk |
+| default is section | `RAG_CHUNK_STRATEGY=section` | 1 chunk for 1 section |
+| no text lost | 4 sentences, no overlap | all 4 words in combined output |
+
+### 5.9h Corpus Builder (`test_corpus_builder.py`)
+
+**Module under test:** `src/modules/rag/corpus_builder`, `src/modules/rag/service`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| load returns None | corpus not built | `None` |
+| invalidate deletes dir | corpus dir exists | dir removed |
+| book_id in chunk metadata | build with book A | all chunks have `source_book_id` |
+| aggregates multiple books | books A + B | 2 chunks in corpus file |
+| retrieve_cross_book disabled | `RAG_CORPUS_INDEX_ENABLED=False` | returns `[]` |
+
+### 5.9i Rewrite RAG Context (`test_rewrite_rag_context.py`)
+
+**Module under test:** `src/modules/generation/parallel_rewrite`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| disabled → not injected | `REWRITE_RAG_CONTEXT=0` | guard `enabled` is `False` |
+| enabled flag | `REWRITE_RAG_CONTEXT=1` | guard `enabled` is `True` |
+| truncated to 400 chars | 800-char text | `len(rag_context) <= 400` |
+| excludes current section | candidates include S1=current | filtered list has no S1 |
+| max 2 results | 3 candidates | `len(used) == 2` |
+| prompt block appended | `rag_context` provided | "Related context" in prompt |
+
+### 5.9j Concept Extractor (`test_concept_extractor.py`)
+
+**Module under test:** `src/modules/knowledge/concept_extractor`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| returns list of ExtractedConcept | legal text | list of `ExtractedConcept` |
+| respects top_k | 20 phrases, top_k=3 | ≤3 results |
+| canonical_name lowercase | mixed-case phrase | all names lowercase |
+| salience_score 0–1 | any text | all scores in `[0.0, 1.0]` |
+| no duplicates | "tort" repeated 20× | no duplicate canonical names |
+| empty text | `""` | returns `[]` |
+| works without SentenceTransformer | monkeypatched to None | no exception |
+| normalise strips stopwords | `"the tort law"` | `"tort law"` |
+| normalise lowercases | `"Tort Law"` | `"tort law"` |
+
+### 5.9k Concept Graph (`test_concept_graph.py`)
+
+**Module under test:** `src/modules/knowledge/concept_graph`
+
+| Test | Scenario | Expected |
+|------|----------|----------|
+| creates concept_nodes | 1 concept | ≥1 row in `concept_nodes` |
+| creates concept_chunks | 1 concept | ≥1 row in `concept_chunks` |
+| idempotent | double run | still 1 row in `concept_nodes` |
+| exact match lookup | build then query same name | returns row |
+| missing name returns None | query non-existent name | `None` |
+| max_hops respected | hops=1 | all related hops ≤ 1 |
+| related returns list | 1 concept | `isinstance(result, list)` |
+| existing tables unaffected | migration | books/topics/fragments tables still present |
 
 ### 5.9 Parallel Rewrite (`test_parallel_rewrite.py`)
 

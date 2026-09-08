@@ -222,6 +222,104 @@ def _flatten_sections(chapters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return flat
 
 
+_MODULE_LINE_RE = re.compile(r"^\s*(module|unit)\s+(\d+)\s*:?\s*$", re.I)
+
+
+def detect_module_unit_break_pages_from_lines(
+    lines: Optional[Sequence[Any]],
+) -> List[Dict[str, Any]]:
+    """Find MODULE/UNIT partition pages from layout lines (syllabus-style PDFs)."""
+    if not lines:
+        return []
+    out: List[Dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for ln in lines:
+        text = str(getattr(ln, "text", None) or (ln.get("text") if isinstance(ln, dict) else "") or "").strip()
+        m = _MODULE_LINE_RE.match(text)
+        if not m:
+            continue
+        kind, num = m.group(1).lower(), m.group(2)
+        key = (kind, num)
+        if key in seen:
+            continue
+        seen.add(key)
+        page = getattr(ln, "page_number", None)
+        if page is None and isinstance(ln, dict):
+            page = ln.get("page_number") or ln.get("page")
+        if page is None:
+            continue
+        out.append({"page": int(page), "label": text, "kind": kind, "number": num})
+    return sorted(out, key=lambda x: int(x["page"]))
+
+
+def split_chapters_at_module_page_markers(
+    chapters: List[Dict[str, Any]],
+    module_breaks: Sequence[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Split flat sections when MODULE/UNIT lines appear mid-document (page order)."""
+    if not module_breaks:
+        return chapters, 0
+    sections = _flatten_sections(chapters)
+    if len(sections) < 2:
+        return chapters, 0
+
+    ordered_breaks = sorted(
+        [b for b in module_breaks if b.get("page") is not None and int(b["page"]) > 0],
+        key=lambda b: int(b["page"]),
+    )
+    if len(ordered_breaks) < 2:
+        return chapters, 0
+
+    def _module_bucket(page: Any) -> int:
+        if page is None:
+            return 0
+        idx = 0
+        for i, br in enumerate(ordered_breaks):
+            if int(page) >= int(br["page"]):
+                idx = i
+        return idx
+
+    buckets: Dict[int, List[Dict[str, Any]]] = {}
+    for sec in sorted(sections, key=lambda s: int(s.get("page_number") or 0)):
+        buckets.setdefault(_module_bucket(sec.get("page_number")), []).append(sec)
+
+    bucket_keys = sorted(buckets.keys())
+    chunks = [buckets[k] for k in bucket_keys if buckets[k]]
+    if len(chunks) <= 1:
+        return chapters, 0
+
+    from src.modules.structure.dropped_heading_registry import partition_heading_to_study_title
+
+    book_title = ""
+    new_chapters: List[Dict[str, Any]] = []
+    for key, chunk in zip(bucket_keys, chunks):
+        label = str(ordered_breaks[key].get("label") or "") if key < len(ordered_breaks) else ""
+        title = infer_chapter_title_from_sections(chunk, book_title=book_title)
+        module_title = partition_heading_to_study_title(label) if label else ""
+        if module_title and (
+            not title
+            or len(title) < 10
+            or title.lower().startswith("study topic")
+            or title.lower().startswith("section topic")
+        ):
+            title = module_title
+        elif module_title and label:
+            title = f"{module_title} — {title}"[:120] if title and title != module_title else module_title
+        new_chapters.append(
+            {
+                "chapter_id": f"C{len(new_chapters) + 1}",
+                "heading": (title or module_title or "Chapter")[:120],
+                "level": 1,
+                "page_start": chunk[0].get("page_number"),
+                "page_end": chunk[-1].get("page_number"),
+                "sections": chunk,
+                "assignment_method": "15h_module_page_split",
+                "module_page_partition": True,
+            }
+        )
+    return _renumber_chapters(new_chapters), len(new_chapters) - len(chapters)
+
+
 def _renumber_chapters(chapters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     for i, ch in enumerate(chapters, start=1):
         ch["chapter_id"] = f"C{i}"
@@ -559,7 +657,23 @@ def enforce_chapter_structure(hierarchy: Dict[str, Any]) -> Tuple[Dict[str, Any]
     return out, stats
 
 
-def run_chapter_placement(chapter_hierarchy: Dict[str, Any]) -> Dict[str, Any]:
+def refresh_chapter_placement_if_module_gap(
+    chapter_hierarchy: Dict[str, Any],
+    lines: Optional[Sequence[Any]] = None,
+) -> Dict[str, Any]:
+    """Re-run 15h when MODULE/UNIT markers imply more chapters than we have."""
+    breaks = detect_module_unit_break_pages_from_lines(lines)
+    chapter_count = len(chapter_hierarchy.get("chapters") or [])
+    if len(breaks) >= 2 and chapter_count < len(breaks):
+        return run_chapter_placement(chapter_hierarchy, lines=lines)
+    return chapter_hierarchy
+
+
+def run_chapter_placement(
+    chapter_hierarchy: Dict[str, Any],
+    *,
+    lines: Optional[Sequence[Any]] = None,
+) -> Dict[str, Any]:
     """Stage 15h — structural splits, MiniLM reassignment, chapter title inference."""
     if not getattr(config, "CHAPTER_PLACEMENT_ENABLED", True):
         return chapter_hierarchy
@@ -570,7 +684,11 @@ def run_chapter_placement(chapter_hierarchy: Dict[str, Any]) -> Dict[str, Any]:
         return out
 
     meta = dict(out.get("meta") or {})
-    splits = size_splits = reassigns = page_rebalance = 0
+    splits = size_splits = reassigns = page_rebalance = module_splits = 0
+
+    module_breaks = detect_module_unit_break_pages_from_lines(lines)
+    if module_breaks:
+        chapters, module_splits = split_chapters_at_module_page_markers(chapters, module_breaks)
 
     chapters, splits = split_chapters_at_structural_markers(chapters)
     chapters, size_splits = split_oversized_chapters(chapters)
@@ -596,7 +714,10 @@ def run_chapter_placement(chapter_hierarchy: Dict[str, Any]) -> Dict[str, Any]:
     _sort_chapter_sections(out["chapters"])
     meta.update(
         {
+            "total_chapters": len(out["chapters"]),
+            "total_sections": sum(len(c.get("sections") or []) for c in out["chapters"]),
             "chapter_placement_method": "structural+minilm",
+            "chapter_placement_module_splits": module_splits,
             "chapter_placement_splits": splits,
             "chapter_placement_reassignments": reassigns,
             "chapter_placement_page_rebalances": page_rebalance,

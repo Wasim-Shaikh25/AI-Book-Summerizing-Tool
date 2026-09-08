@@ -89,19 +89,19 @@ class CommandParser:
         task_type = "rewrite_book"
         allow_external = True
 
-        if any(k in cmd for k in ("very short", "ultra short", "quick revision", "quick prep")):
+        if any(k in cmd for k in ("very short", "ultra short", "quick revision", "quick prep", "executive summary", "quick reference")):
             depth = "very_short"
             language_level = "simple"
         elif any(k in cmd for k in ("short", "simple", "easy")):
             depth = "short"
             language_level = "simple"
 
-        if any(k in cmd for k in ("revision", "cram", "last minute")):
+        if any(k in cmd for k in ("revision", "cram", "last minute", "cheat sheet", "key points", "quick reference")):
             task_type = "revision_notes"
             depth = "very_short"
             format_type = "exam_oriented"
             language_level = "simple"
-        elif any(k in cmd for k in ("study notes", "exam prep", "exam preparation", "exam oriented")):
+        elif any(k in cmd for k in ("study notes", "exam prep", "exam preparation", "exam oriented", "technical summary", "reference sheet")):
             task_type = "study_notes"
             format_type = "exam_oriented"
             language_level = "simple"

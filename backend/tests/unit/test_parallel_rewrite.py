@@ -41,10 +41,11 @@ def test_prompt_labels_context_as_non_primary(monkeypatch) -> None:
     assert "Fundamental Rights" in prompt
     assert "Art. 14" in prompt
     assert "Subtopics" in prompt
-    assert "do not invent new parent headings" in prompt
+    assert "Use ### for each distinct sub-topic" in prompt
 
 
-def test_parallel_rewrite_preserves_all_section_ids() -> None:
+def test_parallel_rewrite_preserves_all_section_ids(monkeypatch) -> None:
+    monkeypatch.setenv("NOTES_EXPORT_STYLE", "book")
     sections = [
         {"section_id": "S1", "heading": "One", "text": "alpha"},
         {"section_id": "S2", "heading": "Two", "text": "beta"},

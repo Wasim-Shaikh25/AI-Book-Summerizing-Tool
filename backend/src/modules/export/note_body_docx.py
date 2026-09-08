@@ -121,32 +121,34 @@ def _append_plain_lines(
                 h.paragraph_format.space_after = space_after
             continue
 
-        if _STANDALONE_BOLD_RE.match(stripped) or is_callout_label(stripped):
-            list_tracker.on_non_ordered_line()
-            label = callout_label_text(stripped)
-            try:
-                from src.shared.notes_export_style import is_book_export_style
+        # Disabled internal subtitles for uniform structure - treat as regular text
+        # if _STANDALONE_BOLD_RE.match(stripped) or is_callout_label(stripped):
+        #     list_tracker.on_non_ordered_line()
+        #     label = callout_label_text(stripped)
+        #     try:
+        #         from src.shared.notes_export_style import is_book_export_style
 
-                book = is_book_export_style()
-            except Exception:
-                book = False
-            if book:
-                p = doc.add_paragraph()
-                run = p.add_run(label.rstrip(":"))
-                run.bold = True
-                style_body_paragraph(p)
-                if compact and space_after:
-                    p.paragraph_format.space_after = space_after
-            elif is_named_callout_label(label):
-                add_callout_paragraph(doc, "", label=label)
-            else:
-                add_topic_subheading(doc, label)
-            continue
+        #         book = is_book_export_style()
+        #     except Exception:
+        #         book = False
+        #     if book:
+        #         p = doc.add_paragraph()
+        #         run = p.add_run(label.rstrip(":"))
+        #         run.bold = True
+        #         style_body_paragraph(p)
+        #         if compact and space_after:
+        #             p.paragraph_format.space_after = space_after
+        #     elif is_named_callout_label(label):
+        #         add_callout_paragraph(doc, "", label=label)
+        #     else:
+        #         add_topic_subheading(doc, label)
+        #     continue
 
-        if stripped.startswith("> "):
-            list_tracker.on_non_ordered_line()
-            add_callout_paragraph(doc, stripped[2:].strip())
-            continue
+        # Disabled callout paragraphs for uniform structure - treat as regular text
+        # if stripped.startswith("> "):
+        #     list_tracker.on_non_ordered_line()
+        #     add_callout_paragraph(doc, stripped[2:].strip())
+        #     continue
 
         bullet = _BULLET_RE.match(line)
         if bullet:
@@ -167,14 +169,17 @@ def _append_plain_lines(
         if ordered:
             indent, body = ordered.groups()
             level = min(len(indent.expandtabs()) // 2, 2)
-            style_name = "List Number" if level == 0 else f"List Number {level + 1}"
-            try:
-                p = doc.add_paragraph(style=style_name)
-            except KeyError:
-                p = doc.add_paragraph(style="List Number")
-            list_tracker.apply_restart_if_needed(p, level=level)
+            list_tracker.on_non_ordered_line()
+            num_m = re.match(r"^(\s*)(\d+)\.", line)
+            num = num_m.group(2) if num_m else "1"
+            # Render as plain text "N. body" — not Word List Number. Inline
+            # w:lvlOverride on numPr breaks Microsoft Word (invalid OOXML);
+            # markdown already restarts numbering per section.
+            p = doc.add_paragraph()
+            prefix = p.add_run(f"{num}. ")
+            prefix.bold = True
             _add_inline_runs(p, body.strip())
-            style_numbered_paragraph(p, level=level)
+            style_bullet_paragraph(p, level=level)
             if compact and space_after:
                 p.paragraph_format.space_after = space_after
             continue

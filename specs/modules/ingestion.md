@@ -38,16 +38,35 @@ Artifact: log key `document_profile` → `s00_document_profile.json`.
 
 ```mermaid
 flowchart TD
-    PDF[PDF file] --> EXTRACT[extract_pdf]
-    EXTRACT --> VIS[Detect visual elements<br/>tables, images]
+    PDF[PDF file] --> ROUTE{INGESTION_LAYOUT_BACKEND}
+    ROUTE -->|auto scan / docling| DOCLING[Docling ML layout]
+    ROUTE -->|pymupdf / fallback| EXTRACT[PyMuPDF extract]
+    EXTRACT --> VIS[Detect visual elements]
     VIS --> OCR{OCR_ENABLED?}
-    OCR -->|auto mode| SCAN[Detect scan pages<br/>text chars < threshold]
+    OCR -->|auto mode| SCAN[Detect scan pages]
     SCAN --> TESS[Tesseract OCR]
     OCR -->|off| LAYOUT[Layout enrichment]
+    DOCLING --> LINES[NormalizedLine list]
     TESS --> LAYOUT
-    LAYOUT --> NORM[normalize_text]
-    NORM --> LINES[NormalizedLine list]
+    LAYOUT --> LINES
+    LINES --> NORM[Downstream pipeline]
 ```
+
+---
+
+## 3b. ML layout backend (Docling)
+
+When `INGESTION_LAYOUT_BACKEND=auto` or `docling`, and Docling is installed (`pip install -r requirements-ml-layout.txt`):
+
+| Mode | Behavior |
+|------|----------|
+| `auto` | Docling when PDF is scan-like (low extractable text on sampled pages) or `INGESTION_LAYOUT_DOCLING_ALWAYS=true` |
+| `docling` | Always Docling; fallback to PyMuPDF on error |
+| `pymupdf` | Legacy path (font/bold/OCR signals) |
+
+Docling labels `section_header` / `title` map to `is_bold`, `large_font` on `NormalizedLine` so existing candidate scoring (stage 03) works unchanged.
+
+**quality_cloud profile:** `INGESTION_LAYOUT_DOCLING_ALWAYS=true` — prefer ML layout whenever Docling is available.
 
 ---
 

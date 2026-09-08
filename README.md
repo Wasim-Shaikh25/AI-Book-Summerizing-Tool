@@ -1,6 +1,6 @@
-# AI Notes Creator
+# InsightEngine
 
-PDF book structure extraction, AI note generation, and web chat with Word export.
+AI Document Research Engine — corpus-level insights, verified citations, and agentic workflows for any domain.
 
 ## Repository layout
 

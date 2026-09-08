@@ -28,8 +28,8 @@ def test_callout_label_numbered_list(monkeypatch):
     assert out.count("- ") >= 3
 
 
-def test_course_outcomes_dropped_as_syllabus():
-    # Syllabus-admin labels must be dropped from note bodies (deliberate policy).
+def test_course_outcomes_dropped_as_outline():
+    # Outline-admin labels must be dropped from note bodies (deliberate policy).
     raw = (
         "Course Outcomes: 1. Identify the nature and scope of personal laws. "
         "2. Understand traditional systems."
@@ -98,7 +98,7 @@ def test_cleans_bold_label_dash_artifacts(monkeypatch):
 
 
 def test_bulletizes_prose_after_bold_subheading(monkeypatch):
-    # Bulletizing applies in study (bullet) mode; default export style is book/paragraph.
+    # Bulletizing applies in study mode; book mode keeps paragraph normalization.
     monkeypatch.setenv("NOTES_EXPORT_STYLE", "study")
     raw = (
         "**The Law of Allah**\n"

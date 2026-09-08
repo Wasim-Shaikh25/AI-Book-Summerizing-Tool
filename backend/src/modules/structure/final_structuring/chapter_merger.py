@@ -38,6 +38,13 @@ def _chapter_chars(chapter: Dict[str, Any]) -> int:
     return total
 
 
+def _is_module_page_partition(ch: Dict[str, Any]) -> bool:
+    return (
+        str(ch.get("assignment_method") or "") == "15h_module_page_split"
+        or bool(ch.get("module_page_partition"))
+    )
+
+
 def _merge_chapter_into(target: Dict[str, Any], source: Dict[str, Any]) -> None:
     target["sections"] = list(target.get("sections") or []) + list(source.get("sections") or [])
     if source.get("page_end") is not None:
@@ -72,6 +79,8 @@ def merge_undersized_chapters(
             and not is_hard
             and out
             and not _is_hard_break_heading(_norm(str(out[-1].get("heading") or "")))
+            and not _is_module_page_partition(ch)
+            and not _is_module_page_partition(out[-1])
         ):
             _merge_chapter_into(out[-1], ch)
             merged_count += 1
@@ -85,6 +94,8 @@ def merge_undersized_chapters(
         if (
             _section_count(last) < min_sections
             and not _is_hard_break_heading(_norm(str(last.get("heading") or "")))
+            and not _is_module_page_partition(last)
+            and not _is_module_page_partition(out[-2])
         ):
             prev = out[-2]
             if not _is_hard_break_heading(_norm(str(prev.get("heading") or ""))):

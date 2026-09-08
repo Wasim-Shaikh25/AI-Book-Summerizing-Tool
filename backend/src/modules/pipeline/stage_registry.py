@@ -42,6 +42,7 @@ STAGE_LOG_FILES: Dict[str, str] = {
     "clean_titles": "s15f_heading_cleanup.json",
     "refine_titles": "s15i_heading_refinement.json",
     "cloud_hierarchy": "s15j_hierarchy_openai.json",
+    "synced_hierarchy": "s15k_synced_hierarchy.json",
     "validate_titles": "s15g_title_validation.json",
     "assemble_book": "s15c_final_book.json",
     "rag_snapshot": "s16_rag_snapshot.json",

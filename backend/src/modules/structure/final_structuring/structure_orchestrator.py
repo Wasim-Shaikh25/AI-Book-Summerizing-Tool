@@ -18,12 +18,12 @@ from src.modules.structure.final_structuring.book_assembler import (
     build_ultimate_sections,
 )
 from src.modules.structure.final_structuring.chapter_hierarchy_builder import build_chapter_hierarchy
-from src.modules.structure.final_structuring.chapter_placement import run_chapter_placement
+# from src.modules.structure.final_structuring.chapter_placement import run_chapter_placement  # Disabled - preserve original structure
 from src.modules.structure.final_structuring.heading_cleanup import clean_heading_hierarchy
 from src.modules.structure.final_structuring.hierarchy_openai_refinement import (
     run_hierarchy_openai_refinement,
 )
-from src.modules.structure.final_structuring.subheading_refinement import run_heading_refinement
+# from src.modules.structure.final_structuring.subheading_refinement import run_heading_refinement  # Disabled - preserve original headings
 from src.modules.structure.logging.pipeline_logger import PipelineLogger
 from src.modules.pipeline.stage_registry import (
     STAGE_ASSEMBLE_BOOK,
@@ -73,8 +73,9 @@ def phase_chapters(
     hierarchy: Dict[str, Any],
     ultimate: Dict[str, Any],
     dropped_registry: Optional[DroppedHeadingRegistry],
+    lines: Optional[List[NormalizedLine]] = None,
 ) -> Dict[str, Any]:
-    """Chapters: group sections then place/split."""
+    """Chapters: group sections only (preserve original structure, skip placement)."""
     max_sections = int(getattr(config, "CHAPTER_HIERARCHY_MAX_SECTIONS", 0) or 0)
     chapter_hierarchy = build_chapter_hierarchy(
         ultimate_sections=ultimate,
@@ -83,8 +84,9 @@ def phase_chapters(
     )
     logger.write_stage_payload(STAGE_GROUP_CHAPTERS, chapter_hierarchy)
 
-    chapter_hierarchy = run_chapter_placement(chapter_hierarchy)
-    logger.write_stage_payload(STAGE_PLACE_CHAPTERS, chapter_hierarchy)
+    # Skip chapter placement (15h) - preserve original PDF structure
+    # chapter_hierarchy = run_chapter_placement(chapter_hierarchy, lines=lines)
+    # logger.write_stage_payload(STAGE_PLACE_CHAPTERS, chapter_hierarchy)
     return chapter_hierarchy
 
 
@@ -98,20 +100,22 @@ def phase_titles(
     lines: Optional[List[NormalizedLine]] = None,
     document_profile: Optional[Any] = None,
 ) -> Dict[str, Any]:
-    """Titles: local cleanup + refinement + optional cloud polish."""
+    """Titles: cleanup only (preserve original headings), optional cloud polish."""
     chapter_hierarchy = clean_heading_hierarchy(
         chapter_hierarchy,
         ultimate_sections=ultimate.get("sections") or [],
         dropped_registry=dropped_registry,
+        use_llm=False,  # Disable LLM renaming, preserve original headings
     )
     logger.write_stage_payload(STAGE_CLEAN_TITLES, chapter_hierarchy)
 
-    chapter_hierarchy = run_heading_refinement(
-        chapter_hierarchy,
-        lines=lines,
-        document_profile=document_profile,
-    )
-    logger.write_stage_payload(STAGE_REFINE_TITLES, chapter_hierarchy)
+    # Skip title refinement (15i) - preserve original headings, no renaming
+    # chapter_hierarchy = run_heading_refinement(
+    #     chapter_hierarchy,
+    #     lines=lines,
+    #     document_profile=document_profile,
+    # )
+    # logger.write_stage_payload(STAGE_REFINE_TITLES, chapter_hierarchy)
 
     if book_title:
         chapter_hierarchy["book_title"] = book_title
@@ -205,6 +209,7 @@ def run_structure_phases(
         hierarchy=hierarchy,
         ultimate=ultimate,
         dropped_registry=dropped_registry,
+        lines=lines,
     )
 
     chapter_hierarchy = phase_titles(

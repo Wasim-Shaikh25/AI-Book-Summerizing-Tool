@@ -10,6 +10,7 @@ from src.modules.generation.rewrite_validation import is_weak_section_heading, n
 from src.modules.structure.final_structuring.chapter_merger import (
     _chapter_chars,
     _is_hard_break_heading,
+    _is_module_page_partition,
     _merge_chapter_into,
     _norm,
     _section_count,
@@ -240,6 +241,10 @@ def merge_related_adjacent_chapters(
         prev_secs = _section_count(prev)
         cur_secs = _section_count(ch)
         combined = prev_secs + cur_secs
+
+        if _is_module_page_partition(prev) or _is_module_page_partition(ch):
+            out.append(dict(ch))
+            continue
 
         if combined > max_sections:
             out.append(dict(ch))

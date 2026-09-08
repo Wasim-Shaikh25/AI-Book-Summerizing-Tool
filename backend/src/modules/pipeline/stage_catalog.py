@@ -490,6 +490,24 @@ STRUCTURE_PHASES: Tuple[StageSpec, ...] = (
 
     StageSpec(
 
+        "synced_hierarchy",
+
+        "Hierarchy synced from Markdown",
+
+        "synced_hierarchy",
+
+        "s15k_synced_hierarchy.json",
+
+        "structure",
+
+        "titles",
+
+        "Hierarchy with headings and section order rebuilt from final Markdown (opt-in SYNC_HIERARCHY_FROM_MD).",
+
+    ),
+
+    StageSpec(
+
         "validate_titles",
 
         "Validate titles",
@@ -608,7 +626,7 @@ STRUCTURE_LOGICAL_GROUPS: Dict[str, FrozenSet[str]] = {
 
     "chapters": frozenset({"group_chapters", "place_chapters"}),
 
-    "titles": frozenset({"clean_titles", "refine_titles", "cloud_hierarchy"}),
+    "titles": frozenset({"clean_titles", "refine_titles", "cloud_hierarchy", "synced_hierarchy"}),
 
     "publish": frozenset({"validate_titles", "assemble_book", "rag_snapshot"}),
 

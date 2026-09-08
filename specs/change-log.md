@@ -6,7 +6,169 @@
 
 ---
 
-## [2026-06-15] — Hierarchy loader accepts both on-disk schemas + e2e validation
+## [2026-07-10] — Fix ToolResult JSON serialization in chat/agent flow
+
+- **What:** Two layered root causes behind `TypeError: Object of type ToolResult is not JSON serializable`.
+  (1) **True root cause — `ToolExecutor.execute` contract violation** (`orchestration/tool_executor.py`): every tool executor returns a `ToolResult` (per `Tool.executor: Callable[[dict], ToolResult]`), but the executor assumed a raw dict and re-wrapped the return into `ToolResult(output={"output": <the tool's ToolResult>})`. This buried a `ToolResult` inside `output`, so `ResearchAgent._synthesize_answer`'s `json.dumps(output, indent=2)` crashed — and it silently mislabeled tool `error_result`s as successes and discarded their `citations`/`error`/`execution_time`. Fixed to pass a returned `ToolResult` through (enriching provenance, backfilling execution time), keeping a raw-dict fallback for compatibility. Hardened the synthesis `json.dumps` with `default=str`.
+  (2) **Streaming boundary** (`api/routes/chat.py`, `services/chat_service.py`, `storage/user_repository.py`): replaced four duplicated, leaky sanitizer functions (objects nested in lists slipped through) with a single `_json_default` fallback on the SSE `json.dumps` calls; assistant metadata now stores only scalar summaries; broadened `run_chat` to catch all exceptions and emit an SSE `error` event instead of killing the stream (this is what surfaced the "Internal error: …" message that exposed root cause #1).
+- **Why:** Ad-hoc sanitizers were whack-a-mole against a symptom; the real defect was the executor breaking its own typed contract. A single `default=` at the serialization boundary plus a contract-honoring executor is the durable fix.
+- **Impact:** Agentic chat responses no longer crash; tool error/success and citations now propagate correctly through the executor. Regression tests added in `tests/unit/test_tool_executor.py` (`test_execute_passes_through_toolresult_and_stays_serializable`, `test_execute_preserves_toolresult_error`). Full unit suite: 506 passed, 4 pre-existing unrelated `qa_engine`/verdict failures. No API shape change.
+
+---
+
+## [2026-06-25] — Phase 7: Knowledge graph (`knowledge/` package + 3 new SQLite tables)
+
+- **What:** New package `backend/src/modules/knowledge/` with `concept_extractor.py` (regex NP extraction, TF scoring, optional MiniLM deduplication), `concept_graph.py` (SQLite build/query — concept_nodes, concept_chunks, concept_links; BFS traversal), `graph_retriever.py` (RAG + graph traversal combined retrieval, falls back to pure RAG when tables empty). `KnowledgeStore._initialize_db()` extended with 3 new tables + 3 indexes. New config key: `KNOWLEDGE_GRAPH_ENABLED` (default `0`). Tests: `test_concept_extractor.py` (9 cases), `test_concept_graph.py` (8 cases).
+- **Why:** Flat chunk retrieval cannot answer "How does X relate to Y?" across sections or books; concept graph traversal surfaces semantically adjacent nodes not in top-k embedding results.
+- **Impact:** Opt-in (`KNOWLEDGE_GRAPH_ENABLED=1`). No existing behaviour changed; `KnowledgeStore` migration uses `CREATE TABLE IF NOT EXISTS` — idempotent on existing DBs.
+
+---
+
+## [2026-06-25] — Phase 5: RAG Improvements (5A + 5B + 5C)
+
+- **What:** 5A — added `_semantic_boundary_split` + `paragraph`/`semantic`/`section` strategy dispatch to `chunk_builder.py`; 3 new config keys (`RAG_CHUNK_STRATEGY`, `RAG_SEMANTIC_CHUNK_TARGET_CHARS`, `RAG_SEMANTIC_OVERLAP_SENTS`). 5B — new `corpus_builder.py` with `build_corpus_index`, `load_corpus_index`, `invalidate_corpus_index`; `retrieve_cross_book` added to `RagService`; new API route `GET /api/search`; 1 new config key (`RAG_CORPUS_INDEX_ENABLED`). 5C — RAG context injection in `parallel_rewrite._build_prompt` when `REWRITE_RAG_CONTEXT=1`; 1 new config key. Tests: `test_chunk_builder_strategies.py` (9 cases), `test_corpus_builder.py` (5 cases), `test_rewrite_rag_context.py` (6 cases).
+- **Why:** Whole-section chunk blobs dilute retrieval precision; no cross-book search existed; rewrite had no access to semantically related sections.
+- **Impact:** All opt-in (defaults unchanged). No Qdrant or external DB introduced.
+
+---
+
+## [2026-06-25] — Phase 4: Post-rewrite body structure audit (`body_structure_audit.py` + `body_audit_runner.py`)
+
+- **What:** New `body_structure_audit.py` with deterministic checks — missing_subheadings (long body without `###`), missing_bullets (source has enumeration but body has none), bold_fragments (standalone `**bold**` lines), thin_bullets (>30% bullets < 5 words). New `body_audit_runner.py` pipeline wrapper writes `body_audit_report.json`. Optional step [3.5/4] in `run_full_openai_pipeline.py`. New config keys: `BODY_STRUCTURE_AUDIT_ENABLED` (default `0`), `BODY_AUDIT_LLM` (default `0`), `BODY_AUDIT_SUBHEADING_CHARS` (default `600`). Tests: `test_body_structure_audit.py` (17 cases).
+- **Why:** After LLM rewrite, section bodies had no mechanism to detect structural issues — flat prose walls, missing bullets, surviving bold fragments.
+- **Impact:** Opt-in (`BODY_STRUCTURE_AUDIT_ENABLED=1`). Default pipeline byte-identical to current.
+
+---
+
+## [2026-06-25] — Phase 6: Multi-step CoT Q&A (qa_reasoning.py + qa_engine routing)
+
+- **What:** Added `qa_reasoning.py` with `ReasoningAnswer`, `decompose_question`, `retrieve_for_sub_questions`, `synthesize_answer`. Refactored `qa_engine.py`: original body of `answer()` extracted to `_answer_singleshot()`; new `_answer_multistep()` uses decompose → multi-retrieve → synthesize path; routing block in `answer()` selects based on `QA_MULTISTEP_ENABLED` and question length (≥6 words). New config keys: `QA_MULTISTEP_ENABLED` (default `0`), `QA_MULTISTEP_TOP_K_PER_Q` (default `3`). Tests: `test_qa_reasoning.py` (12 cases).
+- **Why:** Single-shot retrieval under-represents the second concept in comparative multi-part questions, causing hallucinated comparisons.
+- **Impact:** Opt-in (`QA_MULTISTEP_ENABLED=1`). Default path unchanged.
+
+---
+
+## [2026-06-25] — Phase 3: Semantic sentence-level splitter (semantic_splitter.py)
+
+- **What:** New `semantic_splitter.py` with `semantic_split_section`, `_sentence_tokenize`, `_embed_windows`, `_find_drop_points`, fallback char-split. `parallel_rewrite.py` updated with `_semantic_split_enabled()`, `_semantic_split_threshold()`, and opt-in call in `_rewrite_job()`. `rewrite_prompts.py` extended with `semantic_chunks` param in `build_section_user_prompt_with_context`. New config keys: `SEMANTIC_SPLIT_ENABLED` (default `0`), `SEMANTIC_SPLIT_THRESHOLD` (default `2000`). Tests: `test_semantic_splitter.py` (12 cases).
+- **Why:** Sections >2000 chars arrive as flat text to the LLM with no sub-topic signal, producing subheading-sparse output.
+- **Impact:** Opt-in (`SEMANTIC_SPLIT_ENABLED=1`). Default path byte-identical to current.
+
+---
+
+## [2026-06-25] — Phase 2: TOC sync from final Markdown (sync_hierarchy_from_markdown)
+
+- **What:** Added `sync_hierarchy_from_markdown(md_path, hierarchy, *, write_path)` to `structure_fix_runner.py`. Patches section headings, reorders sections within chapters to match Markdown display sequence, majority-votes chapter headings. Opt-in via `SYNC_HIERARCHY_FROM_MD=1` in both `reexport_docx.py` and `run_full_openai_pipeline.py`. Writes `s15k_synced_hierarchy.json` artifact. Registered new stage in `stage_catalog.py`, `stage_registry.py`. Tests: `test_toc_sync_from_markdown.py` (10 cases).
+- **Why:** `reexport_docx.py` used stale hierarchy JSON ignoring user Markdown edits and structure-fix reorders.
+- **Impact:** Opt-in. Default re-export unchanged.
+
+---
+
+## [2026-06-25] — Phase 1: Heading continuation check (heading_validity_gate.py)
+
+- **What:** Added `_CONTINUATION_CONJUNCTIONS_RE` and `_continuation_context_check(candidate_text, before_lines, after_lines)` to `heading_validity_gate.py`. Wired check into `gate_heading_validity_candidates` after `_is_non_bold_lowercase_fake_heading` and before the MiniLM gate. Continuation fragments now dropped with `"continuation_fragment"` reason. Bold/Title-Case fast-path still short-circuits before this check. Tests: `test_heading_continuation.py` (8 cases).
+- **Why:** `_needs_continuity_check()` was advisory-only; continuation fragments like "such rules are binding upon…" passed the gate unchallenged.
+- **Impact:** Stricter heading validity; no domain vocabulary used; `strong_layout_heading` fast-path preserves bold Title Case headings.
+
+---
+
+## [2026-06-25] — TOC fallback & structured study output (V1 rewrite prompts)
+
+- **What:** Fixed dict subheading extraction in `parallel_rewrite.py` (`str(dict)` → `heading` field). Made rewrite guardrails mode-aware: study mode encourages bullets + `###` subheadings; book mode keeps prose-first rule 14. Expanded rule 8 subheading guidance; long sections (>1800 chars) without pipeline sub-labels get an LLM inference fallback; study-mode user prompt suffix now mandates `###` not `**bold**`. Default `NOTES_EXPORT_STYLE` changed to `study` (`notes_export_style.py`, `default.yaml`, `config.py`, `.env.example`). `universal_prose_rules()` split into book vs study variants in `document_format_style.py`. Tests: `test_rewrite_prompts.py` (8 cases); updated `test_notes_export_style.py`, `test_parallel_rewrite.py`.
+- **Why:** Pipeline-detected subheadings never reached the LLM; study mode was forced into linear prose by global guardrail rule 14; imperfect TOC left long sections as flat blocks.
+- **Impact:** V1 `run_full_openai_pipeline.py` rewrites default to structured study notes with inferred `###` subheadings when TOC is sparse. Set `NOTES_EXPORT_STYLE=book` for textbook prose layout.
+
+---
+
+## [2026-06-25] — SDD correction: export.md primary/secondary path clarification
+
+- **What:** Corrected `specs/modules/export.md` §2: the file inventory falsely labelled `word_exporter.py` as "Primary Word export API (web + CLI)". The actual full-book primary path is `docx_notes_exporter.py` → `note_body_docx.py` → `markdown_docx_renderer.py` → `docx_theme.py`; `word_exporter.py` is the web-chat single-section secondary path. Added `note_body_docx.py`, `docx_theme.py`, `docx_theme_palettes.py`, `mermaid_renderer.py`, and `signal_export/pdf_mirror_docx.py` to the file inventory. Separated §2 into three headed subsections (full-book primary / web-chat secondary / CLI terminal). Added `test_note_body_docx.py`, `test_export_cover.py`, `test_export_missing_body_mode.py` to §7 Tests.
+- **Why:** The inverted primary/secondary labelling would mislead any agent modifying export code toward the wrong entry point. The missing files and tests were undocumented since they were added in 2026-06-15 sessions.
+- **Impact:** `specs/modules/export.md` only. No code changes.
+
+---
+
+## [2026-06-16] — Signal-Sections V2 default model fix
+
+- **What:** Changed `signal_rewrite.rewrite_engine.DEFAULT_MODEL` from `google/gemini-2.5-flash-lite-preview` to the GA slug `google/gemini-2.5-flash-lite`; mirrored in `.env.example`, `specs/modules/pipeline-signal-sections.md`, `specs/code-reference/signal_sections.md`.
+- **Why:** First live run on `Aarti Publication BNS 2023 ... .pdf` returned OpenRouter HTTP 400 `"google/gemini-2.5-flash-lite-preview is not a valid model ID"` for every section. Confirmed correct slug via openrouter.ai.
+- **Impact:** Default rewrite calls now succeed against the user's OpenRouter account. No code shape change; no test change needed (tests use injected stub client). Existing pipeline still unaffected.
+
+---
+
+## [2026-06-16] — Signal-Sections pipeline V2 (parallel, opt-in)
+
+- **What:** New opt-in pipeline `python backend/scripts/pipeline_signal_sections.py <pdf>` that produces a DOCX whose chapter/section hierarchy mirrors the source PDF verbatim. No existing file modified.
+  - New structure modules under `backend/src/modules/structure/signal_sections/`: `signal_classifier.py` (pick high-signal boundaries from `s03_candidate_scoring` + structural markers), `signal_partitioner.py` (boundary-to-boundary sections + inner-heading metadata), `pdf_chapter_grouper.py` (chapter grouping by PDF markers, with `promote_h1` fallback), `pdf_hierarchy_assembler.py` (final `signal_hierarchy.json` payload), `signal_logger.py` (writes to isolated `logs/run_signal_<ts>/`).
+  - New rewrite modules under `backend/src/modules/generation/signal_rewrite/`: `hierarchy_prompt.py` (structural-aware per-section prompt: parent path, inner-heading hints with scores, prev/next overlap), `inner_heading_decider.py` (downgrade undeclared `###`, strip echoed title, unwrap stray outer code fence), `rewrite_engine.py` (parallel one-call-per-section via `LlmChatClient` on OpenRouter; default model `google/gemini-2.5-flash-lite-preview`).
+  - New export module under `backend/src/modules/export/signal_export/`: `pdf_mirror_docx.py` (assemble Markdown + render DOCX through the standard `markdown_docx_renderer`).
+  - Runner: `backend/scripts/pipeline_signal_sections.py` (CLI: `--skip-rewrite`, `--no-logs`, `--output-dir`, `--log-dir`).
+  - Configuration: 13 new `SIGNAL_*` env keys in `.env.example` + `backend/scripts/README.md` table; no clash with existing keys; OpenRouter auth reuses `OPENROUTER_API_KEY`.
+  - Tests: `backend/tests/unit/test_signal_classifier.py`, `test_signal_partitioner.py`, `test_pdf_chapter_grouper.py`, `test_signal_rewrite_prompt.py`, `test_signal_pipeline_end_to_end.py` (33 new tests, all green; 378/378 pre-existing unit tests still pass — regression-clean per SS-05).
+- **Why:** The existing pipeline mutates the PDF's chapter / section / inner-heading structure via several LLM passes (15e/15h/15j) and flattens the inner hierarchy before rewrite (`toc_sections.load_rewrite_sections_from_15e`), so the generated DOCX cannot be directly compared to the source PDF. The new pipeline preserves the PDF chapter count, verbatim heading text, and inner hierarchy (as hints to the LLM, decided per-section). User explicitly requested a *parallel* implementation that does not touch the legacy path and that uses Gemini Flash small via OpenRouter for rewrite.
+- **Impact:**
+  - `backend/src/modules/structure/signal_sections/{__init__.py,signal_classifier.py,signal_partitioner.py,pdf_chapter_grouper.py,pdf_hierarchy_assembler.py,signal_logger.py}` (new)
+  - `backend/src/modules/generation/signal_rewrite/{__init__.py,hierarchy_prompt.py,inner_heading_decider.py,rewrite_engine.py}` (new)
+  - `backend/src/modules/export/signal_export/{__init__.py,pdf_mirror_docx.py}` (new)
+  - `backend/scripts/pipeline_signal_sections.py` (new) + `backend/scripts/README.md` (catalog row + env-var table)
+  - `backend/tests/unit/test_signal_{classifier,partitioner,rewrite_prompt,pipeline_end_to_end}.py` + `test_pdf_chapter_grouper.py` (new)
+  - `specs/index.md` (module #13 entry + traceability row), `specs/code-reference/index.md` (package row)
+  - `specs/modules/pipeline-signal-sections.md` (new authoritative module spec)
+  - `specs/code-reference/signal_sections.md` (new exhaustive symbol reference per rule 13)
+  - `.env.example` (new `SIGNAL_*` section)
+  - `ai-agent-workflow/change-plan-signal-sections-pipeline.md` (blueprint, written prior turn)
+  - `ai-agent-workflow/tasks.md` (SS-P0…SS-P3 completion ticks — see follow-up commit)
+  - Verified end-to-end on bundled fixture PDF `The Constitution Of India By Jhavala.pdf` with `--skip-rewrite`: produced 193 chapters / 203 sections / 311 inner headings from 202 structural + 11 percentile boundaries, Markdown + DOCX written, four signal artifacts persisted under `logs/run_signal_<ts>/`. Existing pipeline outputs and audit scripts unaffected.
+
+---
+
+## [2026-06-16] — ML layout backend (Docling) integrated into ingestion pipeline
+
+- **What:** Pluggable `INGESTION_LAYOUT_BACKEND` (`auto` | `pymupdf` | `docling`). Docling adapter maps `section_header`/`title` labels to heading signals on `NormalizedLine`. `auto` picks Docling for scan-like PDFs when installed; `quality_cloud` sets `INGESTION_LAYOUT_DOCLING_ALWAYS=true`. Fallback to PyMuPDF+OCR if Docling missing or fails. Optional deps: `requirements-ml-layout.txt`.
+- **Why:** Scanned/two-up PDFs (e.g. BNS 2023) need ML layout parsing, not font/bold heuristics alone.
+- **Impact:** `layout_backends/`, `pymupdf_backend.py`, `pdf_extractor.py`, config + profiles. Tests: `test_layout_backend.py`. MinerU/LayoutParser/Open Parse can plug in later via same registry.
+
+---
+
+## [2026-06-16] — Spec sync: module-page merge guard, cover fields, BNS run
+
+- **What:** Completed rule-13 documentation: `chapter_merger._is_module_page_partition`, `chapter_cohesion` merge guards, `phase_chapters(lines=)`, simplified DOCX/MD cover fields, `pipeline-core.md` §11 full-script + two-up OCR, `structure-extraction.md` 15h module split, `export.md` cover title resolution.
+- **Why:** Prior session updated code + partial specs; code-reference was missing new symbols.
+- **Impact:** `specs/code-reference/{export,structure,ingestion,services-scripts}.md`, `specs/modules/{export,structure-extraction,pipeline-core}.md`, `specs/testing.md`, `ai-agent-workflow/tasks.md`.
+
+---
+
+## [2026-06-16] — BNS 2023 scanned two-up pipeline run + title path fix
+
+- **What:** Full pipeline on `Aarti Publication BNS 2023 Module notes and paper solution.pdf` with `OCR_SPLIT_TWO_UP=1`. Fixed `run_full_openai_pipeline.py` to resolve export title before `md_path` (`UnboundLocalError`). Output: 8 chapters, 82 sections, OVERALL **OK** (pdf_match WARN from OCR noise).
+- **Why:** User book is portrait two-up scan; without split, structure was wrong (45 sections). Title bug blocked rewrite on first attempt.
+- **Impact:** `output/Aarti_Publication_BNS_2023_Module_And_Paper_Solution_2026-06-16_11-27-52.{md,docx,quality_report.txt}`; log `run_2026-06-16_11-20-00`.
+
+---
+
+## [2026-06-16] — Fix pipeline crash: resolve export title before output path
+
+- **What:** `run_full_openai_pipeline.py` now calls `resolve_export_book_title()` before building `md_path` (was `UnboundLocalError: title` at rewrite stage).
+- **Why:** Refactor moved `title = ...` to after rewrite; filename logic still referenced `title` earlier.
+- **Impact:** Full pipeline can reach `[2/4]` rewrite and export for new PDFs (e.g. BNS 2023 scan).
+
+---
+
+## [2026-06-15] — Per-book DOCX covers + environmental MODULE chapter split
+
+- **What:** `resolve_export_book_title()` resolves cover title from hierarchy/sidecar PDF/MD stem (not `ORDER BY processed_at DESC`). Cover page omits Source PDF, Sections, and Notes style (Book, Generated, Chapters only). Stage 15h splits syllabus PDFs at MODULE/UNIT page markers (`detect_module_unit_break_pages_from_lines`, bucket assignment, module partitions protected from merge). Re-export script auto-refreshes 15h when module count exceeds chapter count. Re-exported four `_fixed.docx` outputs.
+- **Why:** All four DOCX shared bareact-140 cover because DB lookup always returned the latest book. Environmental law had 2 chapters with wrong names because MODULE 2–4 were not section boundaries in s15d; page-marker split aligns chapters to MODULE 1/3/4 (MODULE 2 has no section start in range p16–32).
+- **Impact:** Family Law / Constitutional Law / Environmental Law / Bareact 140 each have correct cover title. Environmental: 2→3 chapters with MODULE-aligned titles. Tests: `test_chapter_placement.py` (module split), `test_export_cover.py`. Files: `document_formatter.py`, `reexport_docx.py`, `run_full_openai_pipeline.py`, `chapter_placement.py`, `chapter_cohesion.py`, `chapter_merger.py`, `layout_enrichment.py`, `structure_orchestrator.py`.
+
+---
+
+## [2026-06-15] — Fix DOCX corruption: remove invalid paragraph lvlOverride (Word cannot open)
+
+- **What:** Ordered lists in DOCX export no longer inject `w:lvlOverride` / `w:startOverride` on paragraph `w:numPr` (`restart_numbered_paragraph` is now a no-op). Lists render as plain ``N. text`` paragraphs using numbers from markdown (already renumbered per section). Updated `note_body_docx.py`, `markdown_docx_renderer.py`, `docx_theme.py`, and tests. Re-exported all four latest DOCX outputs in place.
+- **Why:** Microsoft Word rejected the generated files (`Word experienced an error trying to open the file`) while python-docx could still read them. Root cause: `lvlOverride` on paragraph `numPr` is invalid OOXML — it belongs in `numbering.xml`, not inline on paragraphs.
+- **Impact:** All four latest DOCX files open in Word again. List numbering still restarts per topic via markdown normalization. Verified with Word COM on family-law, constitutional-law, environmental-law, and bareact-140 outputs.
+
+---
 
 - **What:** `toc_sections.load_chapter_hierarchy_json` now loads both hierarchy schemas: the legacy wrapped form (`{"items": {"chapters": [...]}}`, e.g. `s15f_heading_cleanup.json`) and the cloud-hierarchy form (`{"chapters": [...], "meta": {...}}`, e.g. `s15j_hierarchy_openai.json`). Previously it required the `items` wrapper and raised `Invalid chapter hierarchy payload` whenever `resolve_chapter_hierarchy_artifact` returned `s15j` (which is preferred when the cloud-hierarchy stage runs). The structure-fix title sync (`propagate_titles_to_hierarchy`) also now returns `max(in_memory, on_disk)` updates so the pipeline log reports the disk-only sync case.
 - **Why:** Universal/subject-agnostic correctness — the loader must not depend on which optional stage produced the artifact. Schema choice is purely structural, not domain-specific. Discovered while running the title-sync end-to-end.

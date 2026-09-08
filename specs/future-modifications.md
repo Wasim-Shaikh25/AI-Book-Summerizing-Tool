@@ -3,7 +3,7 @@
 > **Status:** ACTIVE  
 > **Version:** 1.0  
 > **Date:** 2026-06-07  
-> **Purpose:** Best practices for extending and modifying the AI Notes Creator system
+> **Purpose:** Best practices for extending and modifying the InsightEngine system
 
 ---
 

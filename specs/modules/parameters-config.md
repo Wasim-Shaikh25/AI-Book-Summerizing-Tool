@@ -180,6 +180,16 @@ Profile overrides: `ingestion/profile.py` — see [code-reference/ingestion.md](
 
 See [requirements-ocr-stage.md](../requirements-ocr-stage.md).
 
+### ML layout (Docling)
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `INGESTION_LAYOUT_BACKEND` | auto | `auto` \| `pymupdf` \| `docling` |
+| `INGESTION_LAYOUT_AUTO_SAMPLE_PAGES` | 8 | Pages sampled for scan detection |
+| `INGESTION_LAYOUT_DOCLING_ALWAYS` | false | Prefer Docling when installed (`quality_cloud=true`) |
+
+Install optional deps: `pip install -r backend/requirements-ml-layout.txt`
+
 ---
 
 ## 8. Web Platform (`backend/auth/config.py`)

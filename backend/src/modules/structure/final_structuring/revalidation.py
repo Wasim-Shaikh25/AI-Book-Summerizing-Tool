@@ -13,7 +13,7 @@ from .models.segment_llm_classifier import get_revalidation_classifier
 
 # Methods that are most error-prone and worth revalidating.
 _RISKY_METHODS = frozenset({
-    "syllabus_at_first_toc_page",
+    "outline_at_first_toc_page",
     "page_position_fallback",
     "first_toc_section_span",
 })
@@ -78,7 +78,7 @@ def select_revalidation_candidates(
     # Cap cost — highest priority first
     priority = {
         "integrated_chapter_opener": 0,
-        "method:syllabus_at_first_toc_page": 1,
+        "method:outline_at_first_toc_page": 1,
         "method:page_position_fallback": 2,
         "low_confidence": 3,
     }

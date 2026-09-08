@@ -39,7 +39,7 @@ Runs in `stage_build_book_structure` via `structure_orchestrator.py` → `final_
 | `book_assembler.py` | `partition_tree`, `partition_sections`, `assemble_book`, `rag_snapshot` | Tree, rewrite sections, final book, RAG snapshot |
 | `chapter_hierarchy_builder.py` | `group_chapters` | Chapter hierarchy (rules/MiniLM + optional LLM) |
 | `heading_cleanup.py` | `clean_titles` | Weak title cleanup, chapter dedup, `sanitize_hierarchy_headings` |
-| `chapter_placement.py` | `place_chapters` | `run_chapter_placement`, **`enforce_chapter_structure`** |
+| `chapter_placement.py` | `place_chapters` | `run_chapter_placement(hierarchy, lines=ctx.lines)` — MODULE/UNIT page-marker split when layout lines available; **`enforce_chapter_structure`** |
 | `subheading_refinement.py` | `refine_titles` | `run_heading_refinement`, parent-mirror + verbose title fixes |
 | `hierarchy_openai_refinement.py` | `cloud_hierarchy` | Optional cloud regroup + title polish |
 | `title_validation.py` | `validate_titles` | `validate_chapter_hierarchy` (FLAN/MiniLM title checks) |
@@ -55,10 +55,12 @@ Runs in `stage_build_book_structure` via `structure_orchestrator.py` → `final_
 **Pipeline order** (`structure_orchestrator.py`): `partition_tree` → `partition_sections` → `group_chapters` → `place_chapters` → `clean_titles` → `refine_titles` → `cloud_hierarchy` → `validate_titles` → `assemble_book` → `rag_snapshot`.
 
 **`enforce_chapter_structure()`** runs at end of `validate_titles`, `refine_titles`, `cloud_hierarchy`, and again at rewrite load. It:
+- splits at MODULE/UNIT **page markers** (from `s01` layout lines) when `lines` passed to 15h
 - splits at structural markers and oversized chapters (`max_sections_per_chapter` default 10)
 - fixes parent-mirror chapters (chapter title ≈ first section)
 - sanitizes headings and repairs unacceptable/statute-prose section titles
 - re-splits after fixes and renumbers chapters
+- preserves `module_page_partition` chapters from cohesion merge (`chapter_merger._is_module_page_partition`)
 
 **Log artifacts (filenames on disk):** `s15a_…` → `s15d_…` → `s15e_…` → `s15h_…` → `s15f_…` → `s15i_…` → `s15j_…` → `s15g_…` → `s15c_…` → `s16_…` — see [stage-catalog.md](./stage-catalog.md) for semantic log keys.
 

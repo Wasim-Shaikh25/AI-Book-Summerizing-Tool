@@ -12,12 +12,12 @@ from src.modules.structure.dropped_heading_registry import (
     is_noisy_fragment_heading,
     is_sentence_like_title,
     is_structural_partition_heading,
-    is_syllabus_heading,
+    is_outline_heading,
 )
 
-_SYLLABUS_BODY_RE = re.compile(
+_OUTLINE_BODY_RE = re.compile(
     r"(course\s+objectives?|course\s+outcomes?|learning\s+outcomes?|"
-    r"syllabus|reading\s+list|recommended\s+readings?)\b",
+    r"outline|reading\s+list|recommended\s+readings?)\b",
     re.I,
 )
 _MODULE_BODY_RE = re.compile(r"\b(module|unit)\s+\d+\b", re.I)
@@ -52,8 +52,8 @@ def classify_heading(title: str) -> str:
         return "statute_prose"
     if is_generic_study_title(title):
         return "generic_study"
-    if is_syllabus_heading(title):
-        return "syllabus_heading"
+    if is_outline_heading(title):
+        return "outline_heading"
     if re.search(r"\bA\.?\s*I\.?\s*R\.?", title, re.I) and ")" in title:
         return "case_line"
     if re.search(r"^\d{4}\s+NOC", title, re.I):
@@ -69,22 +69,28 @@ def classify_heading(title: str) -> str:
     return "looks_ok"
 
 
-def detect_syllabus_noise_in_body(body: str) -> List[str]:
+def detect_outline_noise_in_body(body: str) -> List[str]:
+    """Domain-agnostic: detect outline/admin noise in note bodies."""
     if not (body or "").strip():
         return []
     flags: List[str] = []
     low = body.lower()
-    if _SYLLABUS_BODY_RE.search(body):
-        flags.append("syllabus_admin")
+    if _OUTLINE_BODY_RE.search(body):
+        flags.append("outline_admin")
     if _MODULE_BODY_RE.search(body):
         flags.append("module_unit_ref")
     if "also cover:" in low:
         flags.append("also_cover_checklist")
     for line in body.splitlines():
-        if is_syllabus_heading(line.strip()):
-            flags.append("syllabus_heading_line")
+        if is_outline_heading(line.strip()):
+            flags.append("outline_heading_line")
             break
     return flags
+
+
+def detect_syllabus_noise_in_body(body: str) -> List[str]:
+    """Deprecated alias for domain-agnostic naming — use detect_outline_noise_in_body instead."""
+    return detect_outline_noise_in_body(body)
 
 
 def chapter_mirrors_first_section(chapter_heading: str, first_section_heading: str, *, threshold: float = 0.72) -> bool:
@@ -145,7 +151,7 @@ def compute_verdict_scores(
     scores["repetition"] = "PASS" if repeated_pairs <= 5 else ("OK" if repeated_pairs <= 15 else "WARN")
     naming_bad = weak_heading_count + title_noise_count
     scores["naming"] = "PASS" if naming_bad <= 5 else ("OK" if naming_bad <= 15 else "WARN")
-    scores["syllabus_noise"] = "PASS" if syllabus_body_hits == 0 else ("OK" if syllabus_body_hits <= 3 else "WARN")
+    scores["outline_noise"] = "PASS" if syllabus_body_hits == 0 else ("OK" if syllabus_body_hits <= 3 else "WARN")
     scores["pdf_match"] = "PASS" if pdf_match_failures <= 3 else ("OK" if pdf_match_failures <= 10 else "WARN")
     scores["parent_mirror"] = "PASS" if parent_mirror_count == 0 else ("OK" if parent_mirror_count <= 2 else "WARN")
     if heading_acceptance_failed == 0 and heading_export_violations == 0:

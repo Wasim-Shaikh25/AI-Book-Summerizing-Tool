@@ -60,7 +60,7 @@ class RewriteEngine:
     ) -> dict:  # { markdown, docx?, error? }
 ```
 
-**Why `enforce_chapter_structure` before rewrite:** 15j can collapse a syllabus into one chapter; mirrors and statute-prose titles must be fixed before section jobs use headings.
+**Why `enforce_chapter_structure` before rewrite:** 15j can collapse an outline into one chapter; mirrors and statute-prose titles must be fixed before section jobs use headings.
 
 **Provider order:** `REWRITE_PROVIDER_ORDER` env (e.g. `openai,gemini,llamacpp`)
 

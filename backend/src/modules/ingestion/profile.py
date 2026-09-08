@@ -12,6 +12,8 @@ from src import config as cfg
 _PROFILE_ENV_KEYS = (
     "UPLOAD_SKIP_RAG",
     "OCR_ZOOM",
+    "INGESTION_LAYOUT_BACKEND",
+    "INGESTION_LAYOUT_DOCLING_ALWAYS",
     "DOUBTED_RESOLVER_LLM",
     "DOUBTED_RESOLVER_MODE",
     "CHAPTER_HIERARCHY_USE_LLM",
@@ -28,6 +30,8 @@ _PROFILE_ENV_KEYS = (
 _CONFIG_ATTR_MAP = {
     "UPLOAD_SKIP_RAG": None,  # env-only; ingestion_service reads via helper
     "OCR_ZOOM": "OCR_ZOOM",
+    "INGESTION_LAYOUT_BACKEND": "INGESTION_LAYOUT_BACKEND",
+    "INGESTION_LAYOUT_DOCLING_ALWAYS": "INGESTION_LAYOUT_DOCLING_ALWAYS",
     "DOUBTED_RESOLVER_LLM": "DOUBTED_RESOLVER_LLM",
     "DOUBTED_RESOLVER_MODE": "DOUBTED_RESOLVER_MODE",
     "CHAPTER_HIERARCHY_USE_LLM": "CHAPTER_HIERARCHY_USE_LLM",
@@ -69,6 +73,8 @@ _BUILTIN_PROFILES: Dict[str, Dict[str, str]] = {
         "HEADING_REFINEMENT_OPENAI_FALLBACK": "true",
         "USE_LLM_INTENT": "true",
         "NOTES_QUALITY_LLM": "true",
+        "INGESTION_LAYOUT_BACKEND": "auto",
+        "INGESTION_LAYOUT_DOCLING_ALWAYS": "true",
     },
     "debug": {
         "UPLOAD_SKIP_RAG": "false",
@@ -113,6 +119,7 @@ def _coerce_config_value(attr: str, raw: str) -> Any:
         "HEADING_REFINEMENT_OPENAI_FALLBACK",
         "USE_LLM_INTENT",
         "NOTES_QUALITY_LLM",
+        "INGESTION_LAYOUT_DOCLING_ALWAYS",
     }:
         return str(raw).strip().lower() in {"1", "true", "yes", "on"}
     return raw

@@ -30,6 +30,8 @@ Each package doc uses tables:
 | [ingestion.md](./ingestion.md) | `backend/src/modules/ingestion/` | PDF → lines |
 | [interaction.md](./interaction.md) | `backend/src/modules/interaction/` | CLI intent + handlers |
 | [services-scripts.md](./services-scripts.md) | `backend/services/`, `backend/scripts/` | Web layer + batch tools |
+| [signal_sections.md](./signal_sections.md) | `structure/signal_sections/`, `generation/signal_rewrite/`, `export/signal_export/`, `scripts/pipeline_signal_sections.py` | Parallel V2 PDF-mirror pipeline (opt-in) |
+| [knowledge.md](./knowledge.md) | `backend/src/modules/knowledge/` | Concept extraction, SQLite concept graph, graph-augmented retrieval (Phase 7) |
 
 ---
 

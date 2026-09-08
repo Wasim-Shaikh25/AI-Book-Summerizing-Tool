@@ -202,6 +202,10 @@ export interface Message {
   metadata?: {
     docx_available?: boolean;
     docx_download_url?: string;
+    sources?: string[];
+    related?: boolean;
+    retrieval_mode?: string;
+    reasoning?: string;
   };
   created_at: string;
 }
@@ -215,6 +219,9 @@ export interface ChatStreamResult {
   assistant_message: Message;
   docx_available: boolean;
   docx_download_url?: string;
+  sources?: string[];
+  related?: boolean;
+  retrieval_mode?: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {

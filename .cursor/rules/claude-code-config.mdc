@@ -1,0 +1,55 @@
+---
+description: How to create and edit this project's Claude Code configuration (CLAUDE.md, .claude/settings.json, .claude/commands/*, .claude/agents/*). Apply when setting up or maintaining Claude Code memory, settings, custom commands, or subagents.
+globs: ["CLAUDE.md", "AGENTS.md", ".claude/**/*.md", ".claude/**/*.json"]
+alwaysApply: false
+---
+
+# Editing Claude Code config files
+
+These files configure Anthropic's Claude Code CLI. They are NOT application
+source code and have NO runtime in this repo. When you touch them, follow these
+rules exactly.
+
+## CLAUDE.md
+- MUST stay under 200 lines. If it grows past that, move detail into a separate
+  file and reference it with `@path/to/file`.
+- Keep it factual: stack, run/test commands, conventions, and model/effort/
+  context-hygiene rules. No marketing prose, no emoji.
+- Use strong imperative language ("ALWAYS", "NEVER"), not "prefer" or "try to".
+
+## Slash commands — critical
+- NEVER invent slash commands. Only these built-ins exist:
+  `/model`, `/effort`, `/context`, `/compact`, `/clear`, `/cost`, `/usage`,
+  `/stats`, `/plan`, `/resume`, `/rewind`, `/export`, `/agents`, `/mcp`,
+  `/permissions`, `/memory`, `/help`.
+- Commands like `/summarize`, `/session-switch`, `/token-status` do NOT exist.
+  Do not reference them.
+- Custom commands are real ONLY when defined as a markdown file in
+  `.claude/commands/<name>.md`; invoking one is `/<name>`.
+
+## .claude/settings.json
+- MUST be valid JSON. Validate before saving.
+- `model`: one of `"sonnet"`, `"opus"`, `"haiku"`, `"opusplan"`, `"default"`.
+- `effort`: one of `"low"`, `"medium"`, `"high"`, `"max"` (`max` is Opus-only).
+- Force one model for all subagents via `env.CLAUDE_CODE_SUBAGENT_MODEL`.
+- To hard-cap cost, set `availableModels` to exclude `"opus"`.
+
+## .claude/commands/<name>.md (custom commands)
+- Frontmatter may include `description` and `argument-hint`.
+- Body is the instruction Claude runs. Keep it tight and end by telling it not
+  to restate the instructions.
+
+## .claude/agents/<name>.md (subagents)
+- Frontmatter fields: `name`, `description`, optional `model:`, optional `tools:`.
+- Pin read-heavy/verbose agents to a cheap model so their output stays out of
+  the main context window.
+
+## Token-efficiency intent (preserve when editing)
+- Every Claude Code message re-sends full history as input, so the config exists
+  to keep history small: clear/compact often, route to the cheapest capable
+  model, push verbose reads into subagents, and disable unused MCP servers.
+- NEVER add an MCP server or new dependency to the config unless explicitly asked.
+
+## When unsure
+- Re-read the actual file before editing rather than assuming its contents.
+- If a requested change would break one of the rules above, say so instead of doing it.

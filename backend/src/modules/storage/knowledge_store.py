@@ -135,6 +135,52 @@ class KnowledgeStore:
             )
         ''')
 
+        # Concept graph tables (Phase 7 — knowledge graph)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS concept_nodes (
+                concept_id    TEXT PRIMARY KEY,
+                canonical_name TEXT NOT NULL,
+                subject_area   TEXT,
+                embedding      BLOB
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS concept_chunks (
+                concept_id     TEXT NOT NULL,
+                chunk_id       TEXT NOT NULL,
+                book_id        TEXT NOT NULL,
+                salience_score REAL NOT NULL,
+                PRIMARY KEY (concept_id, chunk_id),
+                FOREIGN KEY (concept_id) REFERENCES concept_nodes (concept_id),
+                FOREIGN KEY (book_id)    REFERENCES books (book_id)
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS concept_links (
+                from_concept_id TEXT NOT NULL,
+                to_concept_id   TEXT NOT NULL,
+                relation_type   TEXT NOT NULL,
+                evidence_chunk_ids TEXT,
+                link_strength   REAL NOT NULL,
+                PRIMARY KEY (from_concept_id, to_concept_id),
+                FOREIGN KEY (from_concept_id) REFERENCES concept_nodes (concept_id),
+                FOREIGN KEY (to_concept_id)   REFERENCES concept_nodes (concept_id)
+            )
+        ''')
+
+        # Indexes for concept graph
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_concept_chunks_book_id ON concept_chunks (book_id)'
+        )
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_concept_links_from ON concept_links (from_concept_id)'
+        )
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_concept_links_to ON concept_links (to_concept_id)'
+        )
+
         # Indexes for keyword search / joins
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_topic_name ON topics (topic)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_topics_book_id ON topics (book_id)')

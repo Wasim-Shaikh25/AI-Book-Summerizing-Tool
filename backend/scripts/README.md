@@ -16,6 +16,7 @@ python scripts/pipeline_full_book.py
 | Canonical | Legacy | What it does |
 |-----------|--------|--------------|
 | `pipeline_full_book.py` | `run_full_openai_pipeline.py` | Full book: PDF → structure → parallel LLM rewrite → Markdown + DOCX. Applies `INGESTION_PROFILE` (default `fast_local`), single PDF extract, rewrite LLM cache. |
+| `pipeline_signal_sections.py` | — (new, V2) | **Parallel PDF-mirror pipeline.** Preserves the source PDF's chapter / section hierarchy verbatim (no LLM renaming). One rewrite call per high-signal section via OpenRouter Gemini Flash Lite. Outputs `<title>__signal_<ts>.{md,docx}`; logs to `logs/run_signal_<ts>/`. Existing pipeline is untouched. See `SIGNAL_*` env vars and [`specs/modules/pipeline-signal-sections.md`](../../specs/modules/pipeline-signal-sections.md). |
 | `export_notes_docx.py` | `reexport_docx.py` | Rebuild Markdown + DOCX from saved `logs/run_*` + `rewritten_map` sidecar — no structure or rewrite. |
 | `audit_notes_quality.py` | `run_notes_quality_audit.py` | Post-export quality audit (deterministic checks + optional LLM insights). |
 | `pipeline_batch_books.py` | `run_batch_pipeline.py` | Run full pipeline + audit for multiple PDFs; writes comparison under `output/batch/`. |
@@ -29,6 +30,24 @@ python scripts/pipeline_full_book.py
 | `INGESTION_PROFILE` | `fast_local` \| `quality_cloud` \| `debug` |
 | `SKIP_STRUCTURE` | `1` + `PIPELINE_LOG_DIR` → rewrite-only from saved logs |
 | `NOTES_QUALITY_LLM` | `0` to skip LLM in quality audit |
+
+### Key environment variables (signal-sections pipeline V2)
+
+| Variable | Purpose |
+|----------|---------|
+| `PIPELINE_PDF` | Source PDF path (shared with the full pipeline) |
+| `SIGNAL_BOUNDARY_PERCENTILE` | Top-N % of validated headings to keep as section boundaries (default `35`) |
+| `SIGNAL_BOUNDARY_MIN_SCORE` | Minimum raw heading score required (default `6`) |
+| `SIGNAL_BOUNDARY_INCLUDE_STRUCTURAL` | `1` keeps universal `CHAPTER/MODULE/UNIT/PART N` markers regardless of score |
+| `SIGNAL_PROMOTE_H1_COUNT` | Fallback L1 promotions when no structural markers exist (default `8`) |
+| `SIGNAL_REWRITE_PROVIDER` | `openrouter` (default) |
+| `SIGNAL_REWRITE_MODEL` | OpenRouter slug (default `google/gemini-2.5-flash-lite-preview`) |
+| `SIGNAL_REWRITE_MAX_TOKENS` | Per-section completion ceiling (default `2500`) |
+| `SIGNAL_REWRITE_OVERLAP_CHARS` | Tail+head chars used as prev/next continuity context (default `600`) |
+| `SIGNAL_REWRITE_PARALLEL_WORKERS` | Concurrent LLM calls (default `4`) |
+| `SIGNAL_REWRITE_USER_INSTRUCTION` | Style override; falls back to `REWRITE_USER_INSTRUCTION` |
+| `SIGNAL_OUTPUT_SUFFIX` | Output filename suffix (default `__signal`) |
+| `SIGNAL_EXPORT_DOCX` | `0` to write only Markdown |
 
 ---
 

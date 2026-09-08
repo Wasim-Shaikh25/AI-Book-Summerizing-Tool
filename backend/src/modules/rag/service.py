@@ -101,3 +101,45 @@ class RagService:
             ),
         )
         return chunks_to_sections(chunks)
+
+    def retrieve_cross_book(
+        self,
+        query: str,
+        user_id: str,
+        *,
+        book_ids: list[str] | None = None,
+        top_k: int = 10,
+    ) -> list[dict]:
+        """Retrieve from the corpus-level index spanning all books for a user.
+
+        Builds the index lazily on first call.
+        Returns [] when RAG_CORPUS_INDEX_ENABLED=0 (default).
+
+        Args:
+            query:    Natural language query.
+            user_id:  Owner identifier for corpus namespacing.
+            book_ids: Optional filter — restrict results to these book IDs.
+            top_k:    Number of results to return.
+        """
+        if not getattr(config, "RAG_CORPUS_INDEX_ENABLED", False):
+            return []
+
+        from src.modules.rag.corpus_builder import build_corpus_index, load_corpus_index
+
+        index = load_corpus_index(user_id, data_dir=self.index_dir)
+        if index is None:
+            all_book_ids = book_ids or list(self.repo.list_book_ids(user_id) or [])
+            index = build_corpus_index(
+                all_book_ids,
+                user_id,
+                data_dir=self.index_dir,
+                rag_repo=self.repo,
+                embedding_model=str(getattr(config, "RAG_EMBEDDING_MODEL", "all-MiniLM-L6-v2")),
+            )
+
+        chunks = hybrid_retrieve(query, vector_index=index, top_k=top_k)
+
+        if book_ids:
+            chunks = [c for c in chunks if c.get("source_book_id") in book_ids]
+
+        return chunks_to_sections(chunks)

@@ -14,7 +14,11 @@ PROJECT_ROOT = Path(os.environ.get('PROJECT_ROOT', str(BACKEND_ROOT.parent)))
 sys.path.insert(0, str(BACKEND_ROOT))
 load_dotenv(PROJECT_ROOT / ".env")
 
-from src.modules.export.document_formatter import cover_from_hierarchy_meta, rebuild_notes_markdown
+from src.modules.export.document_formatter import (
+    cover_from_hierarchy_meta,
+    rebuild_notes_markdown,
+    resolve_export_book_title,
+)
 from src.modules.export.docx_notes_exporter import resolve_rewritten_map
 from src.modules.export.output_manager import OutputManager
 from src.modules.generation.missing_section_rewrite import auto_retry_missing_enabled, retry_missing_sections
@@ -137,10 +141,46 @@ def main() -> int:
         print(f"[!] {exc}")
         return 1
 
+    # Opt-in: rebuild hierarchy headings and section order from the final Markdown.
+    # Safe default is 0 — existing re-export behaviour is byte-for-byte unchanged.
+    if os.getenv("SYNC_HIERARCHY_FROM_MD", "0").strip() == "1":
+        from src.modules.generation.structure_fix_runner import sync_hierarchy_from_markdown
+
+        md_candidates = sorted(log_dir.glob("*.md"))
+        if not md_candidates and md_path.exists():
+            md_candidates = [md_path]
+        if md_candidates:
+            synced_artifact = log_dir / "s15k_synced_hierarchy.json"
+            hierarchy, sync_report = sync_hierarchy_from_markdown(
+                md_candidates[0], hierarchy, write_path=synced_artifact
+            )
+            print(
+                f"  [sync] Hierarchy rebuilt from Markdown: "
+                f"{sync_report['patched']} patched, "
+                f"{sync_report['skipped']} skipped"
+            )
+            for w in sync_report.get("warnings", []):
+                print(f"  [sync] WARNING: {w}")
+
+    from src.modules.ingestion.layout_enrichment import load_layout_lines_from_log_dir
+    from src.modules.structure.final_structuring.chapter_placement import (
+        refresh_chapter_placement_if_module_gap,
+    )
+    from src.modules.structure.final_structuring.hierarchy_export import refine_hierarchy_for_export
+
+    layout_lines = load_layout_lines_from_log_dir(log_dir)
+    before_ch = len(hierarchy.get("chapters") or [])
+    hierarchy = refresh_chapter_placement_if_module_gap(hierarchy, layout_lines)
+    after_ch = len(hierarchy.get("chapters") or [])
+    if after_ch != before_ch:
+        print(f"  15h refresh: chapters {before_ch} -> {after_ch}")
+        hierarchy = refine_hierarchy_for_export(hierarchy)
+
     meta = hierarchy.get("meta") or {}
     print(f"  chapters={meta.get('total_chapters')} sections={meta.get('total_sections')}")
 
     sidecar = default_rewritten_map_path(md_path)
+    sidecar_meta: dict = {}
     if not sidecar.exists():
         if not md_path.exists():
             print(f"[!] No sidecar and no markdown: {md_path}")
@@ -150,7 +190,9 @@ def main() -> int:
         rewritten = resolve_rewritten_map(hierarchy, md_text=md_text)
     else:
         print(f"  sidecar={sidecar.name}")
-        rewritten = load_rewritten_map(sidecar)
+        raw_sidecar = json.loads(sidecar.read_text(encoding="utf-8"))
+        sidecar_meta = raw_sidecar.get("meta") or {}
+        rewritten = raw_sidecar.get("sections") or load_rewritten_map(sidecar)
 
     print(f"  mapped sections={len(rewritten)}/{meta.get('total_sections', '?')}")
 
@@ -193,17 +235,18 @@ def main() -> int:
         print("[!] Export blocked — missing sections remain after auto-retry.")
         return 1
 
-    store = KnowledgeStore()
-    row = store.get_connection().execute(
-        "SELECT title FROM books ORDER BY processed_at DESC LIMIT 1"
-    ).fetchone()
-    title = row[0] if row else md_path.stem
+    title = resolve_export_book_title(
+        hierarchy=hierarchy,
+        md_path=md_path,
+        sidecar_meta=sidecar_meta,
+        pdf_path=os.environ.get("PIPELINE_PDF") or pdf_name,
+        log_dir=log_dir,
+    )
+    print(f"  title={title}")
 
     cover = cover_from_hierarchy_meta(
         title=title,
         hierarchy=hierarchy,
-        source_pdf=pdf_name,
-        user_instruction=os.environ.get("REWRITE_USER_INSTRUCTION", "short easy notes, do not add extra details"),
     )
 
     bundle_size = resolve_bundle_size()

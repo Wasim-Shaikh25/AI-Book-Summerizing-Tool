@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from statistics import median
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -372,3 +373,112 @@ def lines_to_log(lines: Iterable[NormalizedLine]) -> List[Dict[str, Any]]:
             }
         )
     return out
+
+
+def finalize_line_layout_signals(lines: List[NormalizedLine]) -> List[NormalizedLine]:
+    """Recompute large_font, large_gap, centered per page (works after ML or PyMuPDF extract)."""
+    if not lines:
+        return lines
+
+    by_page: Dict[int, List[NormalizedLine]] = {}
+    for ln in lines:
+        pg = int(ln.page_number or 0)
+        by_page.setdefault(pg, []).append(ln)
+
+    out: List[NormalizedLine] = []
+    for pg in sorted(by_page.keys()):
+        page_lines = sorted(by_page[pg], key=lambda x: (float(x.y0 or x.y_pos or 0), x.line_id))
+        median_font = _safe_median([float(ln.font_size or 10.0) for ln in page_lines], default=10.0)
+        gaps = []
+        prev_y: Optional[float] = None
+        for ln in page_lines:
+            y = float(ln.y0 or ln.y_pos or 0.0)
+            gap = 0.0 if prev_y is None else max(0.0, y - prev_y)
+            gaps.append(gap)
+            prev_y = y
+        median_gap = _safe_median(gaps, default=0.0)
+
+        for ln, gap in zip(page_lines, gaps):
+            page_w = float(ln.page_width or 0.0)
+            x_center = float(ln.x_center or 0.0)
+            centered = abs(x_center - (page_w / 2.0)) < (page_w * 0.1) if page_w else ln.centered
+            font_size = float(ln.font_size or 10.0)
+            large_font = ln.large_font or (font_size > median_font if median_font else False)
+            large_gap = ln.large_gap or (gap > (median_gap * 1.8) if median_gap else False)
+            out.append(
+                NormalizedLine(
+                    line_id=ln.line_id,
+                    text=ln.text,
+                    page_number=ln.page_number,
+                    y_pos=float(ln.y_pos or ln.y0 or 0.0),
+                    font_size=font_size,
+                    page_height=ln.page_height,
+                    page_width=ln.page_width,
+                    x0=ln.x0,
+                    x1=ln.x1,
+                    y0=ln.y0,
+                    y1=ln.y1,
+                    x_center=x_center,
+                    is_bold=ln.is_bold,
+                    is_mix_bold=ln.is_mix_bold,
+                    is_italic=ln.is_italic,
+                    is_centered=centered,
+                    centered=centered,
+                    is_link=ln.is_link,
+                    large_font=large_font,
+                    large_gap=large_gap,
+                    is_noise=ln.is_noise,
+                    noise_type=ln.noise_type,
+                    vertical_gap_above=gap,
+                    source=ln.source,
+                )
+            )
+    out.sort(key=lambda x: (int(x.page_number or 0), float(x.y0 or x.y_pos or 0), x.line_id))
+    return out
+
+
+def log_dict_to_normalized_line(item: Dict[str, Any], *, raw_idx: int = 0) -> NormalizedLine:
+    """Rebuild a NormalizedLine from s01_layout_lines.json item dict."""
+    bbox = item.get("bbox") or [0.0, 0.0, 0.0, 0.0]
+    x0 = _safe_float(item.get("x0", bbox[0] if bbox else 0.0))
+    y0 = _safe_float(item.get("y0", bbox[1] if bbox else 0.0))
+    x1 = _safe_float(item.get("x1", bbox[2] if bbox else 0.0))
+    y1 = _safe_float(item.get("y1", bbox[3] if bbox else 0.0))
+    return NormalizedLine(
+        line_id=int(item.get("line_id") or raw_idx),
+        text=str(item.get("text") or ""),
+        page_number=item.get("page_number"),
+        y_pos=y0,
+        font_size=_safe_float(item.get("font_size", 10.0)),
+        page_height=item.get("page_height"),
+        page_width=item.get("page_width"),
+        x0=x0,
+        x1=x1,
+        y0=y0,
+        y1=y1,
+        x_center=_safe_float(item.get("x_center", 0.0)),
+        is_bold=bool(item.get("is_bold")),
+        is_mix_bold=bool(item.get("is_mix_bold")),
+        is_italic=bool(item.get("is_italic")),
+        centered=bool(item.get("centered")),
+        is_link=bool(item.get("is_link")),
+        large_font=bool(item.get("large_font")),
+        large_gap=bool(item.get("large_gap")),
+        vertical_gap_above=_safe_float(item.get("vertical_gap_above", 0.0)),
+        source=str(item.get("source") or ""),
+    )
+
+
+def load_layout_lines_from_log_dir(log_dir: Path) -> List[NormalizedLine]:
+    """Load NormalizedLine list from pipeline log dir (s01_layout_lines.json)."""
+    path = log_dir / "s01_layout_lines.json"
+    if not path.exists():
+        return []
+    import json
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return []
+    items = payload.get("items") or []
+    return [log_dict_to_normalized_line(it, raw_idx=i) for i, it in enumerate(items) if isinstance(it, dict)]

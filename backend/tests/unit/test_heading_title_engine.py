@@ -5,7 +5,7 @@ from __future__ import annotations
 from src.modules.structure.dropped_heading_registry import (
     is_acceptable_study_title,
     is_flan_awkward_title,
-    is_syllabus_heading,
+    is_outline_heading,
     topic_from_labeled_prose,
 )
 from src.modules.structure.final_structuring.heading_title_engine import (
@@ -47,9 +47,9 @@ def test_pick_section_title_extracts_topic_from_statute_prose() -> None:
     assert title
 
 
-def test_rejects_syllabus_and_flan_awkward_titles() -> None:
-    assert is_syllabus_heading("COURSE OBJECTIVES:")
-    assert is_syllabus_heading("Course Outcomes")
+def test_rejects_outline_and_flan_awkward_titles() -> None:
+    assert is_outline_heading("COURSE OBJECTIVES:")
+    assert is_outline_heading("Course Outcomes")
     assert is_flan_awkward_title("A Study of the Meaning of Mahr")
     assert is_flan_awkward_title("A History of Marriage")
     assert not is_acceptable_study_title("A Study of the Meaning of Mahr")
@@ -69,7 +69,7 @@ def test_pick_chapter_title_range_not_first_section() -> None:
     assert " — " in title or title in {"Registration", "Meaning of mahr", "D. Hanbali School"}
 
 
-def test_pick_chapter_title_pins_syllabus_to_book_title() -> None:
+def test_pick_chapter_title_pins_outline_to_book_title() -> None:
     sections = [
         {"section_id": "S1", "heading": "COURSE OBJECTIVES:", "page_number": 1},
         {"section_id": "S2", "heading": "Course Outcomes", "page_number": 1},

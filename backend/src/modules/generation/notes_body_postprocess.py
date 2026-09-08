@@ -5,7 +5,7 @@ import re
 from difflib import SequenceMatcher
 from typing import List
 
-from src.modules.quality.heuristics import detect_syllabus_noise_in_body, norm
+from src.modules.quality.heuristics import detect_outline_noise_in_body, norm
 
 _STANDALONE_BOLD_RE = re.compile(r"^\*\*(.+?)\*\*:?\s*$")
 _BULLET_RE = re.compile(r"^(\s*)[-*]\s+(.*)$")
@@ -48,7 +48,7 @@ def _should_drop_line(
         return True
     if _INSTRUCTIONAL_HOURS_RE.match(stripped):
         return True
-    if detect_syllabus_noise_in_body(stripped):
+    if detect_outline_noise_in_body(stripped):
         return True
     if _STANDALONE_BOLD_RE.match(stripped):
         return True
@@ -84,7 +84,7 @@ def postprocess_rewritten_section(
     heading: str = "",
     chapter_heading: str = "",
 ) -> str:
-    """Remove meta filler, heading echoes, syllabus lines, and thin junk from rewrite output."""
+    """Remove meta filler, heading echoes, outline lines, and thin junk from rewrite output."""
     raw = (text or "").strip()
     if not raw:
         return raw

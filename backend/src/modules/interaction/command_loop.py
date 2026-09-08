@@ -35,7 +35,7 @@ class CommandLoop:
 
     def start(self) -> None:
         print("\n" + "=" * 50)
-        print("AI KNOWLEDGE ENGINE - INTERACTIVE CHAT")
+        print("INSIGHTENGINE - INTERACTIVE CHAT")
         print("Provide a PDF path to ingest, then ask for rewrite/export.")
         print("Type 'help' or 'exit'.")
         print("=" * 50 + "\n")

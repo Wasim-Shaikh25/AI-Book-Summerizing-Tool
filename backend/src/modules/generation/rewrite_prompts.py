@@ -48,33 +48,18 @@ _BARE_MERMAID_BLOCK = re.compile(
     re.I,
 )
 
-_GUARDRAILS = """You are a domain-agnostic academic notes rewriter.
-Technical rules (always apply):
+_GUARDRAILS = """You are a domain-agnostic document rewriter. You rewrite textbooks, manuals, acts, treatises, reports, and research papers into clear notes.
+
+Formatting rules (always apply):
 1) Use only the provided source text. Do not invent facts.
-2) Do not add citations, disclaimers, or meta commentary about the source.
-3) Do not repeat the section title as a bullet point.
-4) Do not wrap the whole answer in a fenced code block (except valid ```mermaid diagram blocks when requested).
-5) If adjacent-section context is provided, use it only for continuity — output notes for the primary section only.
-6) When a neighbouring section covers a similar topic, include only information unique to this section — no repetition.
+2) Use standard markdown formatting: H1 (#), H2 (##), H3 (###) for headings
+3) Balance paragraphs and bullet points: Use paragraphs for explanations, bullet points for lists
+4) Write in full paragraphs for main content, not just bullet points
+5) Use bullet points (-) only for lists, examples, or key points
+6) For tables, use markdown table format
 7) Output English only — no Hindi, Urdu, Arabic, or other non-English script. Skip or paraphrase non-English source text in simple English.
-8) UNIVERSAL MARKDOWN STRUCTURE (always):
-   - Section bodies: export adds the ## section title — do NOT repeat it; write body content only.
-   - Use ### only for genuine sub-parts with real content (when helpful).
-   - Do NOT use standalone **bold** lines as fake subheadings unless the user asked for labeled blocks.
-   - Follow the user's request for length, depth, bullets vs prose, and tone — do not artificially shorten or pad.
-9) Do NOT include syllabus/admin blocks: course objectives/outcomes, learning outcomes, module/unit labels, reading lists, or "Also cover:" checklists — teach the topic only.
-10) "Simple English" means plain words a beginner can understand — NOT artificially short sentences. Do not shorten legal or technical content; explain it clearly.
-11) Never write filler such as "This chapter covers…", "This section addresses…", or "In this unit we learn…" — explain the substance from the source only.
-12) Do not create a **bold subheading** unless the user explicitly asked for labeled blocks (e.g. Key Points).
-13) FORBIDDEN in section body (never output these):
-    - Meta filler: "This section/chapter covers…", "We will discuss…", "It is important to note…"
-    - Repeating the section title as the first line or as a bullet
-    - Syllabus/admin: course outcomes, learning objectives, instructional hours, module/unit labels, reading lists
-    - Standalone **bold** lines with no real content underneath
-    - Thin bullets: one-word or two-word bullets like "- Yes", "- Important"
-    - Content that cannot be traced to the provided source text
-14) Write continuous justified prose for main explanations. Use bullet or numbered lists ONLY for genuine enumerations (examples, steps, case lists) — not for the whole section.
-15) Do not break one idea into many tiny one-sentence paragraphs. Merge related sentences into proper paragraphs.
+8) Use fenced code blocks only for code or diagrams when requested
+9) Follow the user's request for length, depth, bullets vs prose, and tone
 """
 
 # Legacy alias — universal format supersedes book-only addendum.
@@ -214,6 +199,19 @@ def build_dynamic_rewrite_system_prompt(
     )
     if include_diagrams:
         parts.append(_DIAGRAM_SYSTEM_ADDENDUM)
+    from src.shared.notes_export_style import is_book_export_style
+
+    if is_book_export_style():
+        parts.append(
+            "14) PROSE FIRST: Write continuous paragraphs. Bullets only for 3+ parallel items, "
+            "steps, or case lists. One idea per paragraph, not per line.\n"
+        )
+    else:
+        parts.append(
+            "14) STUDY FORMAT: Use bullet points for key properties, definitions, and distinct "
+            "items. Use prose for explanations and context. Aim for a mix — short bullets for "
+            "facts, paragraph for analysis.\n"
+        )
     from src.shared.english_text import english_only_rewrite_instruction
 
     eng = english_only_rewrite_instruction()
@@ -553,6 +551,7 @@ def build_section_user_prompt_with_context(
     next_overlap: str = "",
     chapter_heading: str = "",
     subheadings: Optional[list[str]] = None,
+    semantic_chunks: Optional[list[dict]] = None,
 ) -> str:
     from src.modules.generation.rewrite_validation import heading_similarity
 
@@ -582,12 +581,33 @@ def build_section_user_prompt_with_context(
             )
         else:
             parts.append(
-                "Subtopics (use **bold subheading** only when the source has real text for that label; "
+                "Subtopics (use ### for each label that has genuine body content; "
                 "skip bare chapter/illustration labels):\n"
                 + "\n".join(f"- {label}" for label in labels[:12])
                 + "\n"
             )
-    parts.append(f"Primary source (rewrite ONLY this section):\n{source_text}")
+    if semantic_chunks and len(semantic_chunks) > 1:
+        parts.append(
+            f"Primary source split into {len(semantic_chunks)} sub-topics "
+            f"(rewrite ONLY these — output one ### per sub-topic):\n"
+        )
+        for i, chunk in enumerate(semantic_chunks, start=1):
+            hint = chunk.get("sub_heading_hint") or f"Sub-topic {i}"
+            parts.append(f"[Sub-topic {i}: {hint}]\n{chunk['text']}\n")
+    else:
+        parts.append(f"Primary source (rewrite ONLY this section):\n{source_text}")
+
+    if len(source_text) > 1800 and not labels and not (semantic_chunks and len(semantic_chunks) > 1):
+        parts.append(
+            "\nLONG SECTION — this source covers multiple topics. "
+            "Identify 2–4 distinct sub-topics and create a ### heading for each. "
+            "Do not collapse everything into one prose block.\n"
+        )
+    elif labels:
+        parts.append(
+            "\nThese sub-topics were detected in the source. "
+            "Use ### for each one that has genuine body content.\n"
+        )
 
     if prev_heading and heading_similarity(prev_heading, heading) >= 0.72:
         parts.append(
@@ -632,10 +652,12 @@ def build_section_user_prompt_with_context(
     else:
         parts.append(
             "\nOutput notes for the primary section only.\n"
-            "Follow the refined user request above. "
-            "Put each **bold subheading** and each paragraph or bullet on its own line — never chain with ' - '.\n"
-            "Use the section title and subtopic labels provided above — do not invent new parent headings. "
-            "Cover every listed subtopic in prose under its **bold** label."
+            "Follow the refined user request above.\n"
+            "- Use ### for each distinct sub-topic (proper subheadings, not **bold** lines).\n"
+            "- Use bullet points for key facts, definitions, types, elements, provisions.\n"
+            "- Use prose paragraphs for explanations, context, and analysis.\n"
+            "- Do NOT merge all content into one prose block.\n"
+            "- Do NOT use standalone **bold** lines as subheadings — use ### instead.\n"
         )
     return "\n".join(parts)
 

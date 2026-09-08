@@ -212,4 +212,23 @@ def run_pipeline(pdf_path, *, enable_logs=False, persist_to_db=False):
 | `test_pipeline_single_extract.py` | One `extract_pdf` per upload |
 | `test_fragment_coverage.py` | Fragment mappings complete |
 
+---
+
+## 11. Full book script (`run_full_openai_pipeline.py`)
+
+End-to-end path **after** `run_pipeline()`:
+
+| Step | What | Key config |
+|------|------|------------|
+| `[1/4]` | `run_pipeline` — structure + `s01` layout lines | `INGESTION_PROFILE`, **`OCR_SPLIT_TWO_UP`** for two-up scans |
+| `[2/4]` | Parallel LLM rewrite per 15e/15f section | `REWRITE_USER_INSTRUCTION`, `REWRITE_SECTION_MAX_TOKENS` |
+| `[3/4]` | Structural cleanup + title sync to hierarchy | `NOTES_STRUCTURE_FIX_*` |
+| `[4/4]` | DOCX export + quality audit | `EXPORT_DOCX`, `NOTES_QUALITY_AUDIT` |
+
+**Scanned two-up PDFs:** Set `OCR_SPLIT_TWO_UP=1` before run. Ingestion OCR splits each PDF page left/right and doubles virtual page count (`ocr_stage.virtual_page_number`). Requires Tesseract.
+
+**Title for output filename:** `resolve_export_book_title()` runs **before** `md_path` is built (fix 2026-06-16).
+
+**Validated run:** BNS 2023 scan (`run_2026-06-16_11-20-00`) — 102 PDF pages → 82 rewrite sections, 8 chapters, OVERALL OK with `pdf_match` WARN (OCR noise). See [change-log.md](../change-log.md) 2026-06-16.
+
 See [testing.md](../testing.md) §6.

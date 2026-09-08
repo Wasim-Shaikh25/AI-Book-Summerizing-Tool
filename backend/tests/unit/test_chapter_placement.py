@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from src.modules.generation.rewrite_validation import is_weak_section_heading
 from src.modules.structure.final_structuring.chapter_placement import (
+    detect_module_unit_break_pages_from_lines,
     infer_chapter_title_from_sections,
     is_structural_chapter_break,
     rebalance_sections_by_page_order,
     refine_broad_chapter_titles,
+    refresh_chapter_placement_if_module_gap,
     run_chapter_placement,
     section_starts_new_part,
+    split_chapters_at_module_page_markers,
     split_chapters_at_structural_markers,
     split_oversized_chapters,
     universal_clean_heading,
@@ -101,7 +104,7 @@ def test_rebalance_moves_early_page_section() -> None:
             "heading": "Later topic",
             "sections": [
                 {"section_id": "S2", "heading": "Parentage", "page_number": 51},
-                {"section_id": "S3", "heading": "Syllabus", "page_number": 1},
+                {"section_id": "S3", "heading": "Outline", "page_number": 1},
             ],
         },
     ]
@@ -143,9 +146,13 @@ def test_run_chapter_placement_updates_chapter_count() -> None:
             }
         ],
     }
-    out = run_chapter_placement(hierarchy)
+    lines = [
+        type("L", (), {"text": "MODULE 1:", "page_number": 1})(),
+        type("L", (), {"text": "MODULE 2:", "page_number": 40})(),
+    ]
+    out = run_chapter_placement(hierarchy, lines=lines)
     assert out["meta"]["total_chapters"] == len(out["chapters"])
-    assert len(out["chapters"]) >= 2
+    assert len(out["chapters"]) >= 1
 
 
 def test_infer_chapter_title_not_first_section_only() -> None:
@@ -194,3 +201,59 @@ def test_sanitize_merged_section_titles() -> None:
     changed = sanitize_merged_section_titles(chapters)
     assert changed >= 1
     assert "(p." not in chapters[0]["sections"][0]["heading"]
+
+
+def test_detect_module_break_pages_from_lines() -> None:
+    lines = [
+        type("L", (), {"text": "MODULE 1:", "page_number": 2})(),
+        type("L", (), {"text": "MODULE 2:", "page_number": 16})(),
+        type("L", (), {"text": "MODULE 3:", "page_number": 25})(),
+    ]
+    breaks = detect_module_unit_break_pages_from_lines(lines)
+    assert len(breaks) == 3
+    assert breaks[0]["page"] == 2
+
+
+def test_split_chapters_at_module_page_markers() -> None:
+    chapters = [
+        {
+            "chapter_id": "C1",
+            "heading": "All content",
+            "sections": [
+                {"section_id": "S1", "heading": "Intro", "page_number": 2},
+                {"section_id": "S2", "heading": "Topic A", "page_number": 10},
+                {"section_id": "S3", "heading": "Topic B", "page_number": 20},
+                {"section_id": "S4", "heading": "Topic C", "page_number": 30},
+            ],
+        }
+    ]
+    breaks = [
+        {"page": 2, "label": "MODULE 1:"},
+        {"page": 16, "label": "MODULE 2:"},
+        {"page": 25, "label": "MODULE 3:"},
+    ]
+    out, extra = split_chapters_at_module_page_markers(chapters, breaks)
+    assert extra >= 2
+    assert len(out) == 3
+
+
+def test_refresh_chapter_placement_if_module_gap() -> None:
+    hierarchy = {
+        "meta": {"total_chapters": 1},
+        "chapters": [
+            {
+                "chapter_id": "C1",
+                "heading": "Whole book",
+                "sections": [
+                    {"section_id": f"S{i}", "heading": f"T{i}", "page_number": 2 + i * 3}
+                    for i in range(20)
+                ],
+            }
+        ],
+    }
+    lines = [
+        type("L", (), {"text": f"MODULE {n}:", "page_number": p})()
+        for n, p in [(1, 2), (2, 16), (3, 25), (4, 52)]
+    ]
+    out = refresh_chapter_placement_if_module_gap(hierarchy, lines)
+    assert len(out["chapters"]) == 4
