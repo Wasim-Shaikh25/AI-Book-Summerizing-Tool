@@ -1,0 +1,84 @@
+---
+description: Rules for discovering project state and context
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Project Discovery and Context Rules
+
+Before planning or implementing, determine the current project state.
+
+## Detect Project State
+
+Classify the project as one of:
+
+```text
+EMPTY_PROJECT
+PARTIAL_PROJECT
+EXISTING_PROJECT
+LEGACY_PROJECT
+UNKNOWN_STATE
+```
+
+## Empty Project
+
+If the project is empty or nearly empty:
+
+- Do not immediately build the full product.
+- Create requirements, task plan, and software design document first.
+- Ask for implementation approval unless user explicitly requested implementation.
+- If user requested implementation, create minimal working scaffolding only.
+
+## Existing Project
+
+If code exists:
+
+- Read existing docs.
+- Inspect package/build files.
+- Identify framework/language.
+- Identify folder structure.
+- Identify test framework.
+- Identify configuration system.
+- Identify deployment/infrastructure files.
+- Follow existing patterns.
+
+## Unknown Project State
+
+If unclear:
+
+- Ask for clarification.
+- Or create a short project-state report before changing files.
+
+## Project State Report
+
+When useful, create or update:
+
+```text
+/ai-agent-workflow/project-state.md
+```
+
+Include:
+
+- detected language/framework
+- existing modules
+- missing docs
+- missing tests
+- risks
+- recommended next steps
+
+## Do Not Assume
+
+Do not assume:
+
+- frontend framework
+- backend framework
+- database
+- cloud provider
+- package manager
+- test runner
+- deployment method
+- domain model
+- business rules
+
+Infer from files or ask.

@@ -1,0 +1,75 @@
+---
+description: Universal testing, CI, review, and quality gates
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Testing, CI, and Review Rules
+
+Every meaningful feature should include tests.
+
+## Add Tests For
+
+Where applicable:
+
+- API endpoints
+- service logic
+- database operations
+- background jobs
+- UI components
+- data transformations
+- parsing/extraction
+- retrieval/indexing
+- model/tool routing
+- sandbox/tool policy checks
+- error handling
+- security validation
+- exports/reports
+- migrations
+
+## Test Rules
+
+- Use deterministic tests.
+- Mock external services.
+- Avoid live network calls in unit tests.
+- Use fixtures for sample data.
+- Clearly label synthetic test data.
+- Do not require secrets for tests.
+- Do not use fake claims as real evidence.
+- Do not make tests depend on execution order unless necessary.
+
+## CI Expectations
+
+If CI exists:
+
+- keep it passing
+- update it when adding new test commands
+- do not bypass failing tests without explanation
+
+If CI does not exist:
+
+- do not add complex CI unless requested
+- document recommended test commands
+
+## Completion Criteria
+
+A task is complete only when:
+
+- requested feature works
+- tests pass
+- migrations exist if schema changed
+- errors are handled
+- logs are meaningful
+- no unrelated features were added
+- documentation/task status is updated if needed
+
+## After Implementation
+
+Always summarize:
+
+- changed files
+- tests run
+- key decisions
+- known limitations
+- next recommended step

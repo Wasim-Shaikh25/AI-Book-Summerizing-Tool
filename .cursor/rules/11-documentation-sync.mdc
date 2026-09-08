@@ -1,0 +1,80 @@
+---
+description: Documentation synchronization and changelog rules
+globs:
+  - "**/*.md"
+  - "**/*"
+alwaysApply: true
+---
+
+# Documentation Synchronization Rules
+
+Keep documentation aligned with real code.
+
+## After Planning Changes
+
+Update:
+
+- requirements
+- tasks
+- SDD
+- architecture notes
+- open questions
+
+## After Implementation Changes
+
+Update documentation if:
+
+- architecture changed
+- APIs changed
+- schemas changed
+- setup changed
+- dependencies changed
+- environment variables changed
+- background jobs changed
+- security behavior changed
+- deployment behavior changed
+
+## SDD Accuracy
+
+The SDD must distinguish:
+
+```text
+Implemented
+Partial
+Planned
+Needs clarification
+Deprecated
+```
+
+Do not describe planned features as implemented.
+
+## Changelog
+
+If useful, maintain:
+
+```text
+/ai-agent-workflow/changelog.md
+```
+
+Include:
+
+- date
+- task/phase
+- summary
+- changed files/modules
+- tests
+- known limitations
+
+## Documentation Quality
+
+Docs should be:
+
+- accurate
+- concise
+- structured
+- easy to follow
+- free from fake implementation claims
+
+## Comprehensive code reference
+
+For engine packages, maintain `specs/code-reference/*.md` with every public file and symbol documented (**purpose**, **why**, **called by**). See `.cursor/rules/13-comprehensive-spec-documentation.mdc`.

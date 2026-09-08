@@ -1,0 +1,31 @@
+# Secrets — never bake into the image
+.env
+*.env
+!.env.example
+
+# Python caches / virtualenvs
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Runtime data — mounted as volumes at runtime, not baked
+output/
+logs/
+models/
+*.db
+*.sqlite
+
+# Local model / HF caches
+.cache/
+.huggingface/
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store

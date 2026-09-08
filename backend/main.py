@@ -1,0 +1,25 @@
+import logging
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+from src.modules.interaction.command_loop import CommandLoop
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+def main():
+    """
+    Entry point for InsightEngine.
+    """
+    logger.info("Initializing InsightEngine...")
+    
+    # Start Command Loop immediately. Ingestion will be handled via terminal input.
+    loop = CommandLoop()
+    loop.start()
+
+if __name__ == "__main__":
+    main()

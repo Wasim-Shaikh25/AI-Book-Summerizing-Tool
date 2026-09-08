@@ -1,0 +1,133 @@
+---
+description: Rules for converting documentation into phase-wise task files
+globs:
+  - "docs/**/*"
+  - "tasks/**/*"
+  - "ai-agent-workflow/**/*"
+  - "**/*.md"
+alwaysApply: false
+---
+
+# Docs-to-Tasks Planning Rules
+
+When asked to create tasks from documentation:
+
+- Do not implement code.
+- Create or update planning/task files only.
+- Infer phases from documentation.
+- Split large phases into small implementable tasks.
+- Preserve dependencies.
+- Mark unclear items as "Needs clarification".
+- Do not invent missing architecture.
+
+## Recommended Task Folder
+
+If no task folder exists, create:
+
+```text
+/tasks/
+  00-overview/
+  01-foundation/
+  02-core-features/
+  03-integrations/
+  04-data-and-storage/
+  05-ui/
+  06-testing-and-quality/
+  07-advanced-later/
+```
+
+Adjust to project context if existing conventions differ.
+
+## Task File Structure
+
+Each task file should use:
+
+```md
+# Phase XX — Task Name
+
+## Goal
+
+What this task accomplishes.
+
+## Context
+
+Relevant context from documentation or current code.
+
+## Scope
+
+### Must implement
+
+- Item
+- Item
+
+### Must not implement
+
+- Future feature
+- Unrelated work
+
+## Inputs / Dependencies
+
+- Prior tasks
+- Required docs
+- Existing modules
+
+## Expected Outputs
+
+- Files/modules/APIs/jobs/UI expected
+
+## Data / Schema Requirements
+
+Only if relevant.
+
+## API Requirements
+
+Only if relevant.
+
+## Background Jobs
+
+Only if relevant.
+
+## UI Requirements
+
+Only if relevant.
+
+## Validation and Error Handling
+
+- Expected validation
+- Expected error states
+
+## Tests Required
+
+- Unit tests
+- Integration tests
+- API tests
+- UI tests
+- Security tests if applicable
+
+## Definition of Done
+
+- [ ] Feature works
+- [ ] Tests added/updated
+- [ ] Tests pass
+- [ ] Docs updated if needed
+- [ ] No unrelated features added
+- [ ] Errors handled
+
+## Notes / Clarifications Needed
+
+- List unclear items
+```
+
+## Task Quality Rules
+
+A task must be:
+
+- small enough to implement independently
+- testable
+- scoped
+- ordered
+- dependency-aware
+- clear about non-goals
+- free from fake data or fake implementation assumptions
+
+If too large, split it.

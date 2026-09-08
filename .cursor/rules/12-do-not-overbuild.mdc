@@ -1,0 +1,60 @@
+---
+description: Prevent overbuilding and future-phase leakage
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Do Not Overbuild
+
+Many projects contain future ideas.
+
+Do not implement advanced features just because they are mentioned in documentation.
+
+Implement only the current requested task.
+
+## When Docs Contain Multiple Phases
+
+Do:
+
+- identify current phase
+- implement only current phase
+- create extension points only if needed
+- leave future phases as tasks
+
+Do not:
+
+- implement future phases
+- add speculative systems
+- create fake working integrations
+- create placeholder logic that looks production-ready
+- add dependencies for future needs
+- expand scope without user approval
+
+## If a Feature Is Not Ready
+
+Use clear states:
+
+```text
+Not implemented
+Requires configuration
+Requires approval
+Requires dependency
+Needs clarification
+```
+
+Do not fake success.
+
+## Large Task Rule
+
+If the requested task is too large:
+
+1. Propose a breakdown.
+2. Ask whether to proceed with the first part.
+3. Implement only the approved part.
+
+## Final Rule
+
+Planning can be broad.
+
+Implementation must be narrow.

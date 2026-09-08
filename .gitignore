@@ -1,29 +1,51 @@
-# Virtual environment
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
 venv/
 .venv/
-env/
-.env/
 
-# Byte-compiled Python files
-__pycache__/
-*.pyc
-*.pyo
+# Test / tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Editor-specific files
+# IDE
 .vscode/
 .idea/
 
-# Operating system files
-.DS_Store
-Thumbs.db
+# Node.js
+node_modules/
+frontend/dist/
 
-# Logs and temporary files
-*.log
-*.tmp
-*.swp
-
-# Sensitive information (e.g., API keys, passwords)
+# Local env files (real secrets) — *.example profiles are committed
 .env
+.env.local
+.env.dev
+.env.prod
 
-# Project specific
+# Runtime data (canonical paths under PROJECT_ROOT — see config LOGS_FOLDER / OUTPUT_FOLDER)
+logs/
 output/
+tmp/
+pdfs/
+backend/logs/
+backend/output/
+
+# SQLite journals
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Local LLM model weights (download separately)
+models/*.gguf
+models/*.tmp
+models/*.bin
+
+# OS / editor noise
+Thumbs.db
+.DS_Store
+*.swp
+*.swo

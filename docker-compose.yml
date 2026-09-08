@@ -1,0 +1,37 @@
+# Local development stack: hot-reload backend + Vite dev server.
+# Source is bind-mounted so edits reload live. Use docker-compose.prod.yml for prod.
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      PROJECT_ROOT: /workspace
+    volumes:
+      - .:/workspace
+      # Persist model + HF caches across container recreation (avoids re-download).
+      - hf_cache:/app/.cache/huggingface
+    working_dir: /workspace/backend
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  hf_cache:

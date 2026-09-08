@@ -1,0 +1,279 @@
+# ============================================================================
+# default.yaml — Base configuration (InsightEngine)
+# ----------------------------------------------------------------------------
+# Authoritative key catalog: /spec/modules/parameters-config.md
+# Overlay order: default.yaml -> environment variables -> .env (via loader)
+# Secrets MUST come from env vars (.env). NEVER place secrets here.
+# MESO Rule 12: tunables live here, not as literals in business logic.
+# ============================================================================
+
+# Profiles: Set INSIGHT_PROFILE=research to enable all research features at once
+profiles:
+  research:
+    enable: false  # Set INSIGHT_PROFILE=research to activate
+    settings:
+      qa_multistep_enabled: true
+      rag_corpus_index_enabled: true
+      knowledge_graph_enabled: true
+      rag_chunk_strategy: semantic
+      rewrite_rag_context: true
+      body_audit_enabled: true
+
+paths:
+  pdf_folder: pdfs
+  output_folder: output
+  logs_folder: logs
+  reference_docx: reference.docx
+  models_dir: models
+
+export:
+  docx_theme: color   # color (purple/teal accents) | bw (elegant black & white)
+  font_family: "Times New Roman"
+  body_size_pt: 11
+  h1_size_pt: 20
+  h2_size_pt: 16
+  h3_size_pt: 13
+  line_spacing: 1.2
+  first_line_indent_inches: 0.3
+  append_subtopic_checklist: false   # do not inject "**Also cover:** ..." into section bodies
+  notes_style: study   # study (bullets + ### subheadings, default) | book (prose textbook layout)
+  missing_body_mode: placeholder   # placeholder | fail | skip
+  structure_fix_enabled: true        # post-export heading repair + list renumber (hybrid LLM/MiniLM)
+  structure_fix_engine: hybrid       # hybrid | minilm | api
+  structure_fix_merge_duplicates: false
+  structure_fix_drop_low_grounding: false
+  sync_hierarchy_from_markdown: false   # set SYNC_HIERARCHY_FROM_MD=1 to rebuild hierarchy from final MD
+
+body_audit:
+  enabled: false           # set BODY_STRUCTURE_AUDIT_ENABLED=1 to enable post-rewrite audit
+  llm: false               # set BODY_AUDIT_LLM=1 to enable optional LLM fix pass
+  subheading_chars: 600    # min body chars before "missing subheadings" is flagged
+
+semantic_splitter:
+  enabled: false          # set SEMANTIC_SPLIT_ENABLED=1 to enable pre-LLM section splitting
+  threshold: 2000         # min chars before splitting is attempted
+
+qa:
+  multistep_enabled: false       # set QA_MULTISTEP_ENABLED=1 to enable chain-of-thought Q&A
+  multistep_top_k_per_question: 3  # chunks retrieved per sub-question
+
+rag_advanced:
+  chunk_strategy: section        # section | paragraph | semantic
+  semantic_chunk_target_chars: 500
+  semantic_overlap_sents: 1
+  corpus_index_enabled: false    # set RAG_CORPUS_INDEX_ENABLED=1 for cross-book search
+  rewrite_rag_context: false     # set REWRITE_RAG_CONTEXT=1 for same-book context in rewrite
+
+knowledge_graph:
+  enabled: false                 # set KNOWLEDGE_GRAPH_ENABLED=1 to enable concept graph
+
+chunking:
+  chunk_size_words: 1500
+  chunk_overlap_words: 150
+
+system:
+  debug_structure: true
+  pipeline_max_pages: 0   # 0 = full PDF; set 3-5 for quick tests
+  english_only: true      # discard non-English script in ingestion, titles, and rewrite output
+
+llm:
+  provider: OPENAI          # OPENAI | OPENROUTER
+  model: gpt-4o-mini
+  base_url: https://api.openai.com
+  timeout_s: 600
+  http_debug: false
+  validity_batch_size: 20
+  toc_batch_size: 20
+
+rewrite:
+  max_tokens: 15000
+  provider_order:                 # empty = single provider from llm.provider (no cross-vendor fallback)
+  full_rewrite_max_chunks: 0
+  parallel_workers: 8            # concurrent section rewrites (1 = sequential)
+  context_overlap_chars: 600     # prev/next snippet chars for continuity
+  auto_retry_enabled: true       # inline retry when coverage below threshold
+  auto_retry_max_passes: 1       # max inline retry passes after parallel rewrite
+  auto_retry_min_coverage: 0.95  # retry only when mapped coverage is below this
+  fidelity_min_overlap: 0.30
+  fidelity_regenerate_temperature: 0.1
+  min_grounding_chars: 160        # below this real (non-list) source size, force strict source-only notes
+  auto_retry_missing: true       # rerun failed/empty sections before export (legacy alias)
+  missing_max_rounds: 3          # max auto-retry passes for missing sections
+  compact_exam: false            # true = 4-6 bullets/section, no Quick Revision block
+  bundle_size: 1                 # combine N sections per LLM call (6 when COMPACT_EXAM=1)
+  bundle_max_chars: 12000        # max combined source chars per bundle
+  bundle_export: true             # group bundled sections as ### under ## in Word
+  chapter_page_breaks: auto       # auto | true | false — new page before each chapter in Word/MD
+
+structure:
+  partition_drop_low_grounding: true   # drop sections whose body is an index/contents listing (no real prose to ground on)
+  contents_region_detection: true      # flag mid-document enumeration-dominated pages as contents regions (exclude from partition)
+
+rag:
+  enabled: true
+  embedding_model: all-MiniLM-L6-v2
+  index_dir: output/rag_index
+  top_k: 6
+  vector_weight: 0.65
+  lexical_weight: 0.35
+  min_score: 0.15
+  chunk_size_words: 0            # 0 = one chunk per section; >0 splits long sections
+  chunk_overlap_words: 80
+  min_chunk_chars: 40
+  rerank_enabled: true
+  rerank_model: cross-encoder/ms-marco-MiniLM-L-6-v2
+  rerank_candidates: 50
+  context_max_chars: 12000
+
+ocr:
+  enabled: true                  # master switch for page-level OCR stage
+  mode: auto                     # auto | force | off — auto runs only on scan-like pages
+  split_two_up: false            # true = split each page at 50% width (left/right book pages)
+  min_text_chars: 40             # below this, page is treated as scan-only in auto mode
+  zoom: 2.0                      # render scale for Tesseract (higher = slower, sharper)
+  lang: eng                      # Tesseract language code(s)
+
+doubted:
+  resolver_mode: revalidate_selected
+  resolver_llm: openai            # empty = derive from llm.provider
+  revalidation_model: ""
+  revalidation_confidence: 0.85
+  revalidation_max: 40
+
+chapter_hierarchy:
+  llm: openai                   # empty = derive from llm.provider; openai | openrouter
+  use_llm: true
+  batch_size: 25
+  max_sections: 0               # 0 = all sections; set 10-20 for quick tests
+  min_sections_per_chapter: 6   # merge tiny chapters for cleaner TOC
+
+ingestion:
+  profile: fast_local             # fast_local | quality_cloud | debug
+  layout_backend: auto            # auto | pymupdf | docling — auto uses Docling on scan-like PDFs when installed
+  layout_auto_sample_pages: 8      # pages sampled for scan detection in auto mode
+  layout_docling_always: false     # true = prefer Docling whenever installed (quality_cloud sets true)
+  # Per-profile overrides (merged over built-in defaults in profile.py)
+  profiles:
+    fast_local:
+      upload_skip_rag: true
+      ocr_zoom: 1.5
+      doubted_resolver_llm: "off"
+      doubted_resolver_mode: fast
+      chapter_hierarchy_use_llm: false
+      heading_cleanup_backend: rules_only
+      heading_cleanup_use_llm: false
+      hierarchy_openai_enabled: false
+      hierarchy_openai_auto_skip: true
+      heading_refinement_openai_fallback: false
+      use_llm_intent: false
+      notes_quality_llm: false
+    quality_cloud:
+      upload_skip_rag: false
+      ocr_zoom: 2.0
+      doubted_resolver_llm: openai
+      doubted_resolver_mode: revalidate_selected
+      chapter_hierarchy_use_llm: true
+      heading_cleanup_backend: openai
+      heading_cleanup_use_llm: true
+      hierarchy_openai_enabled: true
+      hierarchy_openai_auto_skip: true
+      heading_refinement_openai_fallback: true
+      use_llm_intent: true
+      notes_quality_llm: true
+      ingestion_layout_backend: auto
+      ingestion_layout_docling_always: true
+    debug:
+      upload_skip_rag: false
+      ocr_zoom: 2.0
+      doubted_resolver_llm: openai
+      doubted_resolver_mode: revalidate_selected
+      chapter_hierarchy_use_llm: true
+      heading_cleanup_backend: openai
+      heading_cleanup_use_llm: true
+      hierarchy_openai_enabled: true
+      hierarchy_openai_auto_skip: false
+      heading_refinement_openai_fallback: true
+      use_llm_intent: true
+      notes_quality_llm: true
+
+heading_cleanup:
+  backend: rules_only            # off | rules_only | minilm | openai | openrouter
+  llm: openai                   # empty = derive from llm.provider (when backend=openai)
+  use_llm: false                # stage 15f — legacy flag; prefer rules_only for fast_local
+  batch_size: 20
+  minilm_pick_threshold: 0.82
+
+title_validation:
+  enabled: true                  # s13 early + 15g late safety net (rules only)
+
+section_consolidation:
+  enabled: true                  # merge thin / structural sections before rewrite (all books)
+  min_chars: 150                 # merge when combined body below this (per pair walk)
+  max_merged_chars: 12000        # cap merged section source size
+
+chapter_cohesion:
+  min_sections_per_chapter: 3    # merge 1-2 section chapters into related neighbors
+  min_chars: 400
+  max_sections_per_chapter: 12
+  merge_threshold: 0.52          # MiniLM / lexical — merge if next chapter is related
+
+chapter_placement:
+  enabled: true                  # stage 15h after 15f
+  reassign_sections: true        # MiniLM — move outliers to adjacent chapter
+  rename_chapters: true          # infer chapter titles from section context
+  min_sections_for_rename: 3
+  cohesion_threshold: 0.58
+  reassign_margin: 0.06
+  page_margin: 8                 # max page drift before rebalance / block reassignment
+  max_sections_per_chapter: 12   # split oversized chapters at MODULE/page gaps
+  page_gap_split: 16             # new chapter when consecutive sections jump this many pages
+  min_sections_per_chapter: 3    # merge tiny / related chapters after splits
+  min_chapter_chars: 400
+
+hierarchy_openai:
+  enabled: false                 # stage 15j — off by default; quality_cloud profile enables
+  auto_skip: true                # skip 15j when local hierarchy already healthy (saves ~7 min)
+  provider:                      # empty = llm.provider (openai | openrouter)
+  target_max_chapters: 8
+  min_sections_per_chapter: 3
+  min_chapter_chars: 400
+  regroup_batch_size: 22         # batched regroup for large acts (100+ sections)
+
+heading_refinement:
+  enabled: true                  # stage 15i — chapter, section, subheading titles (before rewrite)
+  use_transformers: true         # MiniLM for weak labels
+  dedupe: true
+  drop_empty: true
+  minilm_threshold: 0.8
+  openai_fallback: false         # cloud LLM (MiniLM first) for titles MiniLM cannot fix
+
+ultimate:
+  profile: auto                 # auto | large | medium | small
+  min_parent_fragment_chars: 520
+  min_section_chars_for_nesting: 380
+  min_heading_fragment_chars: 140
+  max_rewrite_section_chars: 2200
+  max_sections_page_ratio: 0.45  # target sections ≈ pages × ratio (230 pages → ~103 sections)
+  min_section_count: 16
+  max_section_count: 0           # 0 = no hard cap beyond page ratio
+
+document_profile:
+  short_body_chars: 400
+  base_min_section_body_chars: 200
+  base_rewrite_overlap_chars: 600
+  base_rewrite_max_tokens: 1800
+  base_median_section_body_chars: 1200
+
+# Provider-specific defaults (secrets via env — see .env.example)
+openai:
+  model: gpt-4o-mini
+  base_url: https://api.openai.com
+
+openrouter:
+  model: openai/gpt-4o-mini      # https://openrouter.ai/openai/gpt-4o-mini
+  base_url: https://openrouter.ai/api/v1
+  http_referer: ""
+  app_title: AI Notes Creator
+
+gemini:
+  model: models/gemini-3.1-flash-lite-preview
